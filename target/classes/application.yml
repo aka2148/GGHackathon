@@ -1,0 +1,91 @@
+spring:
+  application:
+    name: GridGarrison
+
+  # ---------------------------------------------------------------------------
+  # mTLS — server presents cert, requires client cert
+  # ---------------------------------------------------------------------------
+  ssl:
+    enabled: ${GG_SSL_ENABLED:false}
+
+server:
+  port: 8443
+  ssl:
+    enabled: ${GG_SSL_ENABLED:false}
+    key-store:            classpath:certs/gridgarrison-server.p12
+    key-store-type:       PKCS12
+    key-store-password:   ${GG_SERVER_KS_PASSWORD:changeit}
+    key-alias:            gridgarrison-server
+    # mTLS: require client certificate
+    client-auth:          ${GG_CLIENT_AUTH:need}
+    trust-store:          classpath:certs/gridgarrison-ca-trust.p12
+    trust-store-type:     PKCS12
+    trust-store-password: ${GG_CA_TS_PASSWORD:changeit}
+
+  # WebSocket tuning
+  tomcat:
+    max-connections:        2000
+    accept-count:           200
+    connection-timeout:     20000
+
+# ---------------------------------------------------------------------------
+# Web3j connection (Ganache GUI default: 7545, Ganache CLI default: 8545)
+# ---------------------------------------------------------------------------
+web3j:
+  client-address: ${WEB3J_CLIENT_ADDRESS:http://127.0.0.1:7545}
+
+# ---------------------------------------------------------------------------
+# Spring Modulith — event publication log
+# ---------------------------------------------------------------------------
+spring.modulith:
+  events:
+    republish-outstanding-events-on-restart: true
+
+# ---------------------------------------------------------------------------
+# Database (PostgreSQL for production, H2 for local dev)
+# ---------------------------------------------------------------------------
+  datasource:
+    url:      ${GG_DB_URL:jdbc:h2:mem:gridgarrison;DB_CLOSE_DELAY=-1}
+    username: ${GG_DB_USER:sa}
+    password: ${GG_DB_PASS:}
+    driver-class-name: ${GG_DB_DRIVER:org.h2.Driver}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+
+# ---------------------------------------------------------------------------
+# GridGarrison module config
+# ---------------------------------------------------------------------------
+gridgarrison:
+
+  blockchain:
+    rpc-url:          ${GG_RPC_URL:${WEB3J_CLIENT_ADDRESS:http://127.0.0.1:7545}}
+    private-key:      ${GG_WALLET_KEY:0x0000000000000000000000000000000000000000000000000000000000000001}
+    contract-address: ${GG_CONTRACT_ADDR:0x0000000000000000000000000000000000000000}
+
+  watchdog:
+    sweep-interval-ms: 60000
+
+# ---------------------------------------------------------------------------
+# Actuator
+# ---------------------------------------------------------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, modulith
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+logging:
+  level:
+    com.cybersecuals.gridgarrison: DEBUG
+    org.web3j:                     INFO
+    org.springframework.security:  INFO

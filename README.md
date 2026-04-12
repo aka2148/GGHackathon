@@ -1,0 +1,84 @@
+# GridGarrison 🔒⚡
+
+**EV Charging Trust & Identity Platform** — OCPP 2.0.1 · Blockchain · Digital Twin
+
+---
+
+## Architecture
+
+```
+com.cybersecuals.gridgarrison
+├── orchestrator/          ← OCPP 2.0.1 WSS gateway + mTLS enforcement
+│   ├── config/
+│   │   ├── WebSocketConfig.java        (public)  OCPP WS endpoint registration
+│   │   ├── MtlsSecurityConfig.java     (pkg-priv) Spring Security x509 config
+│   │   └── OcppHandshakeInterceptor.java (pkg-priv) Sub-protocol + stationId check
+│   └── websocket/
+│       ├── OcppWebSocketHandler.java   (public)  Message dispatcher
+│       └── OcppMessage.java            (pkg-priv) SRPC frame model + domain events
+│
+├── trust/                 ← Golden Hash verification via Web3j
+│   ├── service/
+│   │   ├── BlockchainService.java      (public)  API interface
+│   │   └── BlockchainServiceImpl.java  (pkg-priv) Web3j implementation
+│   └── contract/
+│       └── FirmwareRegistryContract.java (pkg-priv) Web3j contract wrapper
+│
+├── watchdog/              ← Digital Twin + behavioural anomaly detection
+│   └── service/
+│       ├── DigitalTwinService.java     (public)  API interface
+│       ├── StationTwin.java            (public)  Value objects
+│       └── DigitalTwinServiceImpl.java (pkg-priv) In-memory twin engine
+│
+└── shared/                ← Cross-module DTOs (declared as sharedModule)
+    └── dto/
+        ├── ChargingSession.java
+        └── FirmwareHash.java
+```
+
+## Module Communication
+
+Modules communicate exclusively via **Spring application events** — no direct
+compile-time imports across module boundaries.
+
+```
+orchestrator  ──[StationBootEvent]──►  watchdog  (registers twin)
+orchestrator  ──[FirmwareStatusEvent]► trust     (triggers hash verification)
+orchestrator  ──[TransactionEvent]───► watchdog  (updates session state)
+```
+
+## Key Technologies
+
+| Concern | Technology |
+|---|---|
+| Transport | Spring WebSocket (WSS / OCPP 2.0.1) |
+| Auth | Spring Security x.509 mTLS |
+| Blockchain | Web3j → Ethereum smart contract |
+| Anomaly Detection | Digital Twin in-memory engine |
+| Module Isolation | Spring Modulith |
+
+## Quick Start
+
+```bash
+# Build
+./mvnw clean package -DskipTests
+
+# Run with H2 (dev mode, no certs required*)
+./mvnw spring-boot:run
+
+# Verify module boundaries
+./mvnw test -Dtest=ModularityVerificationTest
+```
+
+\* For full mTLS, generate certs and place in `src/main/resources/certs/`.
+
+## Environment Variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `GG_RPC_URL` | Ethereum JSON-RPC endpoint | `http://localhost:8545` |
+| `GG_WALLET_KEY` | Admin wallet private key | `0x000...1` |
+| `GG_CONTRACT_ADDR` | FirmwareRegistry contract address | `0x000...0` |
+| `GG_DB_URL` | JDBC URL | H2 in-memory |
+| `GG_SERVER_KS_PASSWORD` | Server keystore password | `changeit` |
+| `GG_CA_TS_PASSWORD` | CA truststore password | `changeit` |

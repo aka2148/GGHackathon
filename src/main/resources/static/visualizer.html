@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GridGarrison Runtime Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #0f1720;
+            --paper: #f6f4ee;
+            --panel: #fffdf8;
+            --line: #d5cec0;
+            --accent: #0f766e;
+            --accent-2: #c2410c;
+            --ok: #15803d;
+            --warn: #b45309;
+            --bad: #b91c1c;
+            --muted: #586472;
+            --shadow: 0 18px 40px rgba(15, 23, 32, 0.14);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Space Grotesk", sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 12% 12%, rgba(15, 118, 110, 0.16), transparent 38%),
+                radial-gradient(circle at 86% 18%, rgba(194, 65, 12, 0.16), transparent 40%),
+                linear-gradient(160deg, #f4f1e8 0%, #f6f4ee 48%, #efe9dc 100%);
+            padding: 24px;
+        }
+
+        .app {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            gap: 18px;
+        }
+
+        .hero {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            padding: 22px;
+            display: grid;
+            gap: 14px;
+        }
+
+        .hero-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.35rem, 3vw, 2rem);
+            letter-spacing: 0.02em;
+        }
+
+        .subtitle {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.98rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        input,
+        button {
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.9rem;
+            padding: 10px 12px;
+            background: #ffffff;
+        }
+
+        button {
+            cursor: pointer;
+            transition: transform 140ms ease, background-color 140ms ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            background: #f5f7f9;
+        }
+
+        .btn-accent {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+        }
+
+        .btn-accent:hover {
+            background: #0b5d56;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 14px;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .kpis {
+            grid-column: span 12;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .kpi {
+            border: 1px dashed #b9c0c8;
+            border-radius: 12px;
+            padding: 10px;
+            background: #fff;
+        }
+
+        .kpi .label {
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .kpi .value {
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+
+        .flow {
+            grid-column: span 12;
+        }
+
+        .flow-track {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .node {
+            padding: 10px;
+            border: 1px solid #c5cdd4;
+            border-radius: 12px;
+            background: #ffffff;
+            min-height: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .node h3 {
+            margin: 0;
+            font-size: 0.88rem;
+            letter-spacing: 0.02em;
+        }
+
+        .node p {
+            margin: 7px 0 0;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+
+        .node::after {
+            content: "";
+            position: absolute;
+            left: -40%;
+            top: 0;
+            width: 40%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.16), transparent);
+            transform: skewX(-18deg);
+            animation: sweep 4.8s linear infinite;
+        }
+
+        @keyframes sweep {
+            0% { left: -45%; }
+            100% { left: 130%; }
+        }
+
+        .timeline {
+            grid-column: span 8;
+        }
+
+        .stations {
+            grid-column: span 4;
+        }
+
+        .title {
+            margin: 0 0 10px;
+            font-size: 1rem;
+        }
+
+        .mono {
+            font-family: "IBM Plex Mono", monospace;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+        }
+
+        .table th,
+        .table td {
+            border-bottom: 1px solid #e8e2d7;
+            text-align: left;
+            padding: 7px 6px;
+            vertical-align: top;
+        }
+
+        .tag {
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-family: "IBM Plex Mono", monospace;
+            border: 1px solid transparent;
+            display: inline-block;
+        }
+
+        .tag-orchestrator { background: #e6f7f5; color: #0f766e; border-color: #9fe3dc; }
+        .tag-watchdog { background: #fff1e8; color: #b45309; border-color: #f4c8a7; }
+        .tag-trust { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
+        .tag-app { background: #f0f4f8; color: #334155; border-color: #cbd5e1; }
+
+        .station-list {
+            display: grid;
+            gap: 8px;
+            max-height: 420px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .station-card {
+            border: 1px solid #d5dde5;
+            border-radius: 12px;
+            background: #fff;
+            padding: 10px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .station-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .state {
+            font-size: 0.72rem;
+            font-family: "IBM Plex Mono", monospace;
+            padding: 2px 7px;
+            border-radius: 999px;
+            border: 1px solid;
+        }
+
+        .state-online,
+        .state-monitoring { color: var(--ok); border-color: #86efac; background: #f0fdf4; }
+        .state-alert { color: var(--bad); border-color: #fca5a5; background: #fef2f2; }
+        .state-discovered { color: #334155; border-color: #cbd5e1; background: #f8fafc; }
+
+        .status-line {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        .footer-note {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
+        @media (max-width: 920px) {
+            .kpis { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+            .flow-track { grid-template-columns: repeat(2, 1fr); }
+            .timeline,
+            .stations { grid-column: span 12; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <section class="hero">
+        <div class="hero-head">
+            <div>
+                <h1>GridGarrison Runtime Visualizer</h1>
+                <p class="subtitle">Live view of orchestrator, trust, and watchdog activity.</p>
+            </div>
+            <div class="controls">
+                <input id="stationInput" type="text" value="CS-101" aria-label="Station ID for simulation" />
+                <button id="simulateBtn" class="btn-accent">Simulate End-to-End Flow</button>
+                <button id="clearBtn">Clear Timeline</button>
+                <button id="refreshBtn">Refresh Now</button>
+            </div>
+        </div>
+        <div class="kpis" id="kpis"></div>
+    </section>
+
+    <section class="grid">
+        <article class="panel flow">
+            <h2 class="title">Signal Path</h2>
+            <div class="flow-track">
+                <div class="node"><h3>1) Station</h3><p>Boot / heartbeat / transaction frames.</p></div>
+                <div class="node"><h3>2) Orchestrator</h3><p>WSS + OCPP parse + event publish.</p></div>
+                <div class="node"><h3>3) Trust</h3><p>Golden-hash lookup over Web3j.</p></div>
+                <div class="node"><h3>4) Watchdog</h3><p>Twin state + anomaly sweep.</p></div>
+                <div class="node"><h3>5) Observability</h3><p>This timeline and station state table.</p></div>
+            </div>
+        </article>
+
+        <article class="panel timeline">
+            <h2 class="title">Event Timeline</h2>
+            <table class="table" id="eventsTable">
+                <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Module</th>
+                    <th>Event</th>
+                    <th>Station</th>
+                    <th>Summary</th>
+                </tr>
+                </thead>
+                <tbody id="eventsBody"></tbody>
+            </table>
+        </article>
+
+        <article class="panel stations">
+            <h2 class="title">Station Twin Lens</h2>
+            <div id="stationsList" class="station-list"></div>
+        </article>
+    </section>
+
+    <p class="footer-note" id="statusLine">Initializing visualizer...</p>
+</div>
+
+<script>
+    const kpisEl = document.getElementById("kpis");
+    const eventsBodyEl = document.getElementById("eventsBody");
+    const stationsListEl = document.getElementById("stationsList");
+    const statusLineEl = document.getElementById("statusLine");
+    const stationInputEl = document.getElementById("stationInput");
+
+    function formatInstant(value) {
+        if (!value) return "-";
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return "-";
+        return d.toLocaleTimeString();
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function stateClass(state) {
+        const key = (state || "").toLowerCase();
+        if (key === "online") return "state-online";
+        if (key === "monitoring") return "state-monitoring";
+        if (key === "alert") return "state-alert";
+        return "state-discovered";
+    }
+
+    function moduleTagClass(module) {
+        const key = (module || "app").toLowerCase();
+        if (key.includes("orchestrator")) return "tag-orchestrator";
+        if (key.includes("watchdog")) return "tag-watchdog";
+        if (key.includes("trust")) return "tag-trust";
+        return "tag-app";
+    }
+
+    function renderKpis(snapshot) {
+        const byModule = snapshot.eventsByModule || {};
+        const cards = [
+            { label: "Total Events", value: snapshot.totalEvents ?? 0 },
+            { label: "Orchestrator", value: byModule.orchestrator ?? 0 },
+            { label: "Trust", value: byModule.trust ?? 0 },
+            { label: "Watchdog", value: byModule.watchdog ?? 0 }
+        ];
+
+        kpisEl.innerHTML = cards.map(card => `
+            <div class="kpi">
+                <div class="label">${escapeHtml(card.label)}</div>
+                <div class="value">${escapeHtml(card.value)}</div>
+            </div>
+        `).join("");
+    }
+
+    function renderEvents(events) {
+        if (!events.length) {
+            eventsBodyEl.innerHTML = '<tr><td colspan="5" class="status-line">No runtime events yet. Use "Simulate End-to-End Flow" or connect a real station.</td></tr>';
+            return;
+        }
+
+        eventsBodyEl.innerHTML = events.map(event => `
+            <tr>
+                <td class="mono">${escapeHtml(formatInstant(event.occurredAt))}</td>
+                <td><span class="tag ${moduleTagClass(event.module)}">${escapeHtml(event.module)}</span></td>
+                <td class="mono">${escapeHtml(event.type)}</td>
+                <td class="mono">${escapeHtml(event.stationId)}</td>
+                <td>${escapeHtml(event.summary)}</td>
+            </tr>
+        `).join("");
+    }
+
+    function renderStations(stations) {
+        if (!stations.length) {
+            stationsListEl.innerHTML = '<div class="status-line">No stations observed yet.</div>';
+            return;
+        }
+
+        stationsListEl.innerHTML = stations.map(s => `
+            <div class="station-card">
+                <div class="station-head">
+                    <strong class="mono">${escapeHtml(s.stationId)}</strong>
+                    <span class="state ${stateClass(s.operationalState)}">${escapeHtml(s.operationalState)}</span>
+                </div>
+                <div class="status-line">Last seen: <span class="mono">${escapeHtml(formatInstant(s.lastSeen))}</span></div>
+                <div class="status-line">Boots: <span class="mono">${escapeHtml(s.bootCount)}</span> | Tx: <span class="mono">${escapeHtml(s.transactionCount)}</span></div>
+                <div class="status-line">Firmware events: <span class="mono">${escapeHtml(s.firmwareEventCount)}</span> | Security alerts: <span class="mono">${escapeHtml(s.securityAlertCount)}</span></div>
+                <div class="status-line">Last event: <span class="mono">${escapeHtml(s.lastEventType)}</span></div>
+            </div>
+        `).join("");
+    }
+
+    async function fetchJson(url, options = {}) {
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+    }
+
+    async function refresh() {
+        try {
+            const [snapshot, events] = await Promise.all([
+                fetchJson("/visualizer/api/snapshot"),
+                fetchJson("/visualizer/api/events?limit=80")
+            ]);
+
+            renderKpis(snapshot);
+            renderEvents(events);
+            renderStations(snapshot.stations || []);
+            statusLineEl.textContent = `Live at ${new Date().toLocaleTimeString()} | events=${snapshot.totalEvents}`;
+        } catch (error) {
+            statusLineEl.textContent = `Visualizer API unavailable: ${error.message}`;
+        }
+    }
+
+    async function simulateFlow() {
+        const stationId = stationInputEl.value.trim() || "CS-101";
+        try {
+            await fetchJson(`/visualizer/api/simulate?stationId=${encodeURIComponent(stationId)}`, {
+                method: "POST"
+            });
+            await refresh();
+        } catch (error) {
+            statusLineEl.textContent = `Simulation failed: ${error.message}`;
+        }
+    }
+
+    async function clearTimeline() {
+        try {
+            await fetch("/visualizer/api/events", { method: "DELETE" });
+            await refresh();
+        } catch (error) {
+            statusLineEl.textContent = `Clear failed: ${error.message}`;
+        }
+    }
+
+    document.getElementById("simulateBtn").addEventListener("click", simulateFlow);
+    document.getElementById("refreshBtn").addEventListener("click", refresh);
+    document.getElementById("clearBtn").addEventListener("click", clearTimeline);
+
+    refresh();
+    setInterval(refresh, 2500);
+</script>
+</body>
+</html>
