@@ -39,6 +39,30 @@ public class RuntimeTraceController {
         return runtimeTraceService.snapshot();
     }
 
+    @PostMapping("/simulate-normal")
+    public RuntimeTraceService.RuntimeSnapshot simulateNormal(
+        @RequestParam(defaultValue = "CS-101") String stationId
+    ) {
+        runtimeTraceService.simulateNormalScenario(stationId);
+        return runtimeTraceService.snapshot();
+    }
+
+    @PostMapping("/simulate-tamper")
+    public RuntimeTraceService.RuntimeSnapshot simulateTamper(
+        @RequestParam(defaultValue = "CS-TAMPER-01") String stationId
+    ) {
+        runtimeTraceService.simulateTamperScenario(stationId);
+        return runtimeTraceService.snapshot();
+    }
+
+    @PostMapping("/simulate-anomaly")
+    public RuntimeTraceService.RuntimeSnapshot simulateAnomaly(
+        @RequestParam(defaultValue = "CS-ANOM-01") String stationId
+    ) {
+        runtimeTraceService.simulateAnomalyScenario(stationId);
+        return runtimeTraceService.snapshot();
+    }
+
     @DeleteMapping("/events")
     public void clear() {
         runtimeTraceService.clear();

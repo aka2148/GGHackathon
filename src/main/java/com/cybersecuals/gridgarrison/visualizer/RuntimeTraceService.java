@@ -82,6 +82,10 @@ public class RuntimeTraceService {
     }
 
     public synchronized void simulateFullFlow(String stationId) {
+        simulateNormalScenario(stationId);
+    }
+
+    public synchronized void simulateNormalScenario(String stationId) {
         String id = (stationId == null || stationId.isBlank()) ? "CS-101" : stationId;
 
         appendEvent("orchestrator", "StationBootEvent", id,
@@ -98,6 +102,42 @@ public class RuntimeTraceService {
             "Reported firmware hash matches on-chain golden hash", "INFO");
         appendEvent("watchdog", "AnomalySweepEvent", id,
             "Periodic sweep completed with no anomaly detected", "INFO");
+        appendEvent("app", "ActionTakenEvent", id,
+            "Operational state remains HEALTHY/MONITORING", "INFO");
+    }
+
+    public synchronized void simulateTamperScenario(String stationId) {
+        String id = (stationId == null || stationId.isBlank()) ? "CS-TAMPER-01" : stationId;
+
+        appendEvent("orchestrator", "StationBootEvent", id,
+            "BootNotification received and Accepted response returned", "INFO");
+        appendEvent("watchdog", "TwinRegisteredEvent", id,
+            "Digital twin registered for new station", "INFO");
+        appendEvent("orchestrator", "FirmwareStatusEvent", id,
+            "FirmwareStatusNotification dispatched to trust module", "INFO");
+        appendEvent("trust", "GoldenHashTamperedEvent", id,
+            "Live firmware hash does not match golden hash from Ganache contract", "WARN");
+        appendEvent("watchdog", "FirmwareMismatchAnomalyEvent", id,
+            "Station marked suspicious due to firmware mismatch", "WARN");
+        appendEvent("app", "ActionTakenEvent", id,
+            "ALERT raised: station isolated for manual review", "WARN");
+    }
+
+    public synchronized void simulateAnomalyScenario(String stationId) {
+        String id = (stationId == null || stationId.isBlank()) ? "CS-ANOM-01" : stationId;
+
+        appendEvent("orchestrator", "StationBootEvent", id,
+            "BootNotification received and Accepted response returned", "INFO");
+        appendEvent("watchdog", "TwinRegisteredEvent", id,
+            "Digital twin registered for new station", "INFO");
+        appendEvent("orchestrator", "TransactionEvent", id,
+            "TransactionEvent START/UPDATE captured from OCPP stream", "INFO");
+        appendEvent("watchdog", "SessionUpdatedEvent", id,
+            "Session baseline updated for anomaly profiling", "INFO");
+        appendEvent("watchdog", "EnergySpikeAnomalyEvent", id,
+            "Observed kWh exceeds learned baseline threshold", "WARN");
+        appendEvent("app", "ActionTakenEvent", id,
+            "SUSPICIOUS state applied and high-priority monitoring enabled", "INFO");
     }
 
     public record TraceEvent(Instant occurredAt,
@@ -160,6 +200,12 @@ public class RuntimeTraceService {
             }
             if (type.contains("Security") || "WARN".equalsIgnoreCase(event.severity())) {
                 securityAlertCount++;
+                operationalState = "ALERT";
+            }
+            if (type.contains("Anomaly") && "WARN".equalsIgnoreCase(event.severity())) {
+                operationalState = "SUSPICIOUS";
+            }
+            if (type.contains("Tampered") || type.contains("Mismatch")) {
                 operationalState = "ALERT";
             }
             if (type.contains("Anomaly") && securityAlertCount == 0) {

@@ -280,6 +280,7 @@
 
         .state-online,
         .state-monitoring { color: var(--ok); border-color: #86efac; background: #f0fdf4; }
+        .state-suspicious { color: var(--warn); border-color: #fcd34d; background: #fffbeb; }
         .state-alert { color: var(--bad); border-color: #fca5a5; background: #fef2f2; }
         .state-discovered { color: #334155; border-color: #cbd5e1; background: #f8fafc; }
 
@@ -311,7 +312,9 @@
             </div>
             <div class="controls">
                 <input id="stationInput" type="text" value="CS-101" aria-label="Station ID for simulation" />
-                <button id="simulateBtn" class="btn-accent">Simulate End-to-End Flow</button>
+                <button id="simulateNormalBtn" class="btn-accent">Normal Session</button>
+                <button id="simulateTamperBtn">Firmware Tamper</button>
+                <button id="simulateAnomalyBtn">Energy Anomaly</button>
                 <button id="clearBtn">Clear Timeline</button>
                 <button id="refreshBtn">Refresh Now</button>
             </div>
@@ -383,6 +386,7 @@
         const key = (state || "").toLowerCase();
         if (key === "online") return "state-online";
         if (key === "monitoring") return "state-monitoring";
+        if (key === "suspicious") return "state-suspicious";
         if (key === "alert") return "state-alert";
         return "state-discovered";
     }
@@ -414,7 +418,7 @@
 
     function renderEvents(events) {
         if (!events.length) {
-            eventsBodyEl.innerHTML = '<tr><td colspan="5" class="status-line">No runtime events yet. Use "Simulate End-to-End Flow" or connect a real station.</td></tr>';
+            eventsBodyEl.innerHTML = '<tr><td colspan="5" class="status-line">No runtime events yet. Run Normal, Firmware Tamper, or Energy Anomaly.</td></tr>';
             return;
         }
 
@@ -473,15 +477,16 @@
         }
     }
 
-    async function simulateFlow() {
+    async function simulate(endpointPath, label) {
         const stationId = stationInputEl.value.trim() || "CS-101";
         try {
-            await fetchJson(`/visualizer/api/simulate?stationId=${encodeURIComponent(stationId)}`, {
+            await fetchJson(`/visualizer/api/${endpointPath}?stationId=${encodeURIComponent(stationId)}`, {
                 method: "POST"
             });
             await refresh();
+            statusLineEl.textContent = `${label} scenario completed for ${stationId}`;
         } catch (error) {
-            statusLineEl.textContent = `Simulation failed: ${error.message}`;
+            statusLineEl.textContent = `${label} scenario failed: ${error.message}`;
         }
     }
 
@@ -494,7 +499,9 @@
         }
     }
 
-    document.getElementById("simulateBtn").addEventListener("click", simulateFlow);
+    document.getElementById("simulateNormalBtn").addEventListener("click", () => simulate("simulate-normal", "Normal"));
+    document.getElementById("simulateTamperBtn").addEventListener("click", () => simulate("simulate-tamper", "Tamper"));
+    document.getElementById("simulateAnomalyBtn").addEventListener("click", () => simulate("simulate-anomaly", "Anomaly"));
     document.getElementById("refreshBtn").addEventListener("click", refresh);
     document.getElementById("clearBtn").addEventListener("click", clearTimeline);
 
