@@ -1,10 +1,13 @@
 package com.cybersecuals.gridgarrison.orchestrator.websocket;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.security.Principal;
 
 /**
  * Public-API component of the {@code orchestrator} module.
@@ -25,9 +28,14 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 public class OcppWebSocketHandler extends TextWebSocketHandler {
 
     private final ApplicationEventPublisher eventPublisher;
+    private final boolean enforceStationIdPrincipalMatch;
 
-    public OcppWebSocketHandler(ApplicationEventPublisher eventPublisher) {
+    public OcppWebSocketHandler(
+        ApplicationEventPublisher eventPublisher,
+        @Value("${gridgarrison.security.ocpp.enforce-station-id-principal-match:false}") boolean enforceStationIdPrincipalMatch
+    ) {
         this.eventPublisher = eventPublisher;
+        this.enforceStationIdPrincipalMatch = enforceStationIdPrincipalMatch;
     }
 
     // -------------------------------------------------------------------------
@@ -37,6 +45,23 @@ public class OcppWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         String stationId = (String) session.getAttributes().get("stationId");
+        Principal principal = session.getPrincipal();
+        String principalName = principal != null ? principal.getName() : null;
+
+        if (enforceStationIdPrincipalMatch
+            && principalName != null
+            && stationId != null
+            && !principalName.equalsIgnoreCase(stationId)) {
+            log.warn("[OCPP] Rejecting station due to CN mismatch — stationId={} certCn={}",
+                stationId, principalName);
+            try {
+                session.close(CloseStatus.POLICY_VIOLATION.withReason("stationId/certificate mismatch"));
+            } catch (Exception closeEx) {
+                log.warn("[OCPP] Failed closing mismatched session — sessionId={}", session.getId(), closeEx);
+            }
+            return;
+        }
+
         log.info("[OCPP] Station connected — stationId={} sessionId={}",
             stationId, session.getId());
     }
@@ -83,7 +108,6 @@ public class OcppWebSocketHandler extends TextWebSocketHandler {
 
     private void handleBootNotification(WebSocketSession session, OcppMessage msg) throws Exception {
         log.info("[OCPP] BootNotification from stationId={}", msg.stationId());
-        // TODO: validate station certificate CN against stationId
         // Publish event for watchdog to register digital twin
         eventPublisher.publishEvent(new StationBootEvent(msg.stationId(), msg.rawPayload()));
         // Respond: Accepted with current UTC timestamp

@@ -1,7 +1,11 @@
 package com.cybersecuals.gridgarrison.visualizer;
 
-import java.util.List;
+import com.cybersecuals.gridgarrison.orchestrator.websocket.TransactionEvent;
 
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -14,9 +18,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class RuntimeTraceController {
 
     private final RuntimeTraceService runtimeTraceService;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public RuntimeTraceController(RuntimeTraceService runtimeTraceService) {
+    public RuntimeTraceController(RuntimeTraceService runtimeTraceService,
+                                  ApplicationEventPublisher eventPublisher) {
         this.runtimeTraceService = runtimeTraceService;
+        this.eventPublisher = eventPublisher;
     }
 
     @GetMapping("/snapshot")
@@ -44,6 +51,7 @@ public class RuntimeTraceController {
         @RequestParam(defaultValue = "CS-101") String stationId
     ) {
         runtimeTraceService.simulateNormalScenario(stationId);
+        publishSimulatedTransaction(stationId, "START");
         return runtimeTraceService.snapshot();
     }
 
@@ -60,11 +68,18 @@ public class RuntimeTraceController {
         @RequestParam(defaultValue = "CS-ANOM-01") String stationId
     ) {
         runtimeTraceService.simulateAnomalyScenario(stationId);
+        publishSimulatedTransaction(stationId, "UPDATE");
         return runtimeTraceService.snapshot();
     }
 
     @DeleteMapping("/events")
     public void clear() {
         runtimeTraceService.clear();
+    }
+
+    private void publishSimulatedTransaction(String stationId, String state) {
+        String payload = "{\"sessionId\":\"SIM-" + UUID.randomUUID() + "\",\"eventType\":\""
+            + state + "\",\"source\":\"visualizer\"}";
+        eventPublisher.publishEvent(new TransactionEvent(stationId, payload));
     }
 }

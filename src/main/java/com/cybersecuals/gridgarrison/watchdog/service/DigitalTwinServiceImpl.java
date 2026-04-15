@@ -2,10 +2,12 @@ package com.cybersecuals.gridgarrison.watchdog.service;
 
 import com.cybersecuals.gridgarrison.shared.dto.ChargingSession;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.modulith.ApplicationModuleListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,6 +28,12 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
 
     /** Energy spike threshold — sessions > (baseline * factor) are flagged. */
     private static final double ENERGY_SPIKE_FACTOR = 3.0;
+    private static final int RAPID_RECONNECT_THRESHOLD = 3;
+    private static final Duration RAPID_RECONNECT_WINDOW = Duration.ofMinutes(10);
+    private static final Duration SHORT_SESSION_DURATION = Duration.ofMinutes(2);
+
+    @Value("${gridgarrison.watchdog.heartbeat-timeout-ms:180000}")
+    private long heartbeatTimeoutMs;
 
     // stationId → twin state
     private final Map<String, MutableTwin> twins = new ConcurrentHashMap<>();
@@ -78,7 +86,41 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
             }
         }
 
-        // TODO: add RAPID_RECONNECT, CLOCK_DRIFT, HEARTBEAT_MISSED rules
+        // Rule 2: frequent short sessions in a short window (demo-grade reconnect heuristic)
+        long rapidReconnectCount = sessions.stream()
+            .filter(s -> s.getEndedAt() != null && s.getStartedAt() != null)
+            .filter(s -> s.getEndedAt().isAfter(Instant.now().minus(RAPID_RECONNECT_WINDOW)))
+            .filter(s -> Duration.between(s.getStartedAt(), s.getEndedAt()).compareTo(SHORT_SESSION_DURATION) <= 0)
+            .count();
+        if (rapidReconnectCount >= RAPID_RECONNECT_THRESHOLD) {
+            AnomalyReport report = AnomalyReport.builder()
+                .stationId(stationId)
+                .type(AnomalyReport.AnomalyType.RAPID_RECONNECT)
+                .description("Multiple short sessions observed in a short window")
+                .observedValue(rapidReconnectCount)
+                .expectedValue(RAPID_RECONNECT_THRESHOLD - 1)
+                .detectedAt(Instant.now())
+                .build();
+            twin.incrementAnomalyCount();
+            log.warn("[Watchdog] ANOMALY detected — stationId={} type=RAPID_RECONNECT", stationId);
+            return Optional.of(report);
+        }
+
+        // Rule 3: heartbeat timeout
+        long silenceMs = Duration.between(twin.lastHeartbeat, Instant.now()).toMillis();
+        if (silenceMs > heartbeatTimeoutMs) {
+            AnomalyReport report = AnomalyReport.builder()
+                .stationId(stationId)
+                .type(AnomalyReport.AnomalyType.HEARTBEAT_MISSED)
+                .description("Station heartbeat/session updates have timed out")
+                .observedValue(silenceMs)
+                .expectedValue(heartbeatTimeoutMs)
+                .detectedAt(Instant.now())
+                .build();
+            twin.incrementAnomalyCount();
+            log.warn("[Watchdog] ANOMALY detected — stationId={} type=HEARTBEAT_MISSED", stationId);
+            return Optional.of(report);
+        }
 
         return Optional.empty();
     }

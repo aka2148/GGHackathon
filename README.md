@@ -79,6 +79,35 @@ orchestrator  ──[TransactionEvent]───► watchdog  (updates session st
 | `GG_RPC_URL` | Ethereum JSON-RPC endpoint | `http://localhost:8545` |
 | `GG_WALLET_KEY` | Admin wallet private key | `0x000...1` |
 | `GG_CONTRACT_ADDR` | FirmwareRegistry contract address | `0x000...0` |
+| `GG_BOOTSTRAP_ENABLED` | Deploy and seed contract at startup | `false` |
+| `GG_SEED_GOLDEN_HASHES` | Seed station hashes map | `{}` |
 | `GG_DB_URL` | JDBC URL | H2 in-memory |
 | `GG_SERVER_KS_PASSWORD` | Server keystore password | `changeit` |
 | `GG_CA_TS_PASSWORD` | CA truststore password | `changeit` |
+
+## Ganache Bootstrap (Deploy + Seed)
+
+Use this once after Ganache starts to deploy `FirmwareRegistry` and seed known station hashes.
+
+PowerShell example:
+
+```powershell
+$env:GG_RPC_URL = "http://127.0.0.1:7545"
+$env:GG_WALLET_KEY = "<private-key-of-ganache-account-0>"
+$env:GG_BOOTSTRAP_ENABLED = "true"
+$env:GG_SEED_GOLDEN_HASHES = "{'CS-101':'0xabc123','CS-102':'0xdef456'}"
+$env:GG_CONTRACT_ADDR = "0x0000000000000000000000000000000000000000"
+mvn spring-boot:run
+```
+
+Startup logs will print the deployed contract address:
+
+```text
+[Bootstrap] Deployed contract address=0x...
+[Bootstrap] Set GG_CONTRACT_ADDR=0x... for future runs
+```
+
+For normal runs after bootstrap, set:
+
+- `GG_BOOTSTRAP_ENABLED=false`
+- `GG_CONTRACT_ADDR=<deployed-address>`

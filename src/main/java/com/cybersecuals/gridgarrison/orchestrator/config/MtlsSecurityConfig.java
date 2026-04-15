@@ -2,6 +2,7 @@ package com.cybersecuals.gridgarrison.orchestrator.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -20,35 +21,35 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 class MtlsSecurityConfig {
 
+    @Value("${gridgarrison.security.visualizer-public:true}")
+    private boolean visualizerPublic;
+
     @Bean
     SecurityFilterChain ocppSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            // All /ocpp/** endpoints require a verified client certificate
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/ocpp/**").authenticated()
-                .requestMatchers(
-                    "/actuator/health",
-                    "/visualizer",
-                    "/visualizer.html",
-                    "/visualizer/**"
-                ).permitAll()
-                .anyRequest().denyAll()
-            )
             // x509 extracts the CN from the client cert as the principal
             .x509(x509 -> x509
                 .subjectPrincipalRegex("CN=(.*?)(?:,|$)")
-                .userDetailsService(certCn -> {
-                    // In production: look up station/EV in identity registry
-                    // For now: accept any cert signed by the trusted CA
-                    return org.springframework.security.core.userdetails.User
-                        .withUsername(certCn)
-                        .password("")
-                        .roles("STATION")
-                        .build();
-                })
+                .userDetailsService(certCn -> org.springframework.security.core.userdetails.User
+                    .withUsername(certCn)
+                    .password("{noop}cert-authenticated")
+                    .roles("STATION")
+                    .build())
             )
+            // x509 extracts the CN from the client cert as the principal
             // Disable CSRF — stateless WebSocket sessions
             .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**"));
+
+        http.authorizeHttpRequests(auth -> {
+            auth.requestMatchers("/ocpp/**").authenticated();
+            auth.requestMatchers("/actuator/health").permitAll();
+            if (visualizerPublic) {
+                auth.requestMatchers("/visualizer", "/visualizer.html", "/visualizer/**").permitAll();
+            } else {
+                auth.requestMatchers("/visualizer", "/visualizer.html", "/visualizer/**").authenticated();
+            }
+            auth.anyRequest().denyAll();
+        });
 
         return http.build();
     }

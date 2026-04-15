@@ -53,15 +53,3 @@ class OcppResponse {
 // Internal domain events published to the Spring context.
 // Other modules subscribe via @ApplicationModuleListener — no direct coupling.
 // ---------------------------------------------------------------------------
-
-/** Published when a station sends BootNotification. */
-record StationBootEvent(String stationId, String rawPayload) {}
-
-/** Published when a TransactionEvent (start/update/end) is received. */
-record TransactionEvent(String stationId, String rawPayload) {}
-
-/** Published when a station reports a firmware status change. */
-record FirmwareStatusEvent(String stationId, String rawPayload) {}
-
-/** Published when a SecurityEventNotification is received. */
-record SecurityAlertEvent(String stationId, String rawPayload) {}

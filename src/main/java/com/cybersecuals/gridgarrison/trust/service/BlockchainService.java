@@ -31,4 +31,16 @@ public interface BlockchainService {
      */
     CompletableFuture<String> registerGoldenHash(String stationId,
                                                   String goldenHash);
+
+    /**
+     * Record a charging-session state transition on-chain for auditability.
+     *
+     * @param stationId station identity
+     * @param sessionId logical session id (or transaction id)
+     * @param state     state label such as START, UPDATE, END
+     * @return transaction hash of the emitted session event transaction
+     */
+    CompletableFuture<String> recordSessionEvent(String stationId,
+                                                 String sessionId,
+                                                 String state);
 }
