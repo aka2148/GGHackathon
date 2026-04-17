@@ -16,8 +16,9 @@ server:
     key-store-type:       PKCS12
     key-store-password:   ${GG_SERVER_KS_PASSWORD:changeit}
     key-alias:            gridgarrison-server
-    # mTLS: require client certificate
-    client-auth:          ${GG_CLIENT_AUTH:need}
+    # mTLS for OCPP is still enforced by Spring Security; default to optional certs
+    # at the connector so local browser access to static demo pages keeps working.
+    client-auth:          ${GG_CLIENT_AUTH:want}
     trust-store:          classpath:certs/gridgarrison-ca-trust.p12
     trust-store-type:     PKCS12
     trust-store-password: ${GG_CA_TS_PASSWORD:changeit}
@@ -82,6 +83,13 @@ gridgarrison:
 
   watchdog:
     sweep-interval-ms: 60000
+
+  escrow:
+    default-target-soc: ${GG_ESCROW_TARGET_SOC:80}
+    default-timeout-seconds: ${GG_ESCROW_TIMEOUT_SECONDS:3600}
+    default-deposit-wei: ${GG_ESCROW_DEPOSIT_WEI:1000000000000000}
+    auto-deposit-enabled: ${GG_ESCROW_AUTO_DEPOSIT_ENABLED:true}
+    default-charger-wallet: ${GG_ESCROW_CHARGER_WALLET:}
 
 # ---------------------------------------------------------------------------
 # Actuator

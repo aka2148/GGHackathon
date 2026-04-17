@@ -89,6 +89,28 @@ class EscrowServiceImpl implements EscrowService {
         });
     }
 
+    // ── CREATED → FUNDED ──────────────────────────────────────────────────────
+
+    @Override
+    public CompletableFuture<String> deposit(String escrowAddress, BigInteger amountWei) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                if (amountWei == null || amountWei.signum() <= 0) {
+                    throw new IllegalArgumentException("amountWei must be greater than zero");
+                }
+
+                var receipt = loadEscrow(escrowAddress)
+                    .deposit(amountWei)
+                    .send();
+                log.info("[Escrow] deposit amountWei={} tx={} escrow={}",
+                    amountWei, receipt.getTransactionHash(), escrowAddress);
+                return receipt.getTransactionHash();
+            } catch (Exception e) {
+                throw new RuntimeException("deposit failed for escrow=" + escrowAddress, e);
+            }
+        });
+    }
+
     // ── FUNDED → AUTHORIZED ───────────────────────────────────────────────────
 
     @Override

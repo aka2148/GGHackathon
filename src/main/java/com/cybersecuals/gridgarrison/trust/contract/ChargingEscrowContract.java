@@ -1,133 +1,249 @@
 package com.cybersecuals.gridgarrison.trust.contract;
 
-/*
- * ════════════════════════════════════════════════════════════════════════════
- * ChargingEscrowContract — Web3j auto-generated wrapper
- * ════════════════════════════════════════════════════════════════════════════
- *
- * DO NOT write this file by hand.
- * Generate it from the compiled Solidity ABI using the Web3j CLI:
- *
- * Step 1 — Compile ChargingEscrow.sol with solc:
- *
- *   solc --abi --bin contracts/ChargingEscrow.sol -o build/escrow/
- *
- * Step 2 — Generate the Java wrapper:
- *
- *   web3j generate solidity \
- *     -a build/escrow/ChargingEscrow.abi \
- *     -b build/escrow/ChargingEscrow.bin \
- *     -o src/main/java \
- *     -p com.cybersecuals.gridgarrison.trust.contract
- *
- * This produces ChargingEscrowContract.java with typed methods for:
- *   deploy(...)
- *   load(address, web3j, credentials, gasProvider)
- *   verifyStation(bytes32 liveHash)     → RemoteCall<TransactionReceipt>
- *   startCharging(String sessionId)     → RemoteCall<TransactionReceipt>
- *   updateSoc(BigInteger soc)           → RemoteCall<TransactionReceipt>
- *   completeSession()                   → RemoteCall<TransactionReceipt>
- *   releaseFunds()                      → RemoteCall<TransactionReceipt>
- *   refund(String reason)               → RemoteCall<TransactionReceipt>
- *   cancel(String reason)               → RemoteCall<TransactionReceipt>
- *   getState()                          → RemoteCall<BigInteger>
- *   getBalance()                        → RemoteCall<BigInteger>
- *
- * ── Quick setup if you don't have solc installed ─────────────────────────────
- *
- *   npm install -g solc          (installs solcjs)
- *   solcjs --abi --bin contracts/ChargingEscrow.sol --output-dir build/escrow/
- *
- * Or use the Truffle/Hardhat compile step if you already have those configured
- * for the FirmwareRegistry contract.
- *
- * ── Truffle alternative ───────────────────────────────────────────────────────
- *
- *   1. Put ChargingEscrow.sol in your contracts/ folder.
- *   2. truffle compile
- *   3. web3j generate truffle \
- *        --truffle-json build/contracts/ChargingEscrow.json \
- *        -o src/main/java \
- *        -p com.cybersecuals.gridgarrison.trust.contract
- *
- * ════════════════════════════════════════════════════════════════════════════
- * Until you generate the real file, this placeholder keeps the project
- * compiling. Replace it entirely with the generated output.
- * ════════════════════════════════════════════════════════════════════════════
- */
-
-import org.web3j.protocol.Web3j;
+import org.web3j.abi.TypeReference;
+import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.Type;
+import org.web3j.abi.datatypes.Utf8String;
+import org.web3j.abi.datatypes.generated.Bytes32;
+import org.web3j.abi.datatypes.generated.Uint8;
+import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.crypto.Credentials;
-import org.web3j.tx.Contract;
-import org.web3j.tx.gas.ContractGasProvider;
+import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.RemoteCall;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.tx.Contract;
+import org.web3j.tx.TransactionManager;
+import org.web3j.tx.gas.ContractGasProvider;
 
+import java.io.InputStream;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
 
 /**
- * Placeholder — replace with Web3j-generated wrapper after compiling ChargingEscrow.sol.
- * See class-level comment above for the exact commands to run.
+ * Web3j wrapper for the ChargingEscrow contract.
+ *
+ * The deploy binary is loaded from src/main/resources/solidity/ChargingEscrow.bin,
+ * which is generated from the truffle artifact at build/contracts/ChargingEscrow.json.
  */
 public class ChargingEscrowContract extends Contract {
 
-    // ABI and BIN will be inlined by the generator — leave empty in placeholder
-    private static final String BINARY = "";
+    public static final String BINARY = loadBinaryFromResources();
 
-    protected ChargingEscrowContract(String contractAddress, Web3j web3j,
-                                      Credentials credentials, ContractGasProvider gasProvider) {
+    protected ChargingEscrowContract(String contractAddress,
+                                     Web3j web3j,
+                                     Credentials credentials,
+                                     ContractGasProvider gasProvider) {
         super(BINARY, contractAddress, web3j, credentials, gasProvider);
     }
 
-    public static RemoteCall<ChargingEscrowContract> deploy(
-            Web3j web3j, Credentials credentials, ContractGasProvider gasProvider,
-            String operator, String charger, String stationId,
-            byte[] goldenHash, BigInteger targetSoc, BigInteger timeoutSeconds) {
-        // Generator fills this in — placeholder throws to make misconfiguration obvious
-        throw new UnsupportedOperationException(
-            "ChargingEscrowContract is a placeholder. " +
-            "Generate the real wrapper with: web3j generate solidity -a ChargingEscrow.abi -b ChargingEscrow.bin");
+    protected ChargingEscrowContract(String contractAddress,
+                                     Web3j web3j,
+                                     TransactionManager transactionManager,
+                                     ContractGasProvider gasProvider) {
+        super(BINARY, contractAddress, web3j, transactionManager, gasProvider);
     }
 
-    public static ChargingEscrowContract load(String address, Web3j web3j,
-                                               Credentials credentials,
-                                               ContractGasProvider gasProvider) {
+    public static RemoteCall<ChargingEscrowContract> deploy(
+        Web3j web3j,
+        Credentials credentials,
+        ContractGasProvider gasProvider,
+        String operator,
+        String charger,
+        String stationId,
+        byte[] goldenHash,
+        BigInteger targetSoc,
+        BigInteger timeoutSeconds
+    ) {
+        String encodedConstructor = FunctionEncoder.encodeConstructor(Arrays.asList(
+            new Address(operator),
+            new Address(charger),
+            new Utf8String(stationId),
+            new Bytes32(normalizeBytes32(goldenHash)),
+            new Uint8(targetSoc),
+            new Uint256(timeoutSeconds)
+        ));
+
+        return deployRemoteCall(
+            ChargingEscrowContract.class,
+            web3j,
+            credentials,
+            gasProvider,
+            BINARY,
+            encodedConstructor
+        );
+    }
+
+    public static RemoteCall<ChargingEscrowContract> deploy(
+        Web3j web3j,
+        TransactionManager transactionManager,
+        ContractGasProvider gasProvider,
+        String operator,
+        String charger,
+        String stationId,
+        byte[] goldenHash,
+        BigInteger targetSoc,
+        BigInteger timeoutSeconds
+    ) {
+        String encodedConstructor = FunctionEncoder.encodeConstructor(Arrays.asList(
+            new Address(operator),
+            new Address(charger),
+            new Utf8String(stationId),
+            new Bytes32(normalizeBytes32(goldenHash)),
+            new Uint8(targetSoc),
+            new Uint256(timeoutSeconds)
+        ));
+
+        return deployRemoteCall(
+            ChargingEscrowContract.class,
+            web3j,
+            transactionManager,
+            gasProvider,
+            BINARY,
+            encodedConstructor
+        );
+    }
+
+    public static ChargingEscrowContract load(String address,
+                                              Web3j web3j,
+                                              Credentials credentials,
+                                              ContractGasProvider gasProvider) {
         return new ChargingEscrowContract(address, web3j, credentials, gasProvider);
     }
 
+    public static ChargingEscrowContract load(String address,
+                                              Web3j web3j,
+                                              TransactionManager transactionManager,
+                                              ContractGasProvider gasProvider) {
+        return new ChargingEscrowContract(address, web3j, transactionManager, gasProvider);
+    }
+
+    public RemoteCall<TransactionReceipt> deposit(BigInteger weiAmount) {
+        final Function function = new Function(
+            "deposit",
+            Collections.emptyList(),
+            Collections.emptyList()
+        );
+        return executeRemoteCallTransaction(function, weiAmount);
+    }
+
     public RemoteCall<TransactionReceipt> verifyStation(byte[] liveHash) {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "verifyStation",
+            Arrays.asList(new Bytes32(normalizeBytes32(liveHash))),
+            Collections.emptyList()
+        );
+        return executeRemoteCallTransaction(function);
     }
 
     public RemoteCall<TransactionReceipt> startCharging(String sessionId) {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "startCharging",
+            Arrays.asList(new Utf8String(sessionId)),
+            Collections.emptyList()
+        );
+        return executeRemoteCallTransaction(function);
     }
 
     public RemoteCall<TransactionReceipt> updateSoc(BigInteger soc) {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "updateSoc",
+            Arrays.asList(new Uint8(soc)),
+            Collections.emptyList()
+        );
+        return executeRemoteCallTransaction(function);
     }
 
     public RemoteCall<TransactionReceipt> completeSession() {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "completeSession",
+            Collections.emptyList(),
+            Collections.emptyList()
+        );
+        return executeRemoteCallTransaction(function);
     }
 
     public RemoteCall<TransactionReceipt> releaseFunds() {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "releaseFunds",
+            Collections.emptyList(),
+            Collections.emptyList()
+        );
+        return executeRemoteCallTransaction(function);
     }
 
     public RemoteCall<TransactionReceipt> refund(String reason) {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "refund",
+            Arrays.asList(new Utf8String(reason)),
+            Collections.emptyList()
+        );
+        return executeRemoteCallTransaction(function);
     }
 
     public RemoteCall<TransactionReceipt> cancel(String reason) {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "cancel",
+            Arrays.asList(new Utf8String(reason)),
+            Collections.emptyList()
+        );
+        return executeRemoteCallTransaction(function);
     }
 
     public RemoteCall<BigInteger> getState() {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "getState",
+            Collections.emptyList(),
+            Collections.singletonList(new TypeReference<Uint8>() { })
+        );
+        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
     }
 
     public RemoteCall<BigInteger> getBalance() {
-        throw new UnsupportedOperationException("Placeholder — generate real wrapper");
+        final Function function = new Function(
+            "getBalance",
+            Collections.emptyList(),
+            Collections.singletonList(new TypeReference<Uint256>() { })
+        );
+        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
+    }
+
+    private static byte[] normalizeBytes32(byte[] value) {
+        byte[] normalized = new byte[32];
+        if (value == null || value.length == 0) {
+            return normalized;
+        }
+
+        int bytesToCopy = Math.min(value.length, 32);
+        System.arraycopy(
+            value,
+            value.length - bytesToCopy,
+            normalized,
+            32 - bytesToCopy,
+            bytesToCopy
+        );
+        return normalized;
+    }
+
+    private static String loadBinaryFromResources() {
+        try (InputStream input = ChargingEscrowContract.class
+            .getClassLoader()
+            .getResourceAsStream("solidity/ChargingEscrow.bin")) {
+            if (input == null) {
+                throw new IllegalStateException("Missing resource solidity/ChargingEscrow.bin");
+            }
+
+            String bytecode = new String(input.readAllBytes(), StandardCharsets.UTF_8).trim();
+            if (bytecode.isEmpty()) {
+                throw new IllegalStateException("Resource solidity/ChargingEscrow.bin is empty");
+            }
+
+            return bytecode.startsWith("0x") ? bytecode : "0x" + bytecode;
+        } catch (Exception ex) {
+            throw new ExceptionInInitializerError("Failed to load ChargingEscrow bytecode: " + ex.getMessage());
+        }
     }
 }

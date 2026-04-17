@@ -2,7 +2,6 @@ package com.cybersecuals.gridgarrison.orchestrator.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -20,9 +19,6 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 class MtlsSecurityConfig {
-
-    @Value("${gridgarrison.security.visualizer-public:true}")
-    private boolean visualizerPublic;
 
     @Bean
     @SuppressWarnings("unused")
@@ -44,21 +40,14 @@ class MtlsSecurityConfig {
         http.authorizeHttpRequests(auth -> {
             auth.requestMatchers("/ocpp/**").authenticated();
             auth.requestMatchers("/actuator/health").permitAll();
-            if (visualizerPublic) {
-                auth.requestMatchers(
-                    "/visualizer", "/visualizer.html", "/visualizer/**",
-                    "/panel", "/panel.html",
-                    "/ev-control-panel", "/ev-control-panel.html",
-                    "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
-                ).permitAll();
-            } else {
-                auth.requestMatchers(
-                    "/visualizer", "/visualizer.html", "/visualizer/**",
-                    "/panel", "/panel.html",
-                    "/ev-control-panel", "/ev-control-panel.html",
-                    "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
-                ).authenticated();
-            }
+            // Demo UI and supporting APIs must remain browser-accessible in local runs.
+            auth.requestMatchers(
+                "/visualizer", "/visualizer.html", "/visualizer/**",
+                "/panel", "/panel.html", "/panel/**",
+                "/ev-control-panel", "/ev-control-panel.html", "/ev-control-panel/**",
+                "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
+                "/trust/api/escrow/**"
+            ).permitAll();
             auth.anyRequest().denyAll();
         });
 

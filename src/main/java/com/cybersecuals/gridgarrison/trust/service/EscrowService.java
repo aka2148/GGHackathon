@@ -37,6 +37,16 @@ public interface EscrowService {
                                             long   timeoutSeconds);
 
     /**
+     * Deposits buyer funds into escrow.
+     * Sends deposit() -> CREATED -> FUNDED.
+     *
+     * @param escrowAddress deployed escrow contract address
+     * @param amountWei amount to deposit in wei
+     * @return transaction hash
+     */
+    CompletableFuture<String> deposit(String escrowAddress, BigInteger amountWei);
+
+    /**
      * Called by the backend after BlockchainServiceImpl confirms hash is VERIFIED.
      * Sends verifyStation() to the escrow contract → FUNDED → AUTHORIZED.
      *

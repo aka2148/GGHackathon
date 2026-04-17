@@ -1,0 +1,533 @@
+[
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "address",
+                           "name":  "_operator",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "address payable",
+                           "name":  "_charger",
+                           "type":  "address"
+                       },
+                       {
+                           "internalType":  "string",
+                           "name":  "_stationId",
+                           "type":  "string"
+                       },
+                       {
+                           "internalType":  "bytes32",
+                           "name":  "_goldenHash",
+                           "type":  "bytes32"
+                       },
+                       {
+                           "internalType":  "uint8",
+                           "name":  "_targetSoc",
+                           "type":  "uint8"
+                       },
+                       {
+                           "internalType":  "uint256",
+                           "name":  "_sessionTimeout",
+                           "type":  "uint256"
+                       }
+                   ],
+        "stateMutability":  "nonpayable",
+        "type":  "constructor"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "reason",
+                           "type":  "string"
+                       }
+                   ],
+        "name":  "Cancelled",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "sessionId",
+                           "type":  "string"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "targetSoc",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "ChargingStarted",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "buyer",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "amount",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "Deposited",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "charger",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "amount",
+                           "type":  "uint256"
+                       }
+                   ],
+        "name":  "FundsReleased",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  true,
+                           "internalType":  "address",
+                           "name":  "buyer",
+                           "type":  "address"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint256",
+                           "name":  "amount",
+                           "type":  "uint256"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "reason",
+                           "type":  "string"
+                       }
+                   ],
+        "name":  "Refunded",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "sessionId",
+                           "type":  "string"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "finalSoc",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "SessionCompleted",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "previousSoc",
+                           "type":  "uint8"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "uint8",
+                           "name":  "currentSoc",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "SocUpdated",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "stationId",
+                           "type":  "string"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "bytes32",
+                           "name":  "liveHash",
+                           "type":  "bytes32"
+                       }
+                   ],
+        "name":  "StationVerified",
+        "type":  "event"
+    },
+    {
+        "anonymous":  false,
+        "inputs":  [
+                       {
+                           "indexed":  false,
+                           "internalType":  "string",
+                           "name":  "stationId",
+                           "type":  "string"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "bytes32",
+                           "name":  "liveHash",
+                           "type":  "bytes32"
+                       },
+                       {
+                           "indexed":  false,
+                           "internalType":  "bytes32",
+                           "name":  "goldenHash",
+                           "type":  "bytes32"
+                       }
+                   ],
+        "name":  "VerificationFailed",
+        "type":  "event"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "amount",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "buyer",
+        "outputs":  [
+                        {
+                            "internalType":  "address payable",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "charger",
+        "outputs":  [
+                        {
+                            "internalType":  "address payable",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "createdAt",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "currentSoc",
+        "outputs":  [
+                        {
+                            "internalType":  "uint8",
+                            "name":  "",
+                            "type":  "uint8"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "goldenHash",
+        "outputs":  [
+                        {
+                            "internalType":  "bytes32",
+                            "name":  "",
+                            "type":  "bytes32"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "operator",
+        "outputs":  [
+                        {
+                            "internalType":  "address",
+                            "name":  "",
+                            "type":  "address"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "sessionId",
+        "outputs":  [
+                        {
+                            "internalType":  "string",
+                            "name":  "",
+                            "type":  "string"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "sessionTimeout",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "state",
+        "outputs":  [
+                        {
+                            "internalType":  "enum ChargingEscrow.SessionState",
+                            "name":  "",
+                            "type":  "uint8"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "stationId",
+        "outputs":  [
+                        {
+                            "internalType":  "string",
+                            "name":  "",
+                            "type":  "string"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "targetSoc",
+        "outputs":  [
+                        {
+                            "internalType":  "uint8",
+                            "name":  "",
+                            "type":  "uint8"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "deposit",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "payable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "bytes32",
+                           "name":  "liveHash",
+                           "type":  "bytes32"
+                       }
+                   ],
+        "name":  "verifyStation",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "string",
+                           "name":  "_sessionId",
+                           "type":  "string"
+                       }
+                   ],
+        "name":  "startCharging",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "uint8",
+                           "name":  "soc",
+                           "type":  "uint8"
+                       }
+                   ],
+        "name":  "updateSoc",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "completeSession",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "releaseFunds",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "string",
+                           "name":  "reason",
+                           "type":  "string"
+                       }
+                   ],
+        "name":  "refund",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+                       {
+                           "internalType":  "string",
+                           "name":  "reason",
+                           "type":  "string"
+                       }
+                   ],
+        "name":  "cancel",
+        "outputs":  [
+
+                    ],
+        "stateMutability":  "nonpayable",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "getState",
+        "outputs":  [
+                        {
+                            "internalType":  "enum ChargingEscrow.SessionState",
+                            "name":  "",
+                            "type":  "uint8"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    },
+    {
+        "inputs":  [
+
+                   ],
+        "name":  "getBalance",
+        "outputs":  [
+                        {
+                            "internalType":  "uint256",
+                            "name":  "",
+                            "type":  "uint256"
+                        }
+                    ],
+        "stateMutability":  "view",
+        "type":  "function"
+    }
+]

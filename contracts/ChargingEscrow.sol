@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.17;
 
 /**
  * ChargingEscrow — payment escrow for a single EV charging session.
@@ -79,13 +79,13 @@ contract ChargingEscrow {
     // ── Constructor ───────────────────────────────────────────────────────────
 
     /**
- * @param _operator
- * @param _charger
- * @param _stationId
- * @param _goldenHash
- * @param _targetSoc
- * @param _sessionTimeout
- */
+     * @param _operator Backend operator wallet address that is allowed to run admin transitions.
+     * @param _charger Wallet address that receives the released payment after successful charging.
+     * @param _stationId Human-readable station identifier used for events and audit context.
+     * @param _goldenHash Canonical firmware hash baseline stored for station verification.
+     * @param _targetSoc Requested charging target percentage in the range 1 to 100.
+     * @param _sessionTimeout Timeout in seconds used for buyer self-cancel protection.
+     */
     constructor(
     address _operator,
     address payable _charger,
