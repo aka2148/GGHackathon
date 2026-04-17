@@ -1,5 +1,6 @@
 package com.cybersecuals.gridgarrison.orchestrator.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -20,10 +21,28 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 class MtlsSecurityConfig {
 
+    @Value("${GG_SSL_ENABLED:false}")
+    private boolean sslEnabled;
+
     @Bean
     @SuppressWarnings("unused")
     SecurityFilterChain ocppSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+            .authorizeHttpRequests(auth -> {
+                if (sslEnabled) {
+                    auth.requestMatchers("/ocpp/**").authenticated();
+                } else {
+                    auth.requestMatchers("/ocpp/**").permitAll();
+                }
+
+                auth.requestMatchers(
+                        "/actuator/health",
+                        "/visualizer",
+                        "/visualizer.html",
+                        "/visualizer/**"
+                    ).permitAll()
+                    .anyRequest().denyAll();
+            })
             // x509 extracts the CN from the client cert as the principal
             .x509(x509 -> x509
                 .subjectPrincipalRegex("CN=(.*?)(?:,|$)")

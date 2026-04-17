@@ -108,6 +108,7 @@ public class OcppWebSocketHandler extends TextWebSocketHandler {
 
     private void handleBootNotification(WebSocketSession session, OcppMessage msg) throws Exception {
         log.info("[OCPP] BootNotification from stationId={}", msg.stationId());
+        // CN-to-stationId validation is enforced during WebSocket handshake.
         // Publish event for watchdog to register digital twin
         eventPublisher.publishEvent(new StationBootEvent(msg.stationId(), msg.rawPayload()));
         // Respond: Accepted with current UTC timestamp

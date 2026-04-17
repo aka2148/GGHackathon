@@ -2,3 +2,67 @@ scripts/local-env.ps1
 *.class
 target/
 build/
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.bak
+release.properties
+.flattened-pom.xml
+
+# IDE
+.vscode/
+.idea/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Java
+*.class
+*.jar
+*.war
+*.nar
+*.zip
+*.tar.gz
+*.rar
+
+# Gradle (if used)
+.gradle/
+build/
+
+# Node (for any frontend tools)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+*.properties.bak
+
+# Local dev TLS/mTLS artifacts (never commit private key material)
+src/main/resources/certs/*.p12
+src/main/resources/certs/*.jks
+src/main/resources/certs/*.key
+src/main/resources/certs/*.pem
+src/main/resources/certs/*.crt
+src/main/resources/certs/*.cer
+ev-simulator/simulator-app/src/main/resources/certs/*.p12
+ev-simulator/simulator-app/src/main/resources/certs/*.jks
+ev-simulator/simulator-app/src/main/resources/certs/*.key
+ev-simulator/simulator-app/src/main/resources/certs/*.pem
+ev-simulator/simulator-app/src/main/resources/certs/*.crt
+ev-simulator/simulator-app/src/main/resources/certs/*.cer
+
+# OS files
+Thumbs.db
+*.log
+
+# Generated files
+*.generated.java
+/target/
