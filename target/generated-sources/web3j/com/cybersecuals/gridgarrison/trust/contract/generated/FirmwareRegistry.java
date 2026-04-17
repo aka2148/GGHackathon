@@ -1,0 +1,322 @@
+package com.cybersecuals.gridgarrison.trust.contract.generated;
+
+import io.reactivex.Flowable;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.Callable;
+import org.web3j.abi.EventEncoder;
+import org.web3j.abi.TypeReference;
+import org.web3j.abi.datatypes.Address;
+import org.web3j.abi.datatypes.Event;
+import org.web3j.abi.datatypes.Function;
+import org.web3j.abi.datatypes.Type;
+import org.web3j.abi.datatypes.Utf8String;
+import org.web3j.abi.datatypes.generated.Uint256;
+import org.web3j.crypto.Credentials;
+import org.web3j.protocol.Web3j;
+import org.web3j.protocol.core.DefaultBlockParameter;
+import org.web3j.protocol.core.RemoteCall;
+import org.web3j.protocol.core.RemoteFunctionCall;
+import org.web3j.protocol.core.methods.request.EthFilter;
+import org.web3j.protocol.core.methods.response.BaseEventResponse;
+import org.web3j.protocol.core.methods.response.Log;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.tuples.generated.Tuple4;
+import org.web3j.tx.Contract;
+import org.web3j.tx.TransactionManager;
+import org.web3j.tx.gas.ContractGasProvider;
+
+/**
+ * <p>Auto generated code.
+ * <p><strong>Do not modify!</strong>
+ * <p>Please use the <a href="https://docs.web3j.io/command_line.html">web3j command line tools</a>,
+ * or the org.web3j.codegen.SolidityFunctionWrapperGenerator in the 
+ * <a href="https://github.com/web3j/web3j/tree/master/codegen">codegen module</a> to update.
+ *
+ * <p>Generated with web3j version 4.10.3.
+ */
+@SuppressWarnings("rawtypes")
+public class FirmwareRegistry extends Contract {
+    public static final String BINARY = "6080604052348015600e575f5ffd5b505f80546001600160a01b03191633179055610c8a8061002d5f395ff3fe608060405234801561000f575f5ffd5b5060043610610060575f3560e01c806331e4c6a2146100645780638da5cb5b146100795780639876e618146100a8578063c294902a146100bb578063dcb61c92146100ce578063e4a2de1e146100ee575b5f5ffd5b6100776100723660046107b7565b610111565b005b5f5461008b906001600160a01b031681565b6040516001600160a01b0390911681526020015b60405180910390f35b6100776100b6366004610842565b610199565b6100776100c93660046108f7565b6102f0565b6100e16100dc36600461095a565b61045f565b60405161009f91906109c1565b6101016100fc36600461095a565b61050e565b60405161009f94939291906109da565b5f546001600160a01b031633146101435760405162461bcd60e51b815260040161013a90610a24565b60405180910390fd5b6040513390610153908590610a6d565b60405180910390207f11dfaedadf44ffb3aeb23135b017363fec745aad76b077c8bb56b7d24bd55dfe848460405161018c929190610a83565b60405180910390a3505050565b5f546001600160a01b031633146101c25760405162461bcd60e51b815260040161013a90610a24565b6040518060800160405280848152602001838152602001828152602001428152506001856040516101f39190610a6d565b908152604051908190036020019020815181906102109082610b34565b50602082015160018201906102259082610b34565b506040820151600282019061023a9082610b34565b50606091909101516003909101556040513390610258908690610a6d565b60405180910390207f5d518331dab9ef4de7023c73b62313478d0f55b2c4e40fb25335bcdebb95ed4b8560405161028f91906109c1565b60405180910390a360405133906102a7908690610a6d565b60405180910390207f16c2c3b42beb53eb623bb1f22686b36e24bf20a8594b9d2e8125a9407ad4970c8584426040516102e293929190610bee565b60405180910390a350505050565b5f546001600160a01b031633146103195760405162461bcd60e51b815260040161013a90610a24565b604051806080016040528082815260200160405180602001604052805f815250815260200160405180602001604052805f8152508152602001428152506001836040516103669190610a6d565b908152604051908190036020019020815181906103839082610b34565b50602082015160018201906103989082610b34565b50604082015160028201906103ad9082610b34565b506060919091015160039091015560405133906103cb908490610a6d565b60405180910390207f5d518331dab9ef4de7023c73b62313478d0f55b2c4e40fb25335bcdebb95ed4b8360405161040291906109c1565b60405180910390a3604051339061041a908490610a6d565b60405180910390207f16c2c3b42beb53eb623bb1f22686b36e24bf20a8594b9d2e8125a9407ad4970c8342604051610453929190610c23565b60405180910390a35050565b60606001826040516104719190610a6d565b908152604051908190036020019020805461048b90610ab0565b80601f01602080910402602001604051908101604052809291908181526020018280546104b790610ab0565b80156105025780601f106104d957610100808354040283529160200191610502565b820191905f5260205f20905b8154815290600101906020018083116104e557829003601f168201915b50505050509050919050565b60608060605f5f6001866040516105259190610a6d565b90815260200160405180910390206040518060800160405290815f8201805461054d90610ab0565b80601f016020809104026020016040519081016040528092919081815260200182805461057990610ab0565b80156105c45780601f1061059b576101008083540402835291602001916105c4565b820191905f5260205f20905b8154815290600101906020018083116105a757829003601f168201915b505050505081526020016001820180546105dd90610ab0565b80601f016020809104026020016040519081016040528092919081815260200182805461060990610ab0565b80156106545780601f1061062b57610100808354040283529160200191610654565b820191905f5260205f20905b81548152906001019060200180831161063757829003601f168201915b5050505050815260200160028201805461066d90610ab0565b80601f016020809104026020016040519081016040528092919081815260200182805461069990610ab0565b80156106e45780601f106106bb576101008083540402835291602001916106e4565b820191905f5260205f20905b8154815290600101906020018083116106c757829003601f168201915b50505091835250506003919091015460209182015281519082015160408301516060909301519199909850919650945092505050565b634e487b7160e01b5f52604160045260245ffd5b5f82601f83011261073d575f5ffd5b81356001600160401b038111156107565761075661071a565b604051601f8201601f19908116603f011681016001600160401b03811182821017156107845761078461071a565b60405281815283820160200185101561079b575f5ffd5b816020850160208301375f918101602001919091529392505050565b5f5f5f606084860312156107c9575f5ffd5b83356001600160401b038111156107de575f5ffd5b6107ea8682870161072e565b93505060208401356001600160401b03811115610805575f5ffd5b6108118682870161072e565b92505060408401356001600160401b0381111561082c575f5ffd5b6108388682870161072e565b9150509250925092565b5f5f5f5f60808587031215610855575f5ffd5b84356001600160401b0381111561086a575f5ffd5b6108768782880161072e565b94505060208501356001600160401b03811115610891575f5ffd5b61089d8782880161072e565b93505060408501356001600160401b038111156108b8575f5ffd5b6108c48782880161072e565b92505060608501356001600160401b038111156108df575f5ffd5b6108eb8782880161072e565b91505092959194509250565b5f5f60408385031215610908575f5ffd5b82356001600160401b0381111561091d575f5ffd5b6109298582860161072e565b92505060208301356001600160401b03811115610944575f5ffd5b6109508582860161072e565b9150509250929050565b5f6020828403121561096a575f5ffd5b81356001600160401b0381111561097f575f5ffd5b61098b8482850161072e565b949350505050565b5f81518084528060208401602086015e5f602082860101526020601f19601f83011685010191505092915050565b602081525f6109d36020830184610993565b9392505050565b608081525f6109ec6080830187610993565b82810360208401526109fe8187610993565b90508281036040840152610a128186610993565b91505082606083015295945050505050565b60208082526029908201527f4669726d7761726552656769737472793a2063616c6c6572206973206e6f74206040820152683a34329037bbb732b960b91b606082015260800190565b5f82518060208501845e5f920191825250919050565b604081525f610a956040830185610993565b8281036020840152610aa78185610993565b95945050505050565b600181811c90821680610ac457607f821691505b602082108103610ae257634e487b7160e01b5f52602260045260245ffd5b50919050565b601f821115610b2f57805f5260205f20601f840160051c81016020851015610b0d5750805b601f840160051c820191505b81811015610b2c575f8155600101610b19565b50505b505050565b81516001600160401b03811115610b4d57610b4d61071a565b610b6181610b5b8454610ab0565b84610ae8565b6020601f821160018114610b93575f8315610b7c5750848201515b5f19600385901b1c1916600184901b178455610b2c565b5f84815260208120601f198516915b82811015610bc25787850151825560209485019460019092019101610ba2565b5084821015610bdf57868401515f19600387901b60f8161c191681555b50505050600190811b01905550565b606081525f610c006060830186610993565b8281036020840152610c128186610993565b915050826040830152949350505050565b606081525f610c356060830185610993565b82810360208401525f815260208101915050826040830152939250505056fea2646970667358221220abe10dc05811c8abf528a34188b465420da520eb915e159b57d0beeb16da75e964736f6c634300081e0033";
+
+    public static final String FUNC_GETGOLDENHASH = "getGoldenHash";
+
+    public static final String FUNC_GETSIGNEDGOLDENRECORD = "getSignedGoldenRecord";
+
+    public static final String FUNC_OWNER = "owner";
+
+    public static final String FUNC_RECORDSESSIONEVENT = "recordSessionEvent";
+
+    public static final String FUNC_REGISTERGOLDENHASH = "registerGoldenHash";
+
+    public static final String FUNC_REGISTERSIGNEDGOLDENHASH = "registerSignedGoldenHash";
+
+    public static final Event GOLDENHASHREGISTERED_EVENT = new Event("GoldenHashRegistered", 
+            Arrays.<TypeReference<?>>asList(new TypeReference<Utf8String>(true) {}, new TypeReference<Utf8String>() {}, new TypeReference<Address>(true) {}));
+    ;
+
+    public static final Event SESSIONEVENTRECORDED_EVENT = new Event("SessionEventRecorded", 
+            Arrays.<TypeReference<?>>asList(new TypeReference<Utf8String>(true) {}, new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Address>(true) {}));
+    ;
+
+    public static final Event SIGNEDGOLDENHASHREGISTERED_EVENT = new Event("SignedGoldenHashRegistered", 
+            Arrays.<TypeReference<?>>asList(new TypeReference<Utf8String>(true) {}, new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Address>(true) {}, new TypeReference<Uint256>() {}));
+    ;
+
+    @Deprecated
+    protected FirmwareRegistry(String contractAddress, Web3j web3j, Credentials credentials, BigInteger gasPrice, BigInteger gasLimit) {
+        super(BINARY, contractAddress, web3j, credentials, gasPrice, gasLimit);
+    }
+
+    protected FirmwareRegistry(String contractAddress, Web3j web3j, Credentials credentials, ContractGasProvider contractGasProvider) {
+        super(BINARY, contractAddress, web3j, credentials, contractGasProvider);
+    }
+
+    @Deprecated
+    protected FirmwareRegistry(String contractAddress, Web3j web3j, TransactionManager transactionManager, BigInteger gasPrice, BigInteger gasLimit) {
+        super(BINARY, contractAddress, web3j, transactionManager, gasPrice, gasLimit);
+    }
+
+    protected FirmwareRegistry(String contractAddress, Web3j web3j, TransactionManager transactionManager, ContractGasProvider contractGasProvider) {
+        super(BINARY, contractAddress, web3j, transactionManager, contractGasProvider);
+    }
+
+    public static List<GoldenHashRegisteredEventResponse> getGoldenHashRegisteredEvents(TransactionReceipt transactionReceipt) {
+        List<Contract.EventValuesWithLog> valueList = staticExtractEventParametersWithLog(GOLDENHASHREGISTERED_EVENT, transactionReceipt);
+        ArrayList<GoldenHashRegisteredEventResponse> responses = new ArrayList<GoldenHashRegisteredEventResponse>(valueList.size());
+        for (Contract.EventValuesWithLog eventValues : valueList) {
+            GoldenHashRegisteredEventResponse typedResponse = new GoldenHashRegisteredEventResponse();
+            typedResponse.log = eventValues.getLog();
+            typedResponse.chargerId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
+            typedResponse.updatedBy = (String) eventValues.getIndexedValues().get(1).getValue();
+            typedResponse.goldenHash = (String) eventValues.getNonIndexedValues().get(0).getValue();
+            responses.add(typedResponse);
+        }
+        return responses;
+    }
+
+    public static GoldenHashRegisteredEventResponse getGoldenHashRegisteredEventFromLog(Log log) {
+        Contract.EventValuesWithLog eventValues = staticExtractEventParametersWithLog(GOLDENHASHREGISTERED_EVENT, log);
+        GoldenHashRegisteredEventResponse typedResponse = new GoldenHashRegisteredEventResponse();
+        typedResponse.log = log;
+        typedResponse.chargerId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
+        typedResponse.updatedBy = (String) eventValues.getIndexedValues().get(1).getValue();
+        typedResponse.goldenHash = (String) eventValues.getNonIndexedValues().get(0).getValue();
+        return typedResponse;
+    }
+
+    public Flowable<GoldenHashRegisteredEventResponse> goldenHashRegisteredEventFlowable(EthFilter filter) {
+        return web3j.ethLogFlowable(filter).map(log -> getGoldenHashRegisteredEventFromLog(log));
+    }
+
+    public Flowable<GoldenHashRegisteredEventResponse> goldenHashRegisteredEventFlowable(DefaultBlockParameter startBlock, DefaultBlockParameter endBlock) {
+        EthFilter filter = new EthFilter(startBlock, endBlock, getContractAddress());
+        filter.addSingleTopic(EventEncoder.encode(GOLDENHASHREGISTERED_EVENT));
+        return goldenHashRegisteredEventFlowable(filter);
+    }
+
+    public static List<SessionEventRecordedEventResponse> getSessionEventRecordedEvents(TransactionReceipt transactionReceipt) {
+        List<Contract.EventValuesWithLog> valueList = staticExtractEventParametersWithLog(SESSIONEVENTRECORDED_EVENT, transactionReceipt);
+        ArrayList<SessionEventRecordedEventResponse> responses = new ArrayList<SessionEventRecordedEventResponse>(valueList.size());
+        for (Contract.EventValuesWithLog eventValues : valueList) {
+            SessionEventRecordedEventResponse typedResponse = new SessionEventRecordedEventResponse();
+            typedResponse.log = eventValues.getLog();
+            typedResponse.chargerId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
+            typedResponse.recordedBy = (String) eventValues.getIndexedValues().get(1).getValue();
+            typedResponse.sessionId = (String) eventValues.getNonIndexedValues().get(0).getValue();
+            typedResponse.state = (String) eventValues.getNonIndexedValues().get(1).getValue();
+            responses.add(typedResponse);
+        }
+        return responses;
+    }
+
+    public static SessionEventRecordedEventResponse getSessionEventRecordedEventFromLog(Log log) {
+        Contract.EventValuesWithLog eventValues = staticExtractEventParametersWithLog(SESSIONEVENTRECORDED_EVENT, log);
+        SessionEventRecordedEventResponse typedResponse = new SessionEventRecordedEventResponse();
+        typedResponse.log = log;
+        typedResponse.chargerId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
+        typedResponse.recordedBy = (String) eventValues.getIndexedValues().get(1).getValue();
+        typedResponse.sessionId = (String) eventValues.getNonIndexedValues().get(0).getValue();
+        typedResponse.state = (String) eventValues.getNonIndexedValues().get(1).getValue();
+        return typedResponse;
+    }
+
+    public Flowable<SessionEventRecordedEventResponse> sessionEventRecordedEventFlowable(EthFilter filter) {
+        return web3j.ethLogFlowable(filter).map(log -> getSessionEventRecordedEventFromLog(log));
+    }
+
+    public Flowable<SessionEventRecordedEventResponse> sessionEventRecordedEventFlowable(DefaultBlockParameter startBlock, DefaultBlockParameter endBlock) {
+        EthFilter filter = new EthFilter(startBlock, endBlock, getContractAddress());
+        filter.addSingleTopic(EventEncoder.encode(SESSIONEVENTRECORDED_EVENT));
+        return sessionEventRecordedEventFlowable(filter);
+    }
+
+    public static List<SignedGoldenHashRegisteredEventResponse> getSignedGoldenHashRegisteredEvents(TransactionReceipt transactionReceipt) {
+        List<Contract.EventValuesWithLog> valueList = staticExtractEventParametersWithLog(SIGNEDGOLDENHASHREGISTERED_EVENT, transactionReceipt);
+        ArrayList<SignedGoldenHashRegisteredEventResponse> responses = new ArrayList<SignedGoldenHashRegisteredEventResponse>(valueList.size());
+        for (Contract.EventValuesWithLog eventValues : valueList) {
+            SignedGoldenHashRegisteredEventResponse typedResponse = new SignedGoldenHashRegisteredEventResponse();
+            typedResponse.log = eventValues.getLog();
+            typedResponse.chargerId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
+            typedResponse.updatedBy = (String) eventValues.getIndexedValues().get(1).getValue();
+            typedResponse.goldenHash = (String) eventValues.getNonIndexedValues().get(0).getValue();
+            typedResponse.manufacturerId = (String) eventValues.getNonIndexedValues().get(1).getValue();
+            typedResponse.registeredAt = (BigInteger) eventValues.getNonIndexedValues().get(2).getValue();
+            responses.add(typedResponse);
+        }
+        return responses;
+    }
+
+    public static SignedGoldenHashRegisteredEventResponse getSignedGoldenHashRegisteredEventFromLog(Log log) {
+        Contract.EventValuesWithLog eventValues = staticExtractEventParametersWithLog(SIGNEDGOLDENHASHREGISTERED_EVENT, log);
+        SignedGoldenHashRegisteredEventResponse typedResponse = new SignedGoldenHashRegisteredEventResponse();
+        typedResponse.log = log;
+        typedResponse.chargerId = (byte[]) eventValues.getIndexedValues().get(0).getValue();
+        typedResponse.updatedBy = (String) eventValues.getIndexedValues().get(1).getValue();
+        typedResponse.goldenHash = (String) eventValues.getNonIndexedValues().get(0).getValue();
+        typedResponse.manufacturerId = (String) eventValues.getNonIndexedValues().get(1).getValue();
+        typedResponse.registeredAt = (BigInteger) eventValues.getNonIndexedValues().get(2).getValue();
+        return typedResponse;
+    }
+
+    public Flowable<SignedGoldenHashRegisteredEventResponse> signedGoldenHashRegisteredEventFlowable(EthFilter filter) {
+        return web3j.ethLogFlowable(filter).map(log -> getSignedGoldenHashRegisteredEventFromLog(log));
+    }
+
+    public Flowable<SignedGoldenHashRegisteredEventResponse> signedGoldenHashRegisteredEventFlowable(DefaultBlockParameter startBlock, DefaultBlockParameter endBlock) {
+        EthFilter filter = new EthFilter(startBlock, endBlock, getContractAddress());
+        filter.addSingleTopic(EventEncoder.encode(SIGNEDGOLDENHASHREGISTERED_EVENT));
+        return signedGoldenHashRegisteredEventFlowable(filter);
+    }
+
+    public RemoteFunctionCall<String> getGoldenHash(String chargerId) {
+        final Function function = new Function(FUNC_GETGOLDENHASH, 
+                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(chargerId)), 
+                Arrays.<TypeReference<?>>asList(new TypeReference<Utf8String>() {}));
+        return executeRemoteCallSingleValueReturn(function, String.class);
+    }
+
+    public RemoteFunctionCall<Tuple4<String, String, String, BigInteger>> getSignedGoldenRecord(String chargerId) {
+        final Function function = new Function(FUNC_GETSIGNEDGOLDENRECORD, 
+                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(chargerId)), 
+                Arrays.<TypeReference<?>>asList(new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Utf8String>() {}, new TypeReference<Uint256>() {}));
+        return new RemoteFunctionCall<Tuple4<String, String, String, BigInteger>>(function,
+                new Callable<Tuple4<String, String, String, BigInteger>>() {
+                    @Override
+                    public Tuple4<String, String, String, BigInteger> call() throws Exception {
+                        List<Type> results = executeCallMultipleValueReturn(function);
+                        return new Tuple4<String, String, String, BigInteger>(
+                                (String) results.get(0).getValue(), 
+                                (String) results.get(1).getValue(), 
+                                (String) results.get(2).getValue(), 
+                                (BigInteger) results.get(3).getValue());
+                    }
+                });
+    }
+
+    public RemoteFunctionCall<String> owner() {
+        final Function function = new Function(FUNC_OWNER, 
+                Arrays.<Type>asList(), 
+                Arrays.<TypeReference<?>>asList(new TypeReference<Address>() {}));
+        return executeRemoteCallSingleValueReturn(function, String.class);
+    }
+
+    public RemoteFunctionCall<TransactionReceipt> recordSessionEvent(String chargerId, String sessionId, String state) {
+        final Function function = new Function(
+                FUNC_RECORDSESSIONEVENT, 
+                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(chargerId), 
+                new org.web3j.abi.datatypes.Utf8String(sessionId), 
+                new org.web3j.abi.datatypes.Utf8String(state)), 
+                Collections.<TypeReference<?>>emptyList());
+        return executeRemoteCallTransaction(function);
+    }
+
+    public RemoteFunctionCall<TransactionReceipt> registerGoldenHash(String chargerId, String firmwareHash) {
+        final Function function = new Function(
+                FUNC_REGISTERGOLDENHASH, 
+                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(chargerId), 
+                new org.web3j.abi.datatypes.Utf8String(firmwareHash)), 
+                Collections.<TypeReference<?>>emptyList());
+        return executeRemoteCallTransaction(function);
+    }
+
+    public RemoteFunctionCall<TransactionReceipt> registerSignedGoldenHash(String chargerId, String firmwareHash, String manufacturerSignature, String manufacturerId) {
+        final Function function = new Function(
+                FUNC_REGISTERSIGNEDGOLDENHASH, 
+                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(chargerId), 
+                new org.web3j.abi.datatypes.Utf8String(firmwareHash), 
+                new org.web3j.abi.datatypes.Utf8String(manufacturerSignature), 
+                new org.web3j.abi.datatypes.Utf8String(manufacturerId)), 
+                Collections.<TypeReference<?>>emptyList());
+        return executeRemoteCallTransaction(function);
+    }
+
+    @Deprecated
+    public static FirmwareRegistry load(String contractAddress, Web3j web3j, Credentials credentials, BigInteger gasPrice, BigInteger gasLimit) {
+        return new FirmwareRegistry(contractAddress, web3j, credentials, gasPrice, gasLimit);
+    }
+
+    @Deprecated
+    public static FirmwareRegistry load(String contractAddress, Web3j web3j, TransactionManager transactionManager, BigInteger gasPrice, BigInteger gasLimit) {
+        return new FirmwareRegistry(contractAddress, web3j, transactionManager, gasPrice, gasLimit);
+    }
+
+    public static FirmwareRegistry load(String contractAddress, Web3j web3j, Credentials credentials, ContractGasProvider contractGasProvider) {
+        return new FirmwareRegistry(contractAddress, web3j, credentials, contractGasProvider);
+    }
+
+    public static FirmwareRegistry load(String contractAddress, Web3j web3j, TransactionManager transactionManager, ContractGasProvider contractGasProvider) {
+        return new FirmwareRegistry(contractAddress, web3j, transactionManager, contractGasProvider);
+    }
+
+    public static RemoteCall<FirmwareRegistry> deploy(Web3j web3j, Credentials credentials, ContractGasProvider contractGasProvider) {
+        return deployRemoteCall(FirmwareRegistry.class, web3j, credentials, contractGasProvider, BINARY, "");
+    }
+
+    public static RemoteCall<FirmwareRegistry> deploy(Web3j web3j, TransactionManager transactionManager, ContractGasProvider contractGasProvider) {
+        return deployRemoteCall(FirmwareRegistry.class, web3j, transactionManager, contractGasProvider, BINARY, "");
+    }
+
+    @Deprecated
+    public static RemoteCall<FirmwareRegistry> deploy(Web3j web3j, Credentials credentials, BigInteger gasPrice, BigInteger gasLimit) {
+        return deployRemoteCall(FirmwareRegistry.class, web3j, credentials, gasPrice, gasLimit, BINARY, "");
+    }
+
+    @Deprecated
+    public static RemoteCall<FirmwareRegistry> deploy(Web3j web3j, TransactionManager transactionManager, BigInteger gasPrice, BigInteger gasLimit) {
+        return deployRemoteCall(FirmwareRegistry.class, web3j, transactionManager, gasPrice, gasLimit, BINARY, "");
+    }
+
+    public static class GoldenHashRegisteredEventResponse extends BaseEventResponse {
+        public byte[] chargerId;
+
+        public String updatedBy;
+
+        public String goldenHash;
+    }
+
+    public static class SessionEventRecordedEventResponse extends BaseEventResponse {
+        public byte[] chargerId;
+
+        public String recordedBy;
+
+        public String sessionId;
+
+        public String state;
+    }
+
+    public static class SignedGoldenHashRegisteredEventResponse extends BaseEventResponse {
+        public byte[] chargerId;
+
+        public String updatedBy;
+
+        public String goldenHash;
+
+        public String manufacturerId;
+
+        public BigInteger registeredAt;
+    }
+}

@@ -94,6 +94,9 @@ class RuntimeEventTap {
             readRecordValue(evidence, "verdict"),
             readRecordValue(evidence, "reportedHash"),
             readRecordValue(evidence, "expectedHash"),
+            readRecordValue(evidence, "manufacturerId"),
+            readRecordValue(evidence, "manufacturerSignature"),
+            parseBoolean(readRecordValue(evidence, "signatureVerified")),
             readRecordValue(evidence, "contractAddress"),
             readRecordValue(evidence, "txHash"),
             readRecordValue(evidence, "rpcStatus"),
@@ -151,6 +154,13 @@ class RuntimeEventTap {
         } catch (NumberFormatException ignored) {
             return null;
         }
+    }
+
+    private Boolean parseBoolean(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return Boolean.parseBoolean(value);
     }
 
     private String abbreviate(String value) {

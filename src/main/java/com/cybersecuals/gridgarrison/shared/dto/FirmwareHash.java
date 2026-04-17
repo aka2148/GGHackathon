@@ -32,6 +32,15 @@ public class FirmwareHash {
     /** Firmware semantic version string (e.g. "2.1.4"). */
     String firmwareVersion;
 
+    /** Manufacturer identity associated with the golden hash signature. */
+    String manufacturerId;
+
+    /** Manufacturer signature for the golden hash (Base64). */
+    String manufacturerSignature;
+
+    /** Whether manufacturer signature verification succeeded. */
+    Boolean signatureVerified;
+
     /** Timestamp when the station reported this firmware. */
     Instant reportedAt;
 

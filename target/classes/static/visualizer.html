@@ -1,631 +1,471 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GridGarrison Runtime Visualizer</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --ink: #0f1720;
-            --paper: #f6f4ee;
-            --panel: #fffdf8;
-            --line: #d5cec0;
-            --accent: #0f766e;
-            --accent-2: #c2410c;
-            --ok: #15803d;
-            --warn: #b45309;
-            --bad: #b91c1c;
-            --muted: #586472;
-            --shadow: 0 18px 40px rgba(15, 23, 32, 0.14);
-        }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>GridGarrison Runtime Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#e8e2d9;
+  --ink2:#a89f94;
+  --ink3:#6b6460;
+  --bg:#0d0f12;
+  --bg2:#131618;
+  --bg3:#191c20;
+  --line:#252a30;
+  --line2:#2e343c;
+  --red:#e84040;
+  --red2:#ff6b6b;
+  --orange:#e06830;
+  --orange2:#ff8c55;
+  --amber:#c07020;
+  --amber2:#e89040;
+  --teal:#1a9b8a;
+  --teal2:#26c4b0;
+  --muted:#6b6460;
+  --ff:'Inter',sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --r:8px;
+  --r2:12px;
+  --r3:16px;
+}
+body{font-family:var(--ff);background:var(--bg);color:var(--ink);min-height:100vh;padding:0}
 
-        * {
-            box-sizing: border-box;
-        }
+/* Animated background grid */
+.bg-grid{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:
+    linear-gradient(rgba(232,64,64,0.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(232,64,64,0.03) 1px,transparent 1px);
+  background-size:48px 48px;
+  animation:gridshift 20s linear infinite;
+}
+@keyframes gridshift{0%{background-position:0 0}100%{background-position:48px 48px}}
 
-        body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: "Space Grotesk", sans-serif;
-            color: var(--ink);
-            background:
-                radial-gradient(circle at 12% 12%, rgba(15, 118, 110, 0.16), transparent 38%),
-                radial-gradient(circle at 86% 18%, rgba(194, 65, 12, 0.16), transparent 40%),
-                linear-gradient(160deg, #f4f1e8 0%, #f6f4ee 48%, #efe9dc 100%);
-            padding: 24px;
-        }
+/* Ambient glows */
+.glow-r{position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(232,64,64,0.06),transparent 70%);top:-200px;right:-200px;pointer-events:none;z-index:0;animation:pulse1 8s ease-in-out infinite}
+.glow-o{position:fixed;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(224,104,48,0.05),transparent 70%);bottom:-150px;left:-100px;pointer-events:none;z-index:0;animation:pulse2 10s ease-in-out infinite}
+@keyframes pulse1{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.1)}}
+@keyframes pulse2{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.9;transform:scale(1.08)}}
 
-        .app {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            gap: 18px;
-        }
+.app{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:24px;display:grid;gap:16px}
 
-        .hero {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 18px;
-            box-shadow: var(--shadow);
-            padding: 22px;
-            display: grid;
-            gap: 14px;
-        }
+/* Header */
+.header{
+  background:linear-gradient(135deg,rgba(19,22,24,0.95),rgba(25,28,32,0.9));
+  border:1px solid var(--line2);
+  border-radius:var(--r3);
+  padding:20px 24px;
+  display:grid;gap:16px;
+  backdrop-filter:blur(10px);
+  position:relative;overflow:hidden;
+}
+.header::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--red),var(--orange),transparent);
+  opacity:.5;
+}
+.header-top{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-mark{width:32px;height:32px;border-radius:var(--r);background:linear-gradient(135deg,var(--red),var(--orange));display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:#fff;flex-shrink:0}
+h1{font-size:clamp(1.1rem,2.5vw,1.5rem);font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.subtitle{font-size:.82rem;color:var(--ink3);margin-top:2px}
 
-        .hero-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 14px;
-            flex-wrap: wrap;
-        }
+/* Controls */
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=text]{
+  background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);
+  font-family:var(--mono);font-size:.82rem;padding:8px 12px;color:var(--ink);
+  outline:none;transition:border-color .2s,box-shadow .2s;width:90px;
+}
+input[type=text]:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(26,155,138,.15)}
+button{
+  font-family:var(--ff);font-size:.8rem;font-weight:500;padding:8px 14px;
+  border-radius:var(--r);border:1px solid var(--line2);background:var(--bg3);
+  color:var(--ink2);cursor:pointer;transition:all .2s;white-space:nowrap;
+  position:relative;overflow:hidden;
+}
+button::after{content:'';position:absolute;inset:0;border-radius:var(--r);opacity:0;transition:opacity .2s;background:radial-gradient(circle at 50% 50%,rgba(255,255,255,.06),transparent)}
+button:hover{color:var(--ink);border-color:var(--line);background:rgba(255,255,255,.04);transform:translateY(-1px)}
+button:hover::after{opacity:1}
+button:active{transform:translateY(0) scale(.98)}
 
-        h1 {
-            margin: 0;
-            font-size: clamp(1.35rem, 3vw, 2rem);
-            letter-spacing: 0.02em;
-        }
+.btn-primary{
+  background:linear-gradient(135deg,var(--red),var(--orange));
+  border-color:transparent;color:#fff;
+  box-shadow:0 0 0 0 rgba(232,64,64,.4);
+}
+.btn-primary:hover{
+  background:linear-gradient(135deg,#f04050,#f07840);
+  box-shadow:0 0 20px rgba(232,64,64,.35),0 4px 16px rgba(224,104,48,.2);
+  border-color:transparent;color:#fff;
+}
+.btn-danger{border-color:rgba(232,64,64,.2);color:var(--red2)}
+.btn-danger:hover{border-color:var(--red);background:rgba(232,64,64,.08);color:var(--red2);box-shadow:0 0 12px rgba(232,64,64,.2)}
+.btn-warn{border-color:rgba(224,104,48,.2);color:var(--orange2)}
+.btn-warn:hover{border-color:var(--orange);background:rgba(224,104,48,.08);color:var(--orange2);box-shadow:0 0 12px rgba(224,104,48,.2)}
 
-        .subtitle {
-            margin: 0;
-            color: var(--muted);
-            font-size: 0.98rem;
-        }
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(100px,1fr));gap:10px}
+.kpi{
+  background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r2);
+  padding:12px;transition:border-color .2s,box-shadow .2s;cursor:default;
+}
+.kpi:hover{border-color:var(--line);box-shadow:0 0 16px rgba(232,64,64,.06)}
+.kpi .lbl{font-size:.72rem;color:var(--ink3);letter-spacing:.04em;text-transform:uppercase;font-weight:500}
+.kpi .val{font-family:var(--mono);font-size:1.4rem;font-weight:500;margin-top:6px;color:var(--ink)}
 
-        .controls {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
+/* Health */
+.health-strip{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding-top:4px}
+.hbadge{
+  font-family:var(--mono);font-size:.68rem;padding:3px 9px;border-radius:999px;
+  border:1px solid;transition:box-shadow .2s;
+}
+.hbadge.ok{border-color:rgba(26,155,138,.4);background:rgba(26,155,138,.08);color:var(--teal2)}
+.hbadge.bad{border-color:rgba(232,64,64,.4);background:rgba(232,64,64,.08);color:var(--red2)}
+.hbadge.neutral{border-color:var(--line2);background:transparent;color:var(--ink3)}
 
-        input,
-        button {
-            border-radius: 12px;
-            border: 1px solid var(--line);
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.9rem;
-            padding: 10px 12px;
-            background: #ffffff;
-        }
+/* Grid layout */
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}
+.panel{
+  background:var(--bg2);border:1px solid var(--line2);border-radius:var(--r3);
+  padding:18px;transition:border-color .2s;
+}
+.panel:hover{border-color:var(--line)}
+.ptitle{font-size:.82rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px}
 
-        button {
-            cursor: pointer;
-            transition: transform 140ms ease, background-color 140ms ease;
-        }
+/* Signal path */
+.flow{grid-column:span 12}
+.flow-track{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:2px}
+.node{
+  padding:12px;border:1px solid var(--line2);border-radius:var(--r2);
+  background:var(--bg3);position:relative;overflow:hidden;
+  transition:border-color .25s,box-shadow .25s;cursor:default;
+}
+.node:hover{border-color:rgba(232,64,64,.3);box-shadow:0 0 20px rgba(232,64,64,.06) inset}
+.node-num{
+  font-family:var(--mono);font-size:.65rem;color:var(--red);
+  font-weight:500;letter-spacing:.06em;margin-bottom:6px;
+}
+.node h3{font-size:.82rem;font-weight:600;color:var(--ink);margin-bottom:4px}
+.node p{font-size:.72rem;color:var(--ink3);line-height:1.5}
+.node::after{
+  content:'';position:absolute;left:-60%;top:0;width:40%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(232,64,64,.06),transparent);
+  animation:sweep 5s linear infinite;
+}
+@keyframes sweep{0%{left:-60%}100%{left:140%}}
 
-        button:hover {
-            transform: translateY(-1px);
-            background: #f5f7f9;
-        }
+/* Golden flow */
+.golden-flow{grid-column:span 12}
+.gflow-grid{display:grid;grid-template-columns:repeat(7,minmax(130px,1fr));gap:8px}
+.flow-step{
+  border:1px solid var(--line2);border-radius:var(--r2);background:var(--bg3);
+  padding:12px;display:grid;gap:6px;min-height:110px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.flow-step.active{border-color:rgba(26,155,138,.5);box-shadow:0 0 16px rgba(26,155,138,.1)}
+.flow-step h4{font-size:.78rem;font-weight:500;color:var(--ink);line-height:1.4}
+.flow-step .det{font-size:.7rem;color:var(--ink3);line-height:1.35}
+.fchip{
+  justify-self:start;font-family:var(--mono);font-size:.65rem;padding:2px 8px;
+  border-radius:999px;border:1px solid var(--line2);background:transparent;color:var(--ink3);
+}
+.fchip.done{border-color:rgba(26,155,138,.4);background:rgba(26,155,138,.08);color:var(--teal2)}
+.fchip.failed{border-color:rgba(232,64,64,.4);background:rgba(232,64,64,.08);color:var(--red2)}
+.fchip.active{border-color:rgba(224,104,48,.5);background:rgba(224,104,48,.08);color:var(--orange2);animation:chipblink .8s ease-in-out infinite}
+@keyframes chipblink{0%,100%{opacity:1}50%{opacity:.5}}
 
-        .btn-accent {
-            background: var(--accent);
-            color: #ffffff;
-            border-color: var(--accent);
-        }
+/* Progress bar */
+.prog-wrap{display:grid;gap:5px;margin:10px 0 14px}
+.prog-meta{font-size:.72rem;color:var(--ink3)}
+.prog-track{width:100%;height:4px;border-radius:999px;background:var(--line2);overflow:hidden}
+.prog-fill{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--orange),var(--teal));transition:width .25s ease}
 
-        .btn-accent:hover {
-            background: #0b5d56;
-        }
+/* Timeline */
+.timeline{grid-column:span 8}
+.stations{grid-column:span 4}
+.evidence{grid-column:span 12}
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(12, 1fr);
-            gap: 14px;
-        }
+.table{width:100%;border-collapse:collapse;font-size:.78rem}
+.table th{
+  font-size:.65rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink3);padding:8px 8px;border-bottom:1px solid var(--line2);text-align:left;
+}
+.table td{padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink)}
+.table tr:last-child td{border-bottom:none}
+.table tbody tr{transition:background .15s}
+.table tbody tr:hover{background:rgba(255,255,255,.02)}
 
-        .panel {
-            background: var(--panel);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 16px;
-        }
+/* Tags */
+.tag{
+  padding:2px 8px;border-radius:999px;font-size:.65rem;font-family:var(--mono);
+  border:1px solid;display:inline-block;
+}
+.tag-orchestrator{border-color:rgba(26,155,138,.35);background:rgba(26,155,138,.08);color:var(--teal2)}
+.tag-watchdog{border-color:rgba(224,104,48,.35);background:rgba(224,104,48,.08);color:var(--orange2)}
+.tag-trust{border-color:rgba(192,112,32,.35);background:rgba(192,112,32,.08);color:var(--amber2)}
+.tag-app{border-color:var(--line2);background:transparent;color:var(--ink3)}
 
-        .kpis {
-            grid-column: span 12;
-            display: grid;
-            grid-template-columns: repeat(4, minmax(120px, 1fr));
-            gap: 10px;
-        }
+/* Station list */
+.station-list{display:grid;gap:8px;max-height:420px;overflow:auto;padding-right:4px}
+.station-list::-webkit-scrollbar{width:4px}
+.station-list::-webkit-scrollbar-track{background:transparent}
+.station-list::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px}
+.station-card{border:1px solid var(--line2);border-radius:var(--r2);background:var(--bg3);padding:12px;display:grid;gap:6px;transition:border-color .2s}
+.station-card:hover{border-color:var(--line)}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.smono{font-family:var(--mono);font-size:.78rem;font-weight:500}
+.sinfo{font-size:.72rem;color:var(--ink3)}
 
-        .kpi {
-            border: 1px dashed #b9c0c8;
-            border-radius: 12px;
-            padding: 10px;
-            background: #fff;
-        }
+.state{font-family:var(--mono);font-size:.65rem;padding:2px 8px;border-radius:999px;border:1px solid}
+.state-online,.state-monitoring{border-color:rgba(26,155,138,.4);background:rgba(26,155,138,.08);color:var(--teal2)}
+.state-suspicious{border-color:rgba(224,104,48,.4);background:rgba(224,104,48,.08);color:var(--orange2)}
+.state-alert{border-color:rgba(232,64,64,.4);background:rgba(232,64,64,.08);color:var(--red2);animation:alertpulse 2s ease-in-out infinite}
+@keyframes alertpulse{0%,100%{box-shadow:none}50%{box-shadow:0 0 10px rgba(232,64,64,.3)}}
+.state-discovered{border-color:var(--line2);background:transparent;color:var(--ink3)}
 
-        .kpi .label {
-            font-size: 0.78rem;
-            color: var(--muted);
-        }
+/* Evidence */
+.evidence-list{display:grid;gap:8px}
+.evidence-item{border:1px solid var(--line2);border-radius:var(--r2);background:var(--bg3);padding:12px;display:grid;gap:6px;transition:border-color .2s}
+.evidence-item:hover{border-color:var(--line)}
+.eline{font-size:.74rem;color:var(--ink3);line-height:1.5}
+.eline span{color:var(--ink);font-family:var(--mono);font-size:.72rem}
 
-        .kpi .value {
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 1.2rem;
-            font-weight: 500;
-            margin-top: 4px;
-        }
+.status-muted{font-size:.74rem;color:var(--ink3)}
+.footer{font-size:.72rem;color:var(--ink3);font-family:var(--mono)}
 
-        .flow {
-            grid-column: span 12;
-        }
+/* Divider accent */
+.accent-line{height:1px;background:linear-gradient(90deg,transparent,var(--red),var(--orange),transparent);opacity:.2;border:none;margin:4px 0}
 
-        .flow-track {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .node {
-            padding: 10px;
-            border: 1px solid #c5cdd4;
-            border-radius: 12px;
-            background: #ffffff;
-            min-height: 80px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .node h3 {
-            margin: 0;
-            font-size: 0.88rem;
-            letter-spacing: 0.02em;
-        }
-
-        .node p {
-            margin: 7px 0 0;
-            font-size: 0.82rem;
-            color: var(--muted);
-        }
-
-        .node::after {
-            content: "";
-            position: absolute;
-            left: -40%;
-            top: 0;
-            width: 40%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.16), transparent);
-            transform: skewX(-18deg);
-            animation: sweep 4.8s linear infinite;
-        }
-
-        @keyframes sweep {
-            0% { left: -45%; }
-            100% { left: 130%; }
-        }
-
-        .timeline {
-            grid-column: span 8;
-        }
-
-        .stations {
-            grid-column: span 4;
-        }
-
-        .evidence {
-            grid-column: span 12;
-        }
-
-        .title {
-            margin: 0 0 10px;
-            font-size: 1rem;
-        }
-
-        .mono {
-            font-family: "IBM Plex Mono", monospace;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.82rem;
-        }
-
-        .table th,
-        .table td {
-            border-bottom: 1px solid #e8e2d7;
-            text-align: left;
-            padding: 7px 6px;
-            vertical-align: top;
-        }
-
-        .tag {
-            padding: 2px 8px;
-            border-radius: 999px;
-            font-size: 0.72rem;
-            font-family: "IBM Plex Mono", monospace;
-            border: 1px solid transparent;
-            display: inline-block;
-        }
-
-        .tag-orchestrator { background: #e6f7f5; color: #0f766e; border-color: #9fe3dc; }
-        .tag-watchdog { background: #fff1e8; color: #b45309; border-color: #f4c8a7; }
-        .tag-trust { background: #eef2ff; color: #3730a3; border-color: #c7d2fe; }
-        .tag-app { background: #f0f4f8; color: #334155; border-color: #cbd5e1; }
-
-        .station-list {
-            display: grid;
-            gap: 8px;
-            max-height: 420px;
-            overflow: auto;
-            padding-right: 4px;
-        }
-
-        .station-card {
-            border: 1px solid #d5dde5;
-            border-radius: 12px;
-            background: #fff;
-            padding: 10px;
-            display: grid;
-            gap: 6px;
-        }
-
-        .station-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .state {
-            font-size: 0.72rem;
-            font-family: "IBM Plex Mono", monospace;
-            padding: 2px 7px;
-            border-radius: 999px;
-            border: 1px solid;
-        }
-
-        .state-online,
-        .state-monitoring { color: var(--ok); border-color: #86efac; background: #f0fdf4; }
-        .state-suspicious { color: var(--warn); border-color: #fcd34d; background: #fffbeb; }
-        .state-alert { color: var(--bad); border-color: #fca5a5; background: #fef2f2; }
-        .state-discovered { color: #334155; border-color: #cbd5e1; background: #f8fafc; }
-
-        .status-line {
-            color: var(--muted);
-            font-size: 0.82rem;
-        }
-
-        .footer-note {
-            color: var(--muted);
-            font-size: 0.82rem;
-        }
-
-        .health-strip {
-            margin-top: 6px;
-            font-size: 0.82rem;
-            color: var(--muted);
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .health-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 999px;
-            border: 1px solid #cbd5e1;
-            font-family: "IBM Plex Mono", monospace;
-            font-size: 0.72rem;
-            background: #f8fafc;
-            color: #334155;
-        }
-
-        .health-badge.ok {
-            border-color: #86efac;
-            background: #f0fdf4;
-            color: #166534;
-        }
-
-        .health-badge.bad {
-            border-color: #fca5a5;
-            background: #fef2f2;
-            color: #991b1b;
-        }
-
-        .evidence-list {
-            display: grid;
-            gap: 8px;
-        }
-
-        .evidence-item {
-            border: 1px solid #d5dde5;
-            border-radius: 12px;
-            background: #fff;
-            padding: 10px;
-            display: grid;
-            gap: 6px;
-        }
-
-        .evidence-item .line {
-            color: var(--muted);
-            font-size: 0.82rem;
-        }
-
-        @media (max-width: 920px) {
-            .kpis { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
-            .flow-track { grid-template-columns: repeat(2, 1fr); }
-            .timeline,
-            .stations { grid-column: span 12; }
-        }
-    </style>
+@media(max-width:900px){
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .flow-track{grid-template-columns:repeat(2,1fr)}
+  .gflow-grid{grid-template-columns:repeat(2,minmax(130px,1fr))}
+  .timeline,.stations{grid-column:span 12}
+}
+</style>
 </head>
 <body>
+<div class="bg-grid"></div>
+<div class="glow-r"></div>
+<div class="glow-o"></div>
+
 <div class="app">
-    <section class="hero">
-        <div class="hero-head">
-            <div>
-                <h1>GridGarrison Runtime Visualizer</h1>
-                <p class="subtitle">Live view of orchestrator, trust, and watchdog activity.</p>
-            </div>
-            <div class="controls">
-                <input id="stationInput" type="text" value="CS-101" aria-label="Station ID for simulation" />
-                <button id="simulateNormalBtn" class="btn-accent">Normal Session</button>
-                <button id="simulateTamperBtn">Firmware Tamper</button>
-                <button id="simulateAnomalyBtn">Energy Anomaly</button>
-                <button id="clearBtn">Clear Timeline</button>
-                <button id="refreshBtn">Refresh Now</button>
-            </div>
-        </div>
-        <div class="kpis" id="kpis"></div>
-        <div class="health-strip" id="healthStrip"></div>
-    </section>
 
-    <section class="grid">
-        <article class="panel flow">
-            <h2 class="title">Signal Path</h2>
-            <div class="flow-track">
-                <div class="node"><h3>1) Station</h3><p>Boot / heartbeat / transaction frames.</p></div>
-                <div class="node"><h3>2) Orchestrator</h3><p>WSS + OCPP parse + event publish.</p></div>
-                <div class="node"><h3>3) Trust</h3><p>Golden-hash lookup over Web3j.</p></div>
-                <div class="node"><h3>4) Watchdog</h3><p>Twin state + anomaly sweep.</p></div>
-                <div class="node"><h3>5) Observability</h3><p>This timeline and station state table.</p></div>
-            </div>
-        </article>
+<section class="header">
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-mark">GG</div>
+      <div>
+        <h1>GridGarrison Runtime Visualizer</h1>
+        <p class="subtitle">Live view of orchestrator, trust &amp; watchdog activity</p>
+      </div>
+    </div>
+    <div class="controls">
+      <input id="stationInput" type="text" value="CS-101" aria-label="Station ID"/>
+      <button id="simulateNormalBtn" class="btn-primary">Normal Session</button>
+      <button id="simulateTamperBtn" class="btn-danger">Firmware Tamper</button>
+      <button id="simulateAnomalyBtn" class="btn-warn">Energy Anomaly</button>
+      <button id="clearBtn">Clear</button>
+      <button id="refreshBtn">Refresh</button>
+    </div>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <hr class="accent-line">
+  <div class="health-strip" id="healthStrip"></div>
+</section>
 
-        <article class="panel timeline">
-            <h2 class="title">Event Timeline</h2>
-            <table class="table" id="eventsTable">
-                <thead>
-                <tr>
-                    <th>Time</th>
-                    <th>Module</th>
-                    <th>Event</th>
-                    <th>Station</th>
-                    <th>Summary</th>
-                </tr>
-                </thead>
-                <tbody id="eventsBody"></tbody>
-            </table>
-        </article>
+<section class="grid">
 
-        <article class="panel stations">
-            <h2 class="title">Station Twin Lens</h2>
-            <div id="stationsList" class="station-list"></div>
-        </article>
+  <article class="panel flow">
+    <div class="ptitle">Signal Path</div>
+    <div class="flow-track">
+      <div class="node"><div class="node-num">01</div><h3>Station</h3><p>Boot / heartbeat / transaction frames</p></div>
+      <div class="node"><div class="node-num">02</div><h3>Orchestrator</h3><p>WSS + OCPP parse + event publish</p></div>
+      <div class="node"><div class="node-num">03</div><h3>Trust</h3><p>Golden-hash lookup over Web3j</p></div>
+      <div class="node"><div class="node-num">04</div><h3>Watchdog</h3><p>Twin state + anomaly sweep</p></div>
+      <div class="node"><div class="node-num">05</div><h3>Observability</h3><p>Timeline and station state table</p></div>
+    </div>
+  </article>
 
-        <article class="panel evidence">
-            <h2 class="title">Trust Evidence</h2>
-            <div id="evidenceList" class="evidence-list"></div>
-        </article>
-    </section>
+  <article class="panel golden-flow">
+    <div class="ptitle">Golden Hash Verification Flow</div>
+    <div id="goldenFlowPanel" class="status-muted">No custody flow captured yet.</div>
+  </article>
 
-    <p class="footer-note" id="statusLine">Initializing visualizer...</p>
+  <article class="panel timeline">
+    <div class="ptitle">Event Timeline</div>
+    <table class="table" id="eventsTable">
+      <thead><tr><th>Time</th><th>Module</th><th>Event</th><th>Station</th><th>Summary</th></tr></thead>
+      <tbody id="eventsBody"></tbody>
+    </table>
+  </article>
+
+  <article class="panel stations">
+    <div class="ptitle">Station Twin Lens</div>
+    <div id="stationsList" class="station-list"></div>
+  </article>
+
+  <article class="panel evidence">
+    <div class="ptitle">Trust Evidence</div>
+    <div id="evidenceList" class="evidence-list"></div>
+  </article>
+
+</section>
+
+<p class="footer" id="statusLine">Initializing visualizer...</p>
 </div>
 
 <script>
-    const kpisEl = document.getElementById("kpis");
-    const eventsBodyEl = document.getElementById("eventsBody");
-    const stationsListEl = document.getElementById("stationsList");
-    const evidenceListEl = document.getElementById("evidenceList");
-    const healthStripEl = document.getElementById("healthStrip");
-    const statusLineEl = document.getElementById("statusLine");
-    const stationInputEl = document.getElementById("stationInput");
+const kpisEl=document.getElementById("kpis");
+const eventsBodyEl=document.getElementById("eventsBody");
+const stationsListEl=document.getElementById("stationsList");
+const evidenceListEl=document.getElementById("evidenceList");
+const goldenFlowPanelEl=document.getElementById("goldenFlowPanel");
+const healthStripEl=document.getElementById("healthStrip");
+const statusLineEl=document.getElementById("statusLine");
+const stationInputEl=document.getElementById("stationInput");
 
-    function formatInstant(value) {
-        if (!value) return "-";
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return "-";
-        return d.toLocaleTimeString();
-    }
+const FLOW_PLAYBACK_DURATION_MS=2400;
+const flowPlayback={key:null,running:false,progressPercent:0,activeStepIndex:-1,selected:null,stagedSteps:[],timers:[]};
 
-    function escapeHtml(value) {
-        return String(value)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#39;");
-    }
+function formatInstant(v){if(!v)return"-";const d=new Date(v);if(Number.isNaN(d.getTime()))return"-";return d.toLocaleTimeString()}
+function esc(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;")}
 
-    function stateClass(state) {
-        const key = (state || "").toLowerCase();
-        if (key === "verified") return "state-monitoring";
-        if (key === "tampered") return "state-alert";
-        if (key === "infra_failure") return "state-alert";
-        if (key === "unknown_station") return "state-suspicious";
-        if (key === "online") return "state-online";
-        if (key === "monitoring") return "state-monitoring";
-        if (key === "suspicious") return "state-suspicious";
-        if (key === "alert") return "state-alert";
-        return "state-discovered";
-    }
+function stateClass(s){
+  const k=(s||"").toLowerCase();
+  if(k==="verified")return"state-monitoring";
+  if(k==="tampered")return"state-alert";
+  if(k==="infra_failure")return"state-alert";
+  if(k==="unknown_station")return"state-suspicious";
+  if(k==="online")return"state-online";
+  if(k==="monitoring")return"state-monitoring";
+  if(k==="suspicious")return"state-suspicious";
+  if(k==="alert")return"state-alert";
+  return"state-discovered";
+}
+function moduleTagClass(m){
+  const k=(m||"app").toLowerCase();
+  if(k.includes("orchestrator"))return"tag-orchestrator";
+  if(k.includes("watchdog"))return"tag-watchdog";
+  if(k.includes("trust"))return"tag-trust";
+  return"tag-app";
+}
 
-    function moduleTagClass(module) {
-        const key = (module || "app").toLowerCase();
-        if (key.includes("orchestrator")) return "tag-orchestrator";
-        if (key.includes("watchdog")) return "tag-watchdog";
-        if (key.includes("trust")) return "tag-trust";
-        return "tag-app";
-    }
+function renderKpis(snapshot){
+  const bm=snapshot.eventsByModule||{};
+  const cards=[{label:"Total Events",value:snapshot.totalEvents??0},{label:"Orchestrator",value:bm.orchestrator??0},{label:"Trust",value:bm.trust??0},{label:"Watchdog",value:bm.watchdog??0}];
+  kpisEl.innerHTML=cards.map(c=>`<div class="kpi"><div class="lbl">${esc(c.label)}</div><div class="val">${esc(c.value)}</div></div>`).join("");
+}
 
-    function renderKpis(snapshot) {
-        const byModule = snapshot.eventsByModule || {};
-        const cards = [
-            { label: "Total Events", value: snapshot.totalEvents ?? 0 },
-            { label: "Orchestrator", value: byModule.orchestrator ?? 0 },
-            { label: "Trust", value: byModule.trust ?? 0 },
-            { label: "Watchdog", value: byModule.watchdog ?? 0 }
-        ];
+function renderEvents(events){
+  if(!events.length){eventsBodyEl.innerHTML='<tr><td colspan="5" class="status-muted">No runtime events yet. Run a scenario above.</td></tr>';return}
+  eventsBodyEl.innerHTML=events.map(e=>`<tr><td style="font-family:var(--mono);font-size:.72rem">${esc(formatInstant(e.occurredAt))}</td><td><span class="tag ${moduleTagClass(e.module)}">${esc(e.module)}</span></td><td style="font-family:var(--mono);font-size:.72rem">${esc(e.type)}</td><td style="font-family:var(--mono);font-size:.72rem">${esc(e.stationId)}</td><td>${esc(e.summary)}</td></tr>`).join("");
+}
 
-        kpisEl.innerHTML = cards.map(card => `
-            <div class="kpi">
-                <div class="label">${escapeHtml(card.label)}</div>
-                <div class="value">${escapeHtml(card.value)}</div>
-            </div>
-        `).join("");
-    }
+function renderStations(stations){
+  if(!stations.length){stationsListEl.innerHTML='<div class="status-muted">No stations observed yet.</div>';return}
+  stationsListEl.innerHTML=stations.map(s=>`<div class="station-card"><div class="sh"><strong class="smono">${esc(s.stationId)}</strong><span class="state ${stateClass(s.operationalState)}">${esc(s.operationalState)}</span></div><div class="sinfo">Last seen: <span style="font-family:var(--mono)">${esc(formatInstant(s.lastSeen))}</span></div><div class="sinfo">Boots: <span style="font-family:var(--mono)">${esc(s.bootCount)}</span> · Tx: <span style="font-family:var(--mono)">${esc(s.transactionCount)}</span></div><div class="sinfo">Firmware: <span style="font-family:var(--mono)">${esc(s.firmwareEventCount)}</span> · Alerts: <span style="font-family:var(--mono)">${esc(s.securityAlertCount)}</span></div><div class="sinfo">Last: <span style="font-family:var(--mono)">${esc(s.lastEventType)}</span></div></div>`).join("");
+}
 
-    function renderEvents(events) {
-        if (!events.length) {
-            eventsBodyEl.innerHTML = '<tr><td colspan="5" class="status-line">No runtime events yet. Run Normal, Firmware Tamper, or Energy Anomaly.</td></tr>';
-            return;
-        }
+function healthBadge(t,ok){return`<span class="hbadge ${ok?"ok":"bad"}">${esc(t)}</span>`}
+function flowChipClass(s){const k=(s||"").toLowerCase();if(k==="done")return"fchip done";if(k==="failed")return"fchip failed";if(k==="in_progress")return"fchip active";return"fchip"}
+function normalizeFlowStatus(s){const k=(s||"").toUpperCase();if(k==="FAILED")return"FAILED";if(k==="DONE")return"DONE";return"PENDING"}
+function flowPlaybackKey(f){const steps=(f?.steps||[]).map(s=>`${s.step}:${s.status}:${s.detail||""}`).join("|");return[f?.stationId||"UNKNOWN",f?.lastUpdated||"0",f?.finalVerdict||"PENDING",steps].join("::")}
 
-        eventsBodyEl.innerHTML = events.map(event => `
-            <tr>
-                <td class="mono">${escapeHtml(formatInstant(event.occurredAt))}</td>
-                <td><span class="tag ${moduleTagClass(event.module)}">${escapeHtml(event.module)}</span></td>
-                <td class="mono">${escapeHtml(event.type)}</td>
-                <td class="mono">${escapeHtml(event.stationId)}</td>
-                <td>${escapeHtml(event.summary)}</td>
-            </tr>
-        `).join("");
-    }
+function clearFlowPlaybackTimers(){flowPlayback.timers.forEach(t=>clearTimeout(t));flowPlayback.timers=[]}
+function resetFlowPlayback(){clearFlowPlaybackTimers();flowPlayback.key=null;flowPlayback.running=false;flowPlayback.progressPercent=0;flowPlayback.activeStepIndex=-1;flowPlayback.selected=null;flowPlayback.stagedSteps=[]}
 
-    function renderStations(stations) {
-        if (!stations.length) {
-            stationsListEl.innerHTML = '<div class="status-line">No stations observed yet.</div>';
-            return;
-        }
+function renderGoldenFlowPanel(selected,steps,progressPercent,activeStepIndex,isAnimating){
+  const progressLabel=isAnimating?`Replay in progress: ${progressPercent}%`:`Replay complete: ${progressPercent}%`;
+  goldenFlowPanelEl.innerHTML=`
+    <div class="status-muted" style="margin-bottom:8px">Station: <span style="font-family:var(--mono);color:var(--ink)">${esc(selected.stationId||"UNKNOWN")}</span> &nbsp;·&nbsp; Verdict: <span style="font-family:var(--mono);color:var(--ink)">${esc(selected.finalVerdict||"PENDING")}</span> &nbsp;·&nbsp; Updated: <span style="font-family:var(--mono)">${esc(formatInstant(selected.lastUpdated))}</span></div>
+    <div class="prog-wrap">
+      <div class="prog-meta">${esc(progressLabel)}</div>
+      <div class="prog-track"><div class="prog-fill" style="width:${esc(progressPercent)}%"></div></div>
+    </div>
+    <div class="gflow-grid">${steps.map((step,i)=>{const ss=i===activeStepIndex?"IN_PROGRESS":(step.status||"PENDING");return`<div class="flow-step ${i===activeStepIndex?"active":""}"><span class="${flowChipClass(ss)}">Step ${esc(step.step)} · ${esc(ss)}</span><h4>${esc(step.title||"-")}</h4><div class="det">${esc(step.detail||"-")}</div></div>`}).join("")}</div>`;
+}
 
-        stationsListEl.innerHTML = stations.map(s => `
-            <div class="station-card">
-                <div class="station-head">
-                    <strong class="mono">${escapeHtml(s.stationId)}</strong>
-                    <span class="state ${stateClass(s.operationalState)}">${escapeHtml(s.operationalState)}</span>
-                </div>
-                <div class="status-line">Last seen: <span class="mono">${escapeHtml(formatInstant(s.lastSeen))}</span></div>
-                <div class="status-line">Boots: <span class="mono">${escapeHtml(s.bootCount)}</span> | Tx: <span class="mono">${escapeHtml(s.transactionCount)}</span></div>
-                <div class="status-line">Firmware events: <span class="mono">${escapeHtml(s.firmwareEventCount)}</span> | Security alerts: <span class="mono">${escapeHtml(s.securityAlertCount)}</span></div>
-                <div class="status-line">Last event: <span class="mono">${escapeHtml(s.lastEventType)}</span></div>
-            </div>
-        `).join("");
-    }
+function startGoldenFlowPlayback(selected,playbackKey){
+  clearFlowPlaybackTimers();
+  const steps=(selected.steps||[]).map(s=>({...s,status:"PENDING"}));
+  const totalSteps=steps.length;
+  if(!totalSteps){renderGoldenFlowPanel(selected,steps,100,-1,false);flowPlayback.key=playbackKey;flowPlayback.running=false;flowPlayback.selected=selected;flowPlayback.stagedSteps=steps;flowPlayback.progressPercent=100;flowPlayback.activeStepIndex=-1;return}
+  const stageDurationMs=Math.max(280,Math.floor(FLOW_PLAYBACK_DURATION_MS/totalSteps));
+  flowPlayback.key=playbackKey;flowPlayback.running=true;flowPlayback.progressPercent=0;flowPlayback.activeStepIndex=0;flowPlayback.selected=selected;flowPlayback.stagedSteps=steps;
+  renderGoldenFlowPanel(selected,steps,0,0,true);
+  for(let i=0;i<totalSteps;i++){
+    const timer=setTimeout(()=>{
+      const fs=normalizeFlowStatus(selected.steps?.[i]?.status);
+      flowPlayback.stagedSteps[i]={...flowPlayback.stagedSteps[i],status:fs};
+      const isLast=i===totalSteps-1;
+      flowPlayback.progressPercent=Math.round(((i+1)/totalSteps)*100);
+      flowPlayback.activeStepIndex=isLast?-1:i+1;
+      flowPlayback.running=!isLast;
+      renderGoldenFlowPanel(flowPlayback.selected,flowPlayback.stagedSteps,flowPlayback.progressPercent,flowPlayback.activeStepIndex,flowPlayback.running);
+    },stageDurationMs*(i+1));
+    flowPlayback.timers.push(timer);
+  }
+}
 
-    function healthBadge(text, ok) {
-        const cls = ok ? "health-badge ok" : "health-badge bad";
-        return `<span class="${cls}">${escapeHtml(text)}</span>`;
-    }
+function renderGoldenFlow(snapshot){
+  const flowMap=snapshot.goldenFlowByStation||{};
+  const preferred=stationInputEl.value.trim();
+  const selected=flowMap[preferred]||Object.values(flowMap)[0];
+  if(!selected){resetFlowPlayback();goldenFlowPanelEl.innerHTML='<div class="status-muted">No custody flow captured yet. Run a scenario above.</div>';return}
+  const pk=flowPlaybackKey(selected);
+  if(flowPlayback.key!==pk){startGoldenFlowPlayback(selected,pk);return}
+  if(flowPlayback.running){renderGoldenFlowPanel(flowPlayback.selected||selected,flowPlayback.stagedSteps.length?flowPlayback.stagedSteps:(selected.steps||[]),flowPlayback.progressPercent,flowPlayback.activeStepIndex,true);return}
+  renderGoldenFlowPanel(selected,(selected.steps||[]).map(s=>({...s,status:normalizeFlowStatus(s.status)})),100,-1,false);
+}
 
-    function renderHealth(snapshot) {
-        const health = snapshot.chainHealth || {};
-        const reachable = !!health.rpcReachable;
-        const configured = !!health.contractConfigured;
-        const status = health.status || "UNKNOWN";
-        const latencyBand = health.lastLatencyBand || "UNKNOWN";
-        const checkedAt = formatInstant(health.lastCheckTime);
+function renderHealth(snapshot){
+  const h=snapshot.chainHealth||{};
+  const reachable=!!h.rpcReachable,configured=!!h.contractConfigured;
+  healthStripEl.innerHTML=[
+    healthBadge(`CHAIN ${h.status||"UNKNOWN"}`,reachable&&configured),
+    healthBadge(`RPC ${reachable?"REACHABLE":"UNREACHABLE"}`,reachable),
+    healthBadge(`CONTRACT ${configured?"OK":"MISSING"}`,configured),
+    `<span class="hbadge neutral">Latency: ${esc(h.lastLatencyBand||"UNKNOWN")}</span>`,
+    `<span class="hbadge neutral">Checked: ${esc(formatInstant(h.lastCheckTime))}</span>`
+  ].join("");
+}
 
-        healthStripEl.innerHTML = [
-            healthBadge(`CHAIN ${status}`, reachable && configured),
-            healthBadge(`RPC ${reachable ? "REACHABLE" : "UNREACHABLE"}`, reachable),
-            healthBadge(`CONTRACT ${configured ? "CONFIGURED" : "MISSING"}`, configured),
-            `<span>Latency: <span class="mono">${escapeHtml(latencyBand)}</span></span>`,
-            `<span>Checked: <span class="mono">${escapeHtml(checkedAt)}</span></span>`
-        ].join(" ");
-    }
+function renderEvidence(snapshot){
+  const em=snapshot.latestTrustByStation||{};
+  const items=Object.values(em).filter(Boolean).sort((a,b)=>new Date(b.observedAt||0)-new Date(a.observedAt||0));
+  if(!items.length){evidenceListEl.innerHTML='<div class="status-muted">No trust evidence yet. Trigger a scenario above.</div>';return}
+  evidenceListEl.innerHTML=items.map(item=>`<div class="evidence-item"><div class="sh"><strong class="smono">${esc(item.stationId||"UNKNOWN")}</strong><span class="state ${stateClass((item.verdict||"").toLowerCase())}">${esc(item.verdict||"UNKNOWN")}</span></div><div class="eline">Rationale: ${esc(item.rationale||"-")}</div><div class="eline">Reported hash: <span>${esc(item.reportedHash||"-")}</span></div><div class="eline">Expected hash: <span>${esc(item.expectedHash||"-")}</span></div><div class="eline">Manufacturer: <span>${esc(item.manufacturerId||"-")}</span> · Sig verified: <span>${esc(item.signatureVerified==null?"UNKNOWN":item.signatureVerified?"YES":"NO")}</span></div><div class="eline">Contract: <span>${esc(item.contractAddress||"-")}</span></div><div class="eline">Tx hash: <span>${esc(item.txHash||"N/A")}</span></div><div class="eline">RPC: <span>${esc(item.rpcStatus||"UNKNOWN")}</span> · Latency: <span>${esc(item.latencyBand||"UNKNOWN")}</span></div><div class="eline">Observed: <span>${esc(formatInstant(item.observedAt))}</span></div></div>`).join("");
+}
 
-    function renderEvidence(snapshot) {
-        const evidenceMap = snapshot.latestTrustByStation || {};
-        const evidenceItems = Object.values(evidenceMap)
-            .filter(Boolean)
-            .sort((a, b) => new Date(b.observedAt || 0) - new Date(a.observedAt || 0));
+async function fetchJson(url,opts={}){const r=await fetch(url,opts);if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json()}
+async function refresh(){
+  try{
+    const[snapshot,events]=await Promise.all([fetchJson("/visualizer/api/snapshot"),fetchJson("/visualizer/api/events?limit=80")]);
+    renderKpis(snapshot);renderEvents(events);renderStations(snapshot.stations||[]);renderEvidence(snapshot);renderHealth(snapshot);renderGoldenFlow(snapshot);
+    statusLineEl.textContent=`Live at ${new Date().toLocaleTimeString()} · events=${snapshot.totalEvents}`;
+  }catch(e){statusLineEl.textContent=`API unavailable: ${e.message}`}
+}
+async function simulate(path,label){
+  const sid=stationInputEl.value.trim()||"CS-101";
+  try{statusLineEl.textContent=`${label} scenario requested for ${sid}...`;await fetchJson(`/visualizer/api/${path}?stationId=${encodeURIComponent(sid)}`,{method:"POST"});await refresh();statusLineEl.textContent=`${label} complete for ${sid}. Playback runs ~2.4s.`}
+  catch(e){statusLineEl.textContent=`${label} failed: ${e.message}`}
+}
+async function clearTimeline(){try{await fetch("/visualizer/api/events",{method:"DELETE"});await refresh()}catch(e){statusLineEl.textContent=`Clear failed: ${e.message}`}}
 
-        if (!evidenceItems.length) {
-            evidenceListEl.innerHTML = '<div class="status-line">No trust evidence yet. Trigger a normal or tamper scenario.</div>';
-            return;
-        }
+document.getElementById("simulateNormalBtn").addEventListener("click",()=>simulate("simulate-normal","Normal"));
+document.getElementById("simulateTamperBtn").addEventListener("click",()=>simulate("simulate-tamper","Tamper"));
+document.getElementById("simulateAnomalyBtn").addEventListener("click",()=>simulate("simulate-anomaly","Anomaly"));
+document.getElementById("refreshBtn").addEventListener("click",refresh);
+document.getElementById("clearBtn").addEventListener("click",clearTimeline);
 
-        evidenceListEl.innerHTML = evidenceItems.map(item => `
-            <div class="evidence-item">
-                <div class="station-head">
-                    <strong class="mono">${escapeHtml(item.stationId || "UNKNOWN")}</strong>
-                    <span class="state ${stateClass((item.verdict || "").toLowerCase())}">${escapeHtml(item.verdict || "UNKNOWN")}</span>
-                </div>
-                <div class="line">Rationale: ${escapeHtml(item.rationale || "-")}</div>
-                <div class="line">Reported hash: <span class="mono">${escapeHtml(item.reportedHash || "-")}</span></div>
-                <div class="line">Expected hash: <span class="mono">${escapeHtml(item.expectedHash || "-")}</span></div>
-                <div class="line">Contract: <span class="mono">${escapeHtml(item.contractAddress || "-")}</span></div>
-                <div class="line">Tx hash: <span class="mono">${escapeHtml(item.txHash || "N/A")}</span></div>
-                <div class="line">RPC: <span class="mono">${escapeHtml(item.rpcStatus || "UNKNOWN")}</span> | Latency: <span class="mono">${escapeHtml(item.latencyBand || "UNKNOWN")}</span></div>
-                <div class="line">Observed: <span class="mono">${escapeHtml(formatInstant(item.observedAt))}</span></div>
-            </div>
-        `).join("");
-    }
-
-    async function fetchJson(url, options = {}) {
-        const response = await fetch(url, options);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        return response.json();
-    }
-
-    async function refresh() {
-        try {
-            const [snapshot, events] = await Promise.all([
-                fetchJson("/visualizer/api/snapshot"),
-                fetchJson("/visualizer/api/events?limit=80")
-            ]);
-
-            renderKpis(snapshot);
-            renderEvents(events);
-            renderStations(snapshot.stations || []);
-            renderEvidence(snapshot);
-            renderHealth(snapshot);
-            statusLineEl.textContent = `Live at ${new Date().toLocaleTimeString()} | events=${snapshot.totalEvents}`;
-        } catch (error) {
-            statusLineEl.textContent = `Visualizer API unavailable: ${error.message}`;
-        }
-    }
-
-    async function simulate(endpointPath, label) {
-        const stationId = stationInputEl.value.trim() || "CS-101";
-        try {
-            await fetchJson(`/visualizer/api/${endpointPath}?stationId=${encodeURIComponent(stationId)}`, {
-                method: "POST"
-            });
-            await refresh();
-            statusLineEl.textContent = `${label} scenario completed for ${stationId}`;
-        } catch (error) {
-            statusLineEl.textContent = `${label} scenario failed: ${error.message}`;
-        }
-    }
-
-    async function clearTimeline() {
-        try {
-            await fetch("/visualizer/api/events", { method: "DELETE" });
-            await refresh();
-        } catch (error) {
-            statusLineEl.textContent = `Clear failed: ${error.message}`;
-        }
-    }
-
-    document.getElementById("simulateNormalBtn").addEventListener("click", () => simulate("simulate-normal", "Normal"));
-    document.getElementById("simulateTamperBtn").addEventListener("click", () => simulate("simulate-tamper", "Tamper"));
-    document.getElementById("simulateAnomalyBtn").addEventListener("click", () => simulate("simulate-anomaly", "Anomaly"));
-    document.getElementById("refreshBtn").addEventListener("click", refresh);
-    document.getElementById("clearBtn").addEventListener("click", clearTimeline);
-
-    refresh();
-    setInterval(refresh, 2500);
+refresh();
+setInterval(refresh,2500);
 </script>
 </body>
 </html>

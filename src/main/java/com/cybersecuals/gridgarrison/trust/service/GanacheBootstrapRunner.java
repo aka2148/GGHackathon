@@ -4,8 +4,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Base64;
 import java.util.Map;
 
 @Slf4j
@@ -15,6 +22,7 @@ class GanacheBootstrapRunner implements CommandLineRunner {
 
     private final BlockchainService blockchainService;
     private final BlockchainServiceImpl blockchainServiceImpl;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Value("${gridgarrison.blockchain.contract-address:}")
     private String configuredContractAddress;
@@ -22,10 +30,18 @@ class GanacheBootstrapRunner implements CommandLineRunner {
     @Value("#{${gridgarrison.blockchain.bootstrap.seed-golden-hashes:{}}}")
     private Map<String, String> seedGoldenHashes;
 
+    @Value("${gridgarrison.trust.manufacturer.id:ACME-MFG}")
+    private String manufacturerId;
+
+    @Value("${gridgarrison.trust.manufacturer.private-key-base64:}")
+    private String manufacturerPrivateKeyBase64;
+
     GanacheBootstrapRunner(BlockchainService blockchainService,
-                           BlockchainServiceImpl blockchainServiceImpl) {
+                           BlockchainServiceImpl blockchainServiceImpl,
+                           ApplicationEventPublisher eventPublisher) {
         this.blockchainService = blockchainService;
         this.blockchainServiceImpl = blockchainServiceImpl;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -52,8 +68,29 @@ class GanacheBootstrapRunner implements CommandLineRunner {
 
         seedGoldenHashes.forEach((stationId, hash) -> {
             try {
-                String txHash = blockchainService.registerGoldenHash(stationId, hash).join();
+                eventPublisher.publishEvent(new ManufactureHashGeneratedEvent(
+                    stationId,
+                    "Manufacture stage generated golden hash " + hash
+                ));
+
+                String manufacturerSignature = signGoldenHash(hash);
+                eventPublisher.publishEvent(new GoldenHashSignedEvent(
+                    stationId,
+                    "Manufacturer " + manufacturerId + " signed golden hash"
+                ));
+
+                String txHash = blockchainService.registerSignedGoldenHash(
+                    stationId,
+                    hash,
+                    manufacturerSignature,
+                    manufacturerId
+                ).join();
                 log.info("[Bootstrap] Seeded stationId={} txHash={}", stationId, txHash);
+                eventPublisher.publishEvent(new SignedGoldenHashStoredOnChainEvent(
+                    stationId,
+                    "Signed golden hash stored on-chain txHash=" + txHash,
+                    txHash
+                ));
             } catch (Exception ex) {
                 log.error("[Bootstrap] Failed seeding stationId={}", stationId, ex);
             }
@@ -73,5 +110,24 @@ class GanacheBootstrapRunner implements CommandLineRunner {
         return value == null
             || value.isBlank()
             || "0x0000000000000000000000000000000000000000".equalsIgnoreCase(value.trim());
+    }
+
+    private String signGoldenHash(String goldenHash) {
+        if (manufacturerPrivateKeyBase64 == null || manufacturerPrivateKeyBase64.isBlank()) {
+            throw new IllegalStateException("Manufacturer private key is not configured for bootstrap signing");
+        }
+
+        try {
+            byte[] privateBytes = Base64.getDecoder().decode(manufacturerPrivateKeyBase64);
+            PrivateKey privateKey = KeyFactory.getInstance("RSA")
+                .generatePrivate(new PKCS8EncodedKeySpec(privateBytes));
+
+            Signature signer = Signature.getInstance("SHA256withRSA");
+            signer.initSign(privateKey);
+            signer.update(goldenHash.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(signer.sign());
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to sign seeded golden hash", ex);
+        }
     }
 }

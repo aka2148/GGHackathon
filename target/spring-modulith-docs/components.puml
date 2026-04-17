@@ -1,0 +1,25 @@
+@startuml
+set separator none
+title GridGarrison
+
+top to bottom direction
+
+!include <C4/C4>
+!include <C4/C4_Context>
+!include <C4/C4_Component>
+
+Container_Boundary("GridGarrison.GridGarrison_boundary", "GridGarrison", $tags="") {
+  Component(GridGarrison.GridGarrison.Trust, "Trust", $techn="Module", $descr="", $tags="", $link="")
+  Component(GridGarrison.GridGarrison.Shared, "Shared", $techn="Module", $descr="", $tags="", $link="")
+  Component(GridGarrison.GridGarrison.Orchestrator, "Orchestrator", $techn="Module", $descr="", $tags="", $link="")
+  Component(GridGarrison.GridGarrison.Watchdog, "Watchdog", $techn="Module", $descr="", $tags="", $link="")
+  Component(GridGarrison.GridGarrison.Visualizer, "Visualizer", $techn="Module", $descr="", $tags="", $link="")
+}
+
+Rel(GridGarrison.GridGarrison.Trust, GridGarrison.GridGarrison.Orchestrator, "listens to", $techn="", $tags="", $link="")
+Rel(GridGarrison.GridGarrison.Trust, GridGarrison.GridGarrison.Shared, "depends on", $techn="", $tags="", $link="")
+Rel(GridGarrison.GridGarrison.Visualizer, GridGarrison.GridGarrison.Orchestrator, "depends on", $techn="", $tags="", $link="")
+Rel(GridGarrison.GridGarrison.Watchdog, GridGarrison.GridGarrison.Shared, "depends on", $techn="", $tags="", $link="")
+
+SHOW_LEGEND(true)
+@enduml

@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -50,6 +51,9 @@ class FirmwareStatusVerificationListenerTest {
             TrustEvidence.Verdict.VERIFIED,
             "0xabc123",
             "0xabc123",
+            "ACME-MFG",
+            "sig",
+            true,
             "0xcontract",
             null,
             TrustEvidence.RpcStatus.REACHABLE,
@@ -68,9 +72,9 @@ class FirmwareStatusVerificationListenerTest {
             "{\"reportedHash\":\"0xabc123\",\"firmwareVersion\":\"1.0.0\"}"
         ));
 
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue())
-            .isInstanceOf(GoldenHashVerifiedEvent.class);
+        verify(eventPublisher, atLeastOnce()).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues())
+            .anyMatch(GoldenHashVerifiedEvent.class::isInstance);
     }
 
     @Test
@@ -89,6 +93,9 @@ class FirmwareStatusVerificationListenerTest {
             TrustEvidence.Verdict.TAMPERED,
             "0xdeadbeef",
             "0xabc123",
+            "ACME-MFG",
+            "sig",
+            true,
             "0xcontract",
             null,
             TrustEvidence.RpcStatus.REACHABLE,
@@ -107,9 +114,9 @@ class FirmwareStatusVerificationListenerTest {
             "{\"reportedHash\":\"0xdeadbeef\",\"firmwareVersion\":\"1.0.0\"}"
         ));
 
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue())
-            .isInstanceOf(GoldenHashTamperedEvent.class);
+        verify(eventPublisher, atLeastOnce()).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues())
+            .anyMatch(GoldenHashTamperedEvent.class::isInstance);
     }
 
     @Test
@@ -120,8 +127,8 @@ class FirmwareStatusVerificationListenerTest {
         ));
 
         verify(blockchainService, never()).verifyGoldenHashWithEvidence(any(FirmwareHash.class));
-        verify(eventPublisher).publishEvent(eventCaptor.capture());
-        assertThat(eventCaptor.getValue())
-            .isInstanceOf(GoldenHashVerificationFailedEvent.class);
+        verify(eventPublisher, atLeastOnce()).publishEvent(eventCaptor.capture());
+        assertThat(eventCaptor.getAllValues())
+            .anyMatch(GoldenHashVerificationFailedEvent.class::isInstance);
     }
 }

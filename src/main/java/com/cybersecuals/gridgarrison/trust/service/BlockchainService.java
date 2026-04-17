@@ -41,6 +41,20 @@ public interface BlockchainService {
                                                   String goldenHash);
 
     /**
+     * Register a signed golden hash payload for a station.
+     *
+     * @param stationId station identity
+     * @param goldenHash authoritative hash
+     * @param manufacturerSignature Base64 signature over goldenHash
+     * @param manufacturerId manufacturer identity label
+     * @return transaction hash of the submitted transaction
+     */
+    CompletableFuture<String> registerSignedGoldenHash(String stationId,
+                                                       String goldenHash,
+                                                       String manufacturerSignature,
+                                                       String manufacturerId);
+
+    /**
      * Record a charging-session state transition on-chain for auditability.
      *
      * @param stationId station identity

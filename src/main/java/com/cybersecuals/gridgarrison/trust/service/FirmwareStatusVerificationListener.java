@@ -50,6 +50,15 @@ class FirmwareStatusVerificationListener {
             return;
         }
 
+        eventPublisher.publishEvent(new GoldenHashRequestedEvent(
+            event.stationId(),
+            "Driver requested on-chain golden hash for station " + event.stationId()
+        ));
+        eventPublisher.publishEvent(new CurrentStatusHashReportedEvent(
+            event.stationId(),
+            "Station reported live status hash " + firmwareHash.getReportedHash()
+        ));
+
         CompletableFuture<TrustVerificationResult> verification =
             blockchainService.verifyGoldenHashWithEvidence(firmwareHash);
         verification.whenComplete((result, error) -> {
@@ -73,6 +82,20 @@ class FirmwareStatusVerificationListener {
 
             FirmwareHash resolvedHash = result.firmwareHash();
             TrustEvidence evidence = result.evidence();
+            if (Boolean.TRUE.equals(resolvedHash.getSignatureVerified())) {
+                eventPublisher.publishEvent(new GoldenSignatureVerifiedEvent(
+                    resolvedHash.getStationId(),
+                    "Manufacturer signature verified using configured public key",
+                    evidence
+                ));
+            } else {
+                eventPublisher.publishEvent(new GoldenSignatureVerificationFailedEvent(
+                    resolvedHash.getStationId(),
+                    "Manufacturer signature verification failed",
+                    evidence
+                ));
+            }
+
             FirmwareHash.VerificationStatus status = resolvedHash.getStatus();
             if (status == FirmwareHash.VerificationStatus.VERIFIED) {
                 eventPublisher.publishEvent(new GoldenHashVerifiedEvent(
@@ -134,6 +157,14 @@ class FirmwareStatusVerificationListener {
                 "firmwareSha256",
                 "sha256");
             String firmwareVersion = readFirstText(payload, "firmwareVersion", "version");
+            String manufacturerId = readFirstText(payload,
+                "manufacturerId",
+                "manufacturer",
+                "vendorId");
+            String manufacturerSignature = readFirstText(payload,
+                "manufacturerSignature",
+                "signature",
+                "signatureBase64");
 
             if (reportedHash == null || reportedHash.isBlank()) {
                 throw new IllegalArgumentException("Firmware payload does not contain a reported hash");
@@ -143,6 +174,8 @@ class FirmwareStatusVerificationListener {
                 .stationId(stationId)
                 .reportedHash(reportedHash)
                 .firmwareVersion(firmwareVersion)
+                .manufacturerId(manufacturerId)
+                .manufacturerSignature(manufacturerSignature)
                 .reportedAt(Instant.now())
                 .status(FirmwareHash.VerificationStatus.PENDING)
                 .build();
@@ -170,6 +203,30 @@ record GoldenHashVerifiedEvent(String stationId,
                                String reportedHash,
                                String goldenHash,
                                TrustEvidence evidence) {}
+
+record GoldenHashRequestedEvent(String stationId,
+                                String rawPayload) {}
+
+record CurrentStatusHashReportedEvent(String stationId,
+                                      String rawPayload) {}
+
+record ManufactureHashGeneratedEvent(String stationId,
+                                     String rawPayload) {}
+
+record GoldenHashSignedEvent(String stationId,
+                             String rawPayload) {}
+
+record SignedGoldenHashStoredOnChainEvent(String stationId,
+                                          String rawPayload,
+                                          String txHash) {}
+
+record GoldenSignatureVerifiedEvent(String stationId,
+                                    String rawPayload,
+                                    TrustEvidence evidence) {}
+
+record GoldenSignatureVerificationFailedEvent(String stationId,
+                                              String rawPayload,
+                                              TrustEvidence evidence) {}
 
 record GoldenHashTamperedEvent(String stationId,
                                String rawPayload,
