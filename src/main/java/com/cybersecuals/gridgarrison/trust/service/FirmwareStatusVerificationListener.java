@@ -5,7 +5,8 @@ import com.cybersecuals.gridgarrison.orchestrator.websocket.TransactionEvent;
 import com.cybersecuals.gridgarrison.shared.dto.FirmwareHash;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -13,15 +14,16 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.concurrent.CompletableFuture;
 
-@Slf4j
 @Service
 class FirmwareStatusVerificationListener {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Logger log = LoggerFactory.getLogger(FirmwareStatusVerificationListener.class);
 
     private final BlockchainService blockchainService;
     private final ApplicationEventPublisher eventPublisher;
 
+    @SuppressWarnings("unused")
     FirmwareStatusVerificationListener(BlockchainService blockchainService,
                                        ApplicationEventPublisher eventPublisher) {
         this.blockchainService = blockchainService;
@@ -97,24 +99,22 @@ class FirmwareStatusVerificationListener {
             }
 
             FirmwareHash.VerificationStatus status = resolvedHash.getStatus();
-            if (status == FirmwareHash.VerificationStatus.VERIFIED) {
-                eventPublisher.publishEvent(new GoldenHashVerifiedEvent(
+            switch (status) {
+                case VERIFIED -> eventPublisher.publishEvent(new GoldenHashVerifiedEvent(
                     resolvedHash.getStationId(),
                     event.rawPayload(),
                     resolvedHash.getReportedHash(),
                     resolvedHash.getGoldenHash(),
                     evidence
                 ));
-            } else if (status == FirmwareHash.VerificationStatus.TAMPERED) {
-                eventPublisher.publishEvent(new GoldenHashTamperedEvent(
+                case TAMPERED -> eventPublisher.publishEvent(new GoldenHashTamperedEvent(
                     resolvedHash.getStationId(),
                     event.rawPayload(),
                     resolvedHash.getReportedHash(),
                     resolvedHash.getGoldenHash(),
                     evidence
                 ));
-            } else {
-                eventPublisher.publishEvent(new GoldenHashVerificationFailedEvent(
+                default -> eventPublisher.publishEvent(new GoldenHashVerificationFailedEvent(
                     resolvedHash.getStationId(),
                     event.rawPayload(),
                     status.name(),
@@ -125,6 +125,7 @@ class FirmwareStatusVerificationListener {
     }
 
     @EventListener
+    @SuppressWarnings("unused")
     void onTransactionEvent(TransactionEvent event) {
         String sessionId = "SESSION-UNKNOWN";
         String state = "UPDATE";
@@ -179,7 +180,7 @@ class FirmwareStatusVerificationListener {
                 .reportedAt(Instant.now())
                 .status(FirmwareHash.VerificationStatus.PENDING)
                 .build();
-        } catch (Exception ex) {
+        } catch (java.io.IOException | RuntimeException ex) {
             throw new IllegalArgumentException("Malformed firmware status payload", ex);
         }
     }

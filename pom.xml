@@ -21,6 +21,7 @@
         <java.version>17</java.version>
         <web3j.version>4.10.3</web3j.version>
         <spring-modulith.version>1.2.0</spring-modulith.version>
+        <lombok.version>1.18.36</lombok.version>
     </properties>
 
     <dependencyManagement>

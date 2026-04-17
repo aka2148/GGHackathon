@@ -5,7 +5,8 @@ import com.cybersecuals.gridgarrison.trust.contract.FirmwareRegistryContract;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.web3j.crypto.Credentials;
@@ -42,9 +43,10 @@ import java.util.concurrent.CompletableFuture;
  *     contract-address:  0xABCD...               # deployed FirmwareRegistry
  * </pre>
  */
-@Slf4j
 @Service
 class BlockchainServiceImpl implements BlockchainService {
+
+    private static final Logger log = LoggerFactory.getLogger(BlockchainServiceImpl.class);
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String GOLDEN_HASH_FIELD = "goldenHash";
@@ -82,6 +84,7 @@ class BlockchainServiceImpl implements BlockchainService {
     private ContractGasProvider gasProvider;
 
     @PostConstruct
+    @SuppressWarnings("unused")
     void init() {
         web3j       = Web3j.build(new HttpService(rpcUrl));
         credentials = Credentials.create(privateKey);
@@ -376,18 +379,6 @@ class BlockchainServiceImpl implements BlockchainService {
     // Private helpers
     // -------------------------------------------------------------------------
 
-    private FirmwareHash.VerificationStatus determineStatus(String reported, String onChain) {
-        if (reported == null || reported.isBlank()) {
-            return FirmwareHash.VerificationStatus.UNKNOWN_STATION;
-        }
-        if (onChain == null || onChain.isBlank() || onChain.equals("0x")) {
-            return FirmwareHash.VerificationStatus.UNKNOWN_STATION;
-        }
-        return normalise(reported).equalsIgnoreCase(normalise(onChain))
-            ? FirmwareHash.VerificationStatus.VERIFIED
-            : FirmwareHash.VerificationStatus.TAMPERED;
-    }
-
     private FirmwareHash.VerificationStatus determineStatus(String reported,
                                                             String onChain,
                                                             boolean signatureVerified) {
@@ -437,6 +428,7 @@ class BlockchainServiceImpl implements BlockchainService {
         return "Unable to determine trust verdict.";
     }
 
+    @SuppressWarnings("unused")
     String encodeSignedGoldenRecord(String goldenHash,
                                     String manufacturerSignature,
                                     String manufacturerId) {
@@ -619,11 +611,11 @@ class BlockchainServiceImpl implements BlockchainService {
 
         try {
             byte[] privateBytes = Base64.getDecoder().decode(manufacturerPrivateKeyBase64);
-            PrivateKey privateKey = KeyFactory.getInstance("RSA")
+            PrivateKey signingPrivateKey = KeyFactory.getInstance("RSA")
                 .generatePrivate(new PKCS8EncodedKeySpec(privateBytes));
 
             Signature signer = Signature.getInstance("SHA256withRSA");
-            signer.initSign(privateKey);
+            signer.initSign(signingPrivateKey);
             signer.update(goldenHash.getBytes(StandardCharsets.UTF_8));
             return Base64.getEncoder().encodeToString(signer.sign());
         } catch (Exception ex) {

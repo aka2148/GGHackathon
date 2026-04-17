@@ -45,6 +45,7 @@ com\cybersecuals\gridgarrison\trust\service\SignedGoldenRegistrationResult.class
 com\cybersecuals\gridgarrison\watchdog\service\AnomalyReport.class
 com\cybersecuals\gridgarrison\trust\service\TrustReadController$OnChainGoldenHashResponse.class
 com\cybersecuals\gridgarrison\watchdog\service\StationTwin$StationTwinBuilder.class
+com\cybersecuals\gridgarrison\shared\dto\FirmwareHash$Builder.class
 com\cybersecuals\gridgarrison\visualizer\RuntimeTraceService$GoldenFlowState.class
 com\cybersecuals\gridgarrison\trust\service\CurrentStatusHashReportedEvent.class
 com\cybersecuals\gridgarrison\trust\service\GoldenHashRequestedEvent.class
@@ -59,12 +60,10 @@ com\cybersecuals\gridgarrison\watchdog\service\StationTwin.class
 com\cybersecuals\gridgarrison\orchestrator\config\OcppHandshakeInterceptor.class
 com\cybersecuals\gridgarrison\trust\service\SignedGoldenHashStoredOnChainEvent.class
 com\cybersecuals\gridgarrison\visualizer\RuntimeTraceService$ComponentConditionView.class
-com\cybersecuals\gridgarrison\trust\contract\FirmwareRegistryContract$6.class
 com\cybersecuals\gridgarrison\watchdog\service\AnomalyReport$AnomalyType.class
 com\cybersecuals\gridgarrison\orchestrator\websocket\FirmwareStatusEvent.class
 com\cybersecuals\gridgarrison\visualizer\RuntimeTraceService$RuntimeSnapshot.class
 com\cybersecuals\gridgarrison\visualizer\RuntimeTraceService$VerificationMode.class
-com\cybersecuals\gridgarrison\shared\dto\FirmwareHash$FirmwareHashBuilder.class
 com\cybersecuals\gridgarrison\watchdog\service\AnomalyReport$AnomalyReportBuilder.class
 com\cybersecuals\gridgarrison\trust\service\TrustEvidence$Verdict.class
 com\cybersecuals\gridgarrison\visualizer\RuntimeTraceService$GeneratedHashView.class
@@ -81,3 +80,4 @@ com\cybersecuals\gridgarrison\orchestrator\websocket\TransactionEvent.class
 com\cybersecuals\gridgarrison\visualizer\RuntimeTraceService$StationComponentState.class
 com\cybersecuals\gridgarrison\watchdog\service\StationTwin$TwinStatus.class
 com\cybersecuals\gridgarrison\trust\service\GanacheBootstrapRunner.class
+com\cybersecuals\gridgarrison\trust\service\FirmwareStatusVerificationListener$1.class

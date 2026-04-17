@@ -25,6 +25,7 @@ class MtlsSecurityConfig {
     private boolean visualizerPublic;
 
     @Bean
+    @SuppressWarnings("unused")
     SecurityFilterChain ocppSecurityFilterChain(HttpSecurity http) throws Exception {
         http
             // x509 extracts the CN from the client cert as the principal

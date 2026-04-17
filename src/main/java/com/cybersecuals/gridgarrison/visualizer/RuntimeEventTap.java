@@ -12,6 +12,7 @@ class RuntimeEventTap {
 
     private final RuntimeTraceService runtimeTraceService;
 
+    @SuppressWarnings("unused")
     RuntimeEventTap(RuntimeTraceService runtimeTraceService) {
         this.runtimeTraceService = runtimeTraceService;
     }
@@ -150,7 +151,7 @@ class RuntimeEventTap {
             return null;
         }
         try {
-            return Long.parseLong(value);
+            return Long.valueOf(value);
         } catch (NumberFormatException ignored) {
             return null;
         }
@@ -160,7 +161,7 @@ class RuntimeEventTap {
         if (value == null || value.isBlank()) {
             return null;
         }
-        return Boolean.parseBoolean(value);
+        return Boolean.valueOf(value);
     }
 
     private String abbreviate(String value) {

@@ -25,7 +25,7 @@ record OcppMessage(int messageTypeId, String messageId, String action,
                 ? array.get(3).toString()
                 : array.get(2).toString();
             return new OcppMessage(typeId, msgId, action, payload, stationId);
-        } catch (Exception e) {
+        } catch (java.io.IOException | RuntimeException e) {
             throw new IllegalArgumentException("Malformed OCPP frame: " + json, e);
         }
     }

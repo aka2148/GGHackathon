@@ -1,6 +1,7 @@
 package com.cybersecuals.gridgarrison.trust.service;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -15,10 +16,11 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 import java.util.Map;
 
-@Slf4j
 @Component
 @ConditionalOnProperty(prefix = "gridgarrison.blockchain.bootstrap", name = "enabled", havingValue = "true")
 class GanacheBootstrapRunner implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(GanacheBootstrapRunner.class);
 
     private final BlockchainService blockchainService;
     private final BlockchainServiceImpl blockchainServiceImpl;
@@ -36,6 +38,7 @@ class GanacheBootstrapRunner implements CommandLineRunner {
     @Value("${gridgarrison.trust.manufacturer.private-key-base64:}")
     private String manufacturerPrivateKeyBase64;
 
+    @SuppressWarnings("unused")
     GanacheBootstrapRunner(BlockchainService blockchainService,
                            BlockchainServiceImpl blockchainServiceImpl,
                            ApplicationEventPublisher eventPublisher) {
