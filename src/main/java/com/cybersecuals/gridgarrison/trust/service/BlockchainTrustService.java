@@ -8,8 +8,9 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.tx.gas.DefaultGasProvider;
 
+
 @Service
-public class BlockchainTrustService {
+public class BlockchainTrustService {       
 
     private final String rpcUrl;
     private final String privateKey;
