@@ -32,9 +32,14 @@ class GanacheBootstrapRunner implements CommandLineRunner {
     public void run(String... args) {
         String contractAddress = configuredContractAddress;
         if (isUnset(contractAddress)) {
-            contractAddress = blockchainServiceImpl.deployContract();
-            log.info("[Bootstrap] Deployed contract address={}", contractAddress);
-            log.info("[Bootstrap] Set GG_CONTRACT_ADDR={} for future runs", contractAddress);
+            try {
+                contractAddress = blockchainServiceImpl.deployContract();
+                log.info("[Bootstrap] Deployed contract address={}", contractAddress);
+                log.info("[Bootstrap] Set GG_CONTRACT_ADDR={} for future runs", contractAddress);
+            } catch (Exception ex) {
+                log.warn("[Bootstrap] Contract deployment skipped — using configured zero address", ex);
+                return;
+            }
         } else {
             blockchainServiceImpl.bindContract(contractAddress);
             log.info("[Bootstrap] Using configured contract address={}", contractAddress);
@@ -60,7 +65,7 @@ class GanacheBootstrapRunner implements CommandLineRunner {
                 .join();
             log.info("[Bootstrap] Session audit marker txHash={}", txHash);
         } catch (Exception ex) {
-            log.error("[Bootstrap] Failed writing session audit marker", ex);
+            log.warn("[Bootstrap] Session audit marker skipped", ex);
         }
     }
 

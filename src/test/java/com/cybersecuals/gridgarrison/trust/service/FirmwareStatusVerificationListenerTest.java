@@ -45,9 +45,23 @@ class FirmwareStatusVerificationListenerTest {
             .status(FirmwareHash.VerificationStatus.VERIFIED)
             .build();
 
-        doReturn(CompletableFuture.completedFuture(verified))
+        TrustEvidence evidence = new TrustEvidence(
+            "CS-101",
+            TrustEvidence.Verdict.VERIFIED,
+            "0xabc123",
+            "0xabc123",
+            "0xcontract",
+            null,
+            TrustEvidence.RpcStatus.REACHABLE,
+            Instant.now(),
+            "Reported hash matches on-chain golden hash.",
+            40L,
+            TrustEvidence.LatencyBand.FAST
+        );
+
+        doReturn(CompletableFuture.completedFuture(new TrustVerificationResult(verified, evidence)))
             .when(blockchainService)
-            .verifyGoldenHash(any(FirmwareHash.class));
+            .verifyGoldenHashWithEvidence(any(FirmwareHash.class));
 
         listener.onFirmwareStatus(new FirmwareStatusEvent(
             "CS-101",
@@ -70,9 +84,23 @@ class FirmwareStatusVerificationListenerTest {
             .status(FirmwareHash.VerificationStatus.TAMPERED)
             .build();
 
-        doReturn(CompletableFuture.completedFuture(tampered))
+        TrustEvidence evidence = new TrustEvidence(
+            "CS-102",
+            TrustEvidence.Verdict.TAMPERED,
+            "0xdeadbeef",
+            "0xabc123",
+            "0xcontract",
+            null,
+            TrustEvidence.RpcStatus.REACHABLE,
+            Instant.now(),
+            "Reported hash differs from on-chain golden hash.",
+            60L,
+            TrustEvidence.LatencyBand.FAST
+        );
+
+        doReturn(CompletableFuture.completedFuture(new TrustVerificationResult(tampered, evidence)))
             .when(blockchainService)
-            .verifyGoldenHash(any(FirmwareHash.class));
+            .verifyGoldenHashWithEvidence(any(FirmwareHash.class));
 
         listener.onFirmwareStatus(new FirmwareStatusEvent(
             "CS-102",
@@ -91,7 +119,7 @@ class FirmwareStatusVerificationListenerTest {
             "{\"firmwareVersion\":\"1.0.0\"}"
         ));
 
-        verify(blockchainService, never()).verifyGoldenHash(any(FirmwareHash.class));
+        verify(blockchainService, never()).verifyGoldenHashWithEvidence(any(FirmwareHash.class));
         verify(eventPublisher).publishEvent(eventCaptor.capture());
         assertThat(eventCaptor.getValue())
             .isInstanceOf(GoldenHashVerificationFailedEvent.class);

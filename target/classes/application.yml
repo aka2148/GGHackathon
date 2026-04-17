@@ -61,12 +61,6 @@ spring.modulith:
 # ---------------------------------------------------------------------------
 gridgarrison:
 
-  security:
-    visualizer-public: ${GG_VISUALIZER_PUBLIC:true}
-    ocpp:
-      enforce-station-id-principal-match: ${GG_ENFORCE_CN_STATION_MATCH:false}
-      allowed-origins: ${GG_OCPP_ALLOWED_ORIGINS:http://localhost:8443,http://127.0.0.1:8443}
-
   blockchain:
     rpc-url:          ${GG_RPC_URL:${WEB3J_CLIENT_ADDRESS:http://127.0.0.1:7545}}
     private-key:      ${GG_WALLET_KEY:0x0000000000000000000000000000000000000000000000000000000000000001}
@@ -79,7 +73,6 @@ gridgarrison:
 
   watchdog:
     sweep-interval-ms: 60000
-    heartbeat-timeout-ms: ${GG_HEARTBEAT_TIMEOUT_MS:180000}
 
 # ---------------------------------------------------------------------------
 # Actuator

@@ -18,6 +18,8 @@ C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\trust\service\Bl
 C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\trust\service\BlockchainTrustService.java
 C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\trust\service\FirmwareStatusVerificationListener.java
 C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\trust\service\GanacheBootstrapRunner.java
+C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\trust\service\TrustEvidence.java
+C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\trust\service\TrustVerificationResult.java
 C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\visualizer\RuntimeEventTap.java
 C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\visualizer\RuntimeTraceController.java
 C:\aur\gridgarrison\src\main\java\com\cybersecuals\gridgarrison\visualizer\RuntimeTraceService.java

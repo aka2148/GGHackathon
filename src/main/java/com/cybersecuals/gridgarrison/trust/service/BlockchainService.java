@@ -22,6 +22,14 @@ public interface BlockchainService {
     CompletableFuture<FirmwareHash> verifyGoldenHash(FirmwareHash firmwareHash);
 
     /**
+     * Verify a station firmware hash and attach judge-facing on-chain evidence.
+     *
+     * @param firmwareHash DTO containing the station ID and hash to verify
+     * @return future resolved with both verification output and blockchain evidence
+     */
+    CompletableFuture<TrustVerificationResult> verifyGoldenHashWithEvidence(FirmwareHash firmwareHash);
+
+    /**
      * Register a new authoritative golden hash for a station (admin operation).
      * Submits a signed transaction to the smart contract.
      *

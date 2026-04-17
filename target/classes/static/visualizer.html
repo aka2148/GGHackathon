@@ -209,6 +209,10 @@
             grid-column: span 4;
         }
 
+        .evidence {
+            grid-column: span 12;
+        }
+
         .title {
             margin: 0 0 10px;
             font-size: 1rem;
@@ -294,6 +298,57 @@
             font-size: 0.82rem;
         }
 
+        .health-strip {
+            margin-top: 6px;
+            font-size: 0.82rem;
+            color: var(--muted);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .health-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 999px;
+            border: 1px solid #cbd5e1;
+            font-family: "IBM Plex Mono", monospace;
+            font-size: 0.72rem;
+            background: #f8fafc;
+            color: #334155;
+        }
+
+        .health-badge.ok {
+            border-color: #86efac;
+            background: #f0fdf4;
+            color: #166534;
+        }
+
+        .health-badge.bad {
+            border-color: #fca5a5;
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        .evidence-list {
+            display: grid;
+            gap: 8px;
+        }
+
+        .evidence-item {
+            border: 1px solid #d5dde5;
+            border-radius: 12px;
+            background: #fff;
+            padding: 10px;
+            display: grid;
+            gap: 6px;
+        }
+
+        .evidence-item .line {
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
+
         @media (max-width: 920px) {
             .kpis { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
             .flow-track { grid-template-columns: repeat(2, 1fr); }
@@ -320,6 +375,7 @@
             </div>
         </div>
         <div class="kpis" id="kpis"></div>
+        <div class="health-strip" id="healthStrip"></div>
     </section>
 
     <section class="grid">
@@ -354,6 +410,11 @@
             <h2 class="title">Station Twin Lens</h2>
             <div id="stationsList" class="station-list"></div>
         </article>
+
+        <article class="panel evidence">
+            <h2 class="title">Trust Evidence</h2>
+            <div id="evidenceList" class="evidence-list"></div>
+        </article>
     </section>
 
     <p class="footer-note" id="statusLine">Initializing visualizer...</p>
@@ -363,6 +424,8 @@
     const kpisEl = document.getElementById("kpis");
     const eventsBodyEl = document.getElementById("eventsBody");
     const stationsListEl = document.getElementById("stationsList");
+    const evidenceListEl = document.getElementById("evidenceList");
+    const healthStripEl = document.getElementById("healthStrip");
     const statusLineEl = document.getElementById("statusLine");
     const stationInputEl = document.getElementById("stationInput");
 
@@ -384,6 +447,10 @@
 
     function stateClass(state) {
         const key = (state || "").toLowerCase();
+        if (key === "verified") return "state-monitoring";
+        if (key === "tampered") return "state-alert";
+        if (key === "infra_failure") return "state-alert";
+        if (key === "unknown_station") return "state-suspicious";
         if (key === "online") return "state-online";
         if (key === "monitoring") return "state-monitoring";
         if (key === "suspicious") return "state-suspicious";
@@ -453,6 +520,56 @@
         `).join("");
     }
 
+    function healthBadge(text, ok) {
+        const cls = ok ? "health-badge ok" : "health-badge bad";
+        return `<span class="${cls}">${escapeHtml(text)}</span>`;
+    }
+
+    function renderHealth(snapshot) {
+        const health = snapshot.chainHealth || {};
+        const reachable = !!health.rpcReachable;
+        const configured = !!health.contractConfigured;
+        const status = health.status || "UNKNOWN";
+        const latencyBand = health.lastLatencyBand || "UNKNOWN";
+        const checkedAt = formatInstant(health.lastCheckTime);
+
+        healthStripEl.innerHTML = [
+            healthBadge(`CHAIN ${status}`, reachable && configured),
+            healthBadge(`RPC ${reachable ? "REACHABLE" : "UNREACHABLE"}`, reachable),
+            healthBadge(`CONTRACT ${configured ? "CONFIGURED" : "MISSING"}`, configured),
+            `<span>Latency: <span class="mono">${escapeHtml(latencyBand)}</span></span>`,
+            `<span>Checked: <span class="mono">${escapeHtml(checkedAt)}</span></span>`
+        ].join(" ");
+    }
+
+    function renderEvidence(snapshot) {
+        const evidenceMap = snapshot.latestTrustByStation || {};
+        const evidenceItems = Object.values(evidenceMap)
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.observedAt || 0) - new Date(a.observedAt || 0));
+
+        if (!evidenceItems.length) {
+            evidenceListEl.innerHTML = '<div class="status-line">No trust evidence yet. Trigger a normal or tamper scenario.</div>';
+            return;
+        }
+
+        evidenceListEl.innerHTML = evidenceItems.map(item => `
+            <div class="evidence-item">
+                <div class="station-head">
+                    <strong class="mono">${escapeHtml(item.stationId || "UNKNOWN")}</strong>
+                    <span class="state ${stateClass((item.verdict || "").toLowerCase())}">${escapeHtml(item.verdict || "UNKNOWN")}</span>
+                </div>
+                <div class="line">Rationale: ${escapeHtml(item.rationale || "-")}</div>
+                <div class="line">Reported hash: <span class="mono">${escapeHtml(item.reportedHash || "-")}</span></div>
+                <div class="line">Expected hash: <span class="mono">${escapeHtml(item.expectedHash || "-")}</span></div>
+                <div class="line">Contract: <span class="mono">${escapeHtml(item.contractAddress || "-")}</span></div>
+                <div class="line">Tx hash: <span class="mono">${escapeHtml(item.txHash || "N/A")}</span></div>
+                <div class="line">RPC: <span class="mono">${escapeHtml(item.rpcStatus || "UNKNOWN")}</span> | Latency: <span class="mono">${escapeHtml(item.latencyBand || "UNKNOWN")}</span></div>
+                <div class="line">Observed: <span class="mono">${escapeHtml(formatInstant(item.observedAt))}</span></div>
+            </div>
+        `).join("");
+    }
+
     async function fetchJson(url, options = {}) {
         const response = await fetch(url, options);
         if (!response.ok) {
@@ -471,6 +588,8 @@
             renderKpis(snapshot);
             renderEvents(events);
             renderStations(snapshot.stations || []);
+            renderEvidence(snapshot);
+            renderHealth(snapshot);
             statusLineEl.textContent = `Live at ${new Date().toLocaleTimeString()} | events=${snapshot.totalEvents}`;
         } catch (error) {
             statusLineEl.textContent = `Visualizer API unavailable: ${error.message}`;

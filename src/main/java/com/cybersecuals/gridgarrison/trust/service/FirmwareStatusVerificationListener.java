@@ -36,34 +36,66 @@ class FirmwareStatusVerificationListener {
             firmwareHash = parseFirmwareHash(event.stationId(), event.rawPayload());
         } catch (RuntimeException ex) {
             log.warn("[Trust] Unable to parse firmware payload for stationId={}", event.stationId(), ex);
+            String reason = ex.getMessage() == null ? "Malformed firmware payload" : ex.getMessage();
+            TrustEvidence evidence = TrustEvidence.infrastructureFailure(
+                event.stationId(),
+                null,
+                "UNAVAILABLE",
+                reason,
+                Instant.now()
+            );
             eventPublisher.publishEvent(new GoldenHashVerificationFailedEvent(
-                event.stationId(), event.rawPayload(), ex.getMessage()
+                event.stationId(), event.rawPayload(), reason, evidence
             ));
             return;
         }
 
-        CompletableFuture<FirmwareHash> verification = blockchainService.verifyGoldenHash(firmwareHash);
+        CompletableFuture<TrustVerificationResult> verification =
+            blockchainService.verifyGoldenHashWithEvidence(firmwareHash);
         verification.whenComplete((result, error) -> {
             if (error != null) {
                 log.error("[Trust] Firmware verification failed for stationId={}", event.stationId(), error);
+                String reason = (error.getMessage() == null || error.getMessage().isBlank())
+                    ? error.getClass().getSimpleName()
+                    : error.getMessage();
+                TrustEvidence evidence = TrustEvidence.infrastructureFailure(
+                    event.stationId(),
+                    firmwareHash.getReportedHash(),
+                    "UNAVAILABLE",
+                    "Trust verification future failed: " + reason,
+                    Instant.now()
+                );
                 eventPublisher.publishEvent(new GoldenHashVerificationFailedEvent(
-                    event.stationId(), event.rawPayload(), error.getMessage()
+                    event.stationId(), event.rawPayload(), reason, evidence
                 ));
                 return;
             }
 
-            FirmwareHash.VerificationStatus status = result.getStatus();
+            FirmwareHash resolvedHash = result.firmwareHash();
+            TrustEvidence evidence = result.evidence();
+            FirmwareHash.VerificationStatus status = resolvedHash.getStatus();
             if (status == FirmwareHash.VerificationStatus.VERIFIED) {
                 eventPublisher.publishEvent(new GoldenHashVerifiedEvent(
-                    result.getStationId(), event.rawPayload(), result.getReportedHash(), result.getGoldenHash()
+                    resolvedHash.getStationId(),
+                    event.rawPayload(),
+                    resolvedHash.getReportedHash(),
+                    resolvedHash.getGoldenHash(),
+                    evidence
                 ));
             } else if (status == FirmwareHash.VerificationStatus.TAMPERED) {
                 eventPublisher.publishEvent(new GoldenHashTamperedEvent(
-                    result.getStationId(), event.rawPayload(), result.getReportedHash(), result.getGoldenHash()
+                    resolvedHash.getStationId(),
+                    event.rawPayload(),
+                    resolvedHash.getReportedHash(),
+                    resolvedHash.getGoldenHash(),
+                    evidence
                 ));
             } else {
                 eventPublisher.publishEvent(new GoldenHashVerificationFailedEvent(
-                    result.getStationId(), event.rawPayload(), status.name()
+                    resolvedHash.getStationId(),
+                    event.rawPayload(),
+                    status.name(),
+                    evidence
                 ));
             }
         });
@@ -136,13 +168,16 @@ class FirmwareStatusVerificationListener {
 record GoldenHashVerifiedEvent(String stationId,
                                String rawPayload,
                                String reportedHash,
-                               String goldenHash) {}
+                               String goldenHash,
+                               TrustEvidence evidence) {}
 
 record GoldenHashTamperedEvent(String stationId,
                                String rawPayload,
                                String reportedHash,
-                               String goldenHash) {}
+                               String goldenHash,
+                               TrustEvidence evidence) {}
 
 record GoldenHashVerificationFailedEvent(String stationId,
-                                     String rawPayload,
-                                     String reason) {}
+                                         String rawPayload,
+                                         String reason,
+                                         TrustEvidence evidence) {}

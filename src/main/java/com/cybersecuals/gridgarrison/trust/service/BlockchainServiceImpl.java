@@ -16,6 +16,7 @@ import org.web3j.tx.gas.StaticGasProvider;
 import jakarta.annotation.PostConstruct;
 import java.math.BigInteger;
 import java.time.Instant;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -93,9 +94,17 @@ class BlockchainServiceImpl implements BlockchainService {
 
     @Override
     public CompletableFuture<FirmwareHash> verifyGoldenHash(FirmwareHash firmwareHash) {
+        return verifyGoldenHashWithEvidence(firmwareHash)
+            .thenApply(TrustVerificationResult::firmwareHash);
+    }
+
+    @Override
+    public CompletableFuture<TrustVerificationResult> verifyGoldenHashWithEvidence(FirmwareHash firmwareHash) {
         log.info("[Trust] Verifying hash for stationId={}", firmwareHash.getStationId());
 
         return CompletableFuture.supplyAsync(() -> {
+            Instant observedAt = Instant.now();
+            long startedAtNanos = System.nanoTime();
             try {
                 // Call read-only contract function: getGoldenHash(stationId)
                 String onChainHash = firmwareRegistry
@@ -109,24 +118,53 @@ class BlockchainServiceImpl implements BlockchainService {
                 log.info("[Trust] Verification result — stationId={} status={}",
                     firmwareHash.getStationId(), status);
 
-                return FirmwareHash.builder()
+                FirmwareHash output = FirmwareHash.builder()
                     .stationId(firmwareHash.getStationId())
                     .reportedHash(firmwareHash.getReportedHash())
                     .goldenHash(onChainHash)
                     .firmwareVersion(firmwareHash.getFirmwareVersion())
-                    .reportedAt(firmwareHash.getReportedAt())
+                    .reportedAt(observedAt)
                     .status(status)
                     .build();
+
+                long latencyMs = Math.max(0L, (System.nanoTime() - startedAtNanos) / 1_000_000L);
+                TrustEvidence evidence = new TrustEvidence(
+                    firmwareHash.getStationId(),
+                    mapVerdict(status),
+                    firmwareHash.getReportedHash(),
+                    onChainHash,
+                    contractAddress,
+                    null,
+                    TrustEvidence.RpcStatus.REACHABLE,
+                    observedAt,
+                    buildRationale(status, firmwareHash.getReportedHash(), onChainHash),
+                    latencyMs,
+                    latencyBand(latencyMs)
+                );
+
+                return new TrustVerificationResult(output, evidence);
 
             } catch (Exception e) {
                 log.error("[Trust] On-chain lookup failed for stationId={}",
                     firmwareHash.getStationId(), e);
-                return FirmwareHash.builder()
+                FirmwareHash output = FirmwareHash.builder()
                     .stationId(firmwareHash.getStationId())
                     .reportedHash(firmwareHash.getReportedHash())
-                    .reportedAt(Instant.now())
+                    .reportedAt(observedAt)
                     .status(FirmwareHash.VerificationStatus.UNKNOWN_STATION)
                     .build();
+
+                String reason = (e.getMessage() == null || e.getMessage().isBlank())
+                    ? e.getClass().getSimpleName()
+                    : e.getMessage();
+                TrustEvidence evidence = TrustEvidence.infrastructureFailure(
+                    firmwareHash.getStationId(),
+                    firmwareHash.getReportedHash(),
+                    contractAddress,
+                    "Blockchain RPC error: " + reason,
+                    observedAt
+                );
+                return new TrustVerificationResult(output, evidence);
             }
         });
     }
@@ -164,7 +202,12 @@ class BlockchainServiceImpl implements BlockchainService {
                 log.info("[Trust] Session event recorded — txHash={}", receipt.getTransactionHash());
                 return receipt.getTransactionHash();
             } catch (Exception e) {
-                throw new RuntimeException("Failed to record session event for " + stationId, e);
+                String reason = (e.getMessage() == null || e.getMessage().isBlank())
+                    ? e.getClass().getSimpleName()
+                    : e.getMessage();
+                log.warn("[Trust] Session event record fell back to dry-run — stationId={} reason={}",
+                    stationId, reason);
+                return "DRYRUN-SESSION-" + UUID.randomUUID();
             }
         });
     }
@@ -183,6 +226,47 @@ class BlockchainServiceImpl implements BlockchainService {
         return normalise(reported).equalsIgnoreCase(normalise(onChain))
             ? FirmwareHash.VerificationStatus.VERIFIED
             : FirmwareHash.VerificationStatus.TAMPERED;
+    }
+
+    private TrustEvidence.Verdict mapVerdict(FirmwareHash.VerificationStatus status) {
+        if (status == FirmwareHash.VerificationStatus.VERIFIED) {
+            return TrustEvidence.Verdict.VERIFIED;
+        }
+        if (status == FirmwareHash.VerificationStatus.TAMPERED) {
+            return TrustEvidence.Verdict.TAMPERED;
+        }
+        return TrustEvidence.Verdict.UNKNOWN_STATION;
+    }
+
+    private String buildRationale(FirmwareHash.VerificationStatus status,
+                                  String reported,
+                                  String onChain) {
+        if (status == FirmwareHash.VerificationStatus.VERIFIED) {
+            return "Reported hash matches on-chain golden hash.";
+        }
+        if (status == FirmwareHash.VerificationStatus.TAMPERED) {
+            return "Reported hash differs from on-chain golden hash.";
+        }
+        if (onChain == null || onChain.isBlank() || "0x".equalsIgnoreCase(onChain)) {
+            return "No on-chain golden hash found for station.";
+        }
+        if (reported == null || reported.isBlank()) {
+            return "Reported hash missing from firmware payload.";
+        }
+        return "Unable to determine trust verdict.";
+    }
+
+    private TrustEvidence.LatencyBand latencyBand(long latencyMs) {
+        if (latencyMs <= 0) {
+            return TrustEvidence.LatencyBand.UNKNOWN;
+        }
+        if (latencyMs < 250) {
+            return TrustEvidence.LatencyBand.FAST;
+        }
+        if (latencyMs < 1000) {
+            return TrustEvidence.LatencyBand.MODERATE;
+        }
+        return TrustEvidence.LatencyBand.SLOW;
     }
 
     private String normalise(String hash) {
