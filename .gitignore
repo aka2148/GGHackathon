@@ -1,1 +1,4 @@
 scripts/local-env.ps1
+*.class
+target/
+build/
