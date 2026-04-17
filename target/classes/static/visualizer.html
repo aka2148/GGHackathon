@@ -51,7 +51,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--ink);min-height:100v
 @keyframes pulse1{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.1)}}
 @keyframes pulse2{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:.9;transform:scale(1.08)}}
 
-.app{position:relative;z-index:1;max-width:1280px;margin:0 auto;padding:24px;display:grid;gap:16px}
+.app{position:relative;z-index:1;width:min(1700px,calc(100vw - 20px));margin:0 auto;padding:16px;display:grid;gap:16px}
 
 /* Header */
 .header{
@@ -76,6 +76,14 @@ h1{font-size:clamp(1.1rem,2.5vw,1.5rem);font-weight:600;letter-spacing:-.01em;co
 
 /* Controls */
 .controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.link-btn{
+  font-family:var(--ff);font-size:.8rem;font-weight:500;padding:8px 14px;
+  border-radius:var(--r);border:1px solid var(--line2);background:var(--bg3);
+  color:var(--ink2);cursor:pointer;transition:all .2s;white-space:nowrap;
+  text-decoration:none;display:inline-flex;align-items:center;
+}
+.link-btn:hover{color:var(--ink);border-color:var(--line);background:rgba(255,255,255,.04);transform:translateY(-1px)}
+.link-btn:active{transform:translateY(0) scale(.98)}
 input[type=text]{
   background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);
   font-family:var(--mono);font-size:.82rem;padding:8px 12px;color:var(--ink);
@@ -186,19 +194,35 @@ button:active{transform:translateY(0) scale(.98)}
 .prog-fill{height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--red),var(--orange),var(--teal));transition:width .25s ease}
 
 /* Timeline */
-.timeline{grid-column:span 8}
-.stations{grid-column:span 4}
+.timeline{grid-column:span 9}
+.stations{grid-column:span 3}
 .evidence{grid-column:span 12}
 
-.table{width:100%;border-collapse:collapse;font-size:.78rem}
+.panel-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.panel-toolbar select{
+  background:var(--bg3);border:1px solid var(--line2);border-radius:var(--r);
+  color:var(--ink);padding:7px 10px;font-family:var(--mono);font-size:.75rem;outline:none;
+}
+
+.table{width:100%;border-collapse:collapse;font-size:.74rem;table-layout:fixed}
 .table th{
   font-size:.65rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
   color:var(--ink3);padding:8px 8px;border-bottom:1px solid var(--line2);text-align:left;
+  white-space:nowrap;
 }
-.table td{padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink)}
+.table td{
+  padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink);
+  overflow-wrap:anywhere;word-break:break-word;
+}
+.table th:nth-child(1),.table td:nth-child(1){width:82px}
+.table th:nth-child(2),.table td:nth-child(2){width:120px}
+.table th:nth-child(3),.table td:nth-child(3){width:190px}
+.table th:nth-child(4),.table td:nth-child(4){width:90px}
+.table th:nth-child(5),.table td:nth-child(5){width:auto}
 .table tr:last-child td{border-bottom:none}
 .table tbody tr{transition:background .15s}
 .table tbody tr:hover{background:rgba(255,255,255,.02)}
+.summary-cell{line-height:1.35}
 
 /* Tags */
 .tag{
@@ -242,10 +266,14 @@ button:active{transform:translateY(0) scale(.98)}
 .accent-line{height:1px;background:linear-gradient(90deg,transparent,var(--red),var(--orange),transparent);opacity:.2;border:none;margin:4px 0}
 
 @media(max-width:900px){
+  .app{width:min(1700px,calc(100vw - 12px));padding:10px}
   .kpis{grid-template-columns:repeat(2,1fr)}
   .flow-track{grid-template-columns:repeat(2,1fr)}
   .gflow-grid{grid-template-columns:repeat(2,minmax(130px,1fr))}
   .timeline,.stations{grid-column:span 12}
+  .table{font-size:.7rem}
+  .table th:nth-child(2),.table td:nth-child(2){width:98px}
+  .table th:nth-child(3),.table td:nth-child(3){width:145px}
 }
 </style>
 </head>
@@ -268,8 +296,9 @@ button:active{transform:translateY(0) scale(.98)}
     <div class="controls">
       <input id="stationInput" type="text" value="CS-101" aria-label="Station ID"/>
       <button id="simulateNormalBtn" class="btn-primary">Normal Session</button>
+      <button id="simulateVerifyBtn">Verify Read</button>
       <button id="simulateTamperBtn" class="btn-danger">Firmware Tamper</button>
-      <button id="simulateAnomalyBtn" class="btn-warn">Energy Anomaly</button>
+      <a class="link-btn" href="/panel.html">Open Panel</a>
       <button id="clearBtn">Clear</button>
       <button id="refreshBtn">Refresh</button>
     </div>
@@ -356,6 +385,16 @@ function moduleTagClass(m){
   return"tag-app";
 }
 
+function preferredStationId(snapshot){
+  const preferred=stationInputEl.value.trim();
+  if(preferred)return preferred;
+  const stations=snapshot.stations||[];
+  if(stations.length)return stations[0].stationId;
+  const panelMap=snapshot.componentPanelsByStation||{};
+  const firstPanel=Object.keys(panelMap)[0];
+  return firstPanel||"CS-101";
+}
+
 function renderKpis(snapshot){
   const bm=snapshot.eventsByModule||{};
   const cards=[{label:"Total Events",value:snapshot.totalEvents??0},{label:"Orchestrator",value:bm.orchestrator??0},{label:"Trust",value:bm.trust??0},{label:"Watchdog",value:bm.watchdog??0}];
@@ -364,7 +403,7 @@ function renderKpis(snapshot){
 
 function renderEvents(events){
   if(!events.length){eventsBodyEl.innerHTML='<tr><td colspan="5" class="status-muted">No runtime events yet. Run a scenario above.</td></tr>';return}
-  eventsBodyEl.innerHTML=events.map(e=>`<tr><td style="font-family:var(--mono);font-size:.72rem">${esc(formatInstant(e.occurredAt))}</td><td><span class="tag ${moduleTagClass(e.module)}">${esc(e.module)}</span></td><td style="font-family:var(--mono);font-size:.72rem">${esc(e.type)}</td><td style="font-family:var(--mono);font-size:.72rem">${esc(e.stationId)}</td><td>${esc(e.summary)}</td></tr>`).join("");
+  eventsBodyEl.innerHTML=events.map(e=>`<tr><td style="font-family:var(--mono);font-size:.7rem">${esc(formatInstant(e.occurredAt))}</td><td><span class="tag ${moduleTagClass(e.module)}">${esc(e.module)}</span></td><td style="font-family:var(--mono);font-size:.7rem">${esc(e.type)}</td><td style="font-family:var(--mono);font-size:.7rem">${esc(e.stationId)}</td><td class="summary-cell">${esc(e.summary)}</td></tr>`).join("");
 }
 
 function renderStations(stations){
@@ -415,7 +454,7 @@ function startGoldenFlowPlayback(selected,playbackKey){
 
 function renderGoldenFlow(snapshot){
   const flowMap=snapshot.goldenFlowByStation||{};
-  const preferred=stationInputEl.value.trim();
+  const preferred=preferredStationId(snapshot);
   const selected=flowMap[preferred]||Object.values(flowMap)[0];
   if(!selected){resetFlowPlayback();goldenFlowPanelEl.innerHTML='<div class="status-muted">No custody flow captured yet. Run a scenario above.</div>';return}
   const pk=flowPlaybackKey(selected);
@@ -438,9 +477,11 @@ function renderHealth(snapshot){
 
 function renderEvidence(snapshot){
   const em=snapshot.latestTrustByStation||{};
+  const generatedMap=snapshot.generatedHashByStation||{};
+  const compareMap=snapshot.generatedVerificationByStation||{};
   const items=Object.values(em).filter(Boolean).sort((a,b)=>new Date(b.observedAt||0)-new Date(a.observedAt||0));
   if(!items.length){evidenceListEl.innerHTML='<div class="status-muted">No trust evidence yet. Trigger a scenario above.</div>';return}
-  evidenceListEl.innerHTML=items.map(item=>`<div class="evidence-item"><div class="sh"><strong class="smono">${esc(item.stationId||"UNKNOWN")}</strong><span class="state ${stateClass((item.verdict||"").toLowerCase())}">${esc(item.verdict||"UNKNOWN")}</span></div><div class="eline">Rationale: ${esc(item.rationale||"-")}</div><div class="eline">Reported hash: <span>${esc(item.reportedHash||"-")}</span></div><div class="eline">Expected hash: <span>${esc(item.expectedHash||"-")}</span></div><div class="eline">Manufacturer: <span>${esc(item.manufacturerId||"-")}</span> · Sig verified: <span>${esc(item.signatureVerified==null?"UNKNOWN":item.signatureVerified?"YES":"NO")}</span></div><div class="eline">Contract: <span>${esc(item.contractAddress||"-")}</span></div><div class="eline">Tx hash: <span>${esc(item.txHash||"N/A")}</span></div><div class="eline">RPC: <span>${esc(item.rpcStatus||"UNKNOWN")}</span> · Latency: <span>${esc(item.latencyBand||"UNKNOWN")}</span></div><div class="eline">Observed: <span>${esc(formatInstant(item.observedAt))}</span></div></div>`).join("");
+  evidenceListEl.innerHTML=items.map(item=>{const generated=generatedMap[item.stationId];const compare=compareMap[item.stationId];return`<div class="evidence-item"><div class="sh"><strong class="smono">${esc(item.stationId||"UNKNOWN")}</strong><span class="state ${stateClass((item.verdict||"").toLowerCase())}">${esc(item.verdict||"UNKNOWN")}</span></div><div class="eline">Rationale: ${esc(item.rationale||"-")}</div><div class="eline">Reported hash: <span>${esc(item.reportedHash||"-")}</span></div><div class="eline">Blockchain baseline hash: <span>${esc(item.expectedHash||"-")}</span></div><div class="eline">Generated component hash: <span>${esc(generated?.hash||"N/A")}</span></div><div class="eline">Generated mode verdict: <span>${esc(compare?`${compare.verdict} (${compare.mode})`:"N/A")}</span></div><div class="eline">Manufacturer: <span>${esc(item.manufacturerId||"-")}</span> · Sig verified: <span>${esc(item.signatureVerified==null?"UNKNOWN":item.signatureVerified?"YES":"NO")}</span></div><div class="eline">Contract: <span>${esc(item.contractAddress||"-")}</span></div><div class="eline">Tx hash: <span>${esc(item.txHash||"N/A")}</span></div><div class="eline">RPC: <span>${esc(item.rpcStatus||"UNKNOWN")}</span> · Latency: <span>${esc(item.latencyBand||"UNKNOWN")}</span></div><div class="eline">Observed: <span>${esc(formatInstant(item.observedAt))}</span></div></div>`}).join("");
 }
 
 async function fetchJson(url,opts={}){const r=await fetch(url,opts);if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json()}
@@ -459,8 +500,8 @@ async function simulate(path,label){
 async function clearTimeline(){try{await fetch("/visualizer/api/events",{method:"DELETE"});await refresh()}catch(e){statusLineEl.textContent=`Clear failed: ${e.message}`}}
 
 document.getElementById("simulateNormalBtn").addEventListener("click",()=>simulate("simulate-normal","Normal"));
+document.getElementById("simulateVerifyBtn").addEventListener("click",()=>simulate("simulate-verify","Verify"));
 document.getElementById("simulateTamperBtn").addEventListener("click",()=>simulate("simulate-tamper","Tamper"));
-document.getElementById("simulateAnomalyBtn").addEventListener("click",()=>simulate("simulate-anomaly","Anomaly"));
 document.getElementById("refreshBtn").addEventListener("click",refresh);
 document.getElementById("clearBtn").addEventListener("click",clearTimeline);
 

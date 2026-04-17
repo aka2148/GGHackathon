@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
+import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.tx.gas.ContractGasProvider;
 import org.web3j.tx.gas.StaticGasProvider;
 
@@ -18,8 +19,10 @@ import jakarta.annotation.PostConstruct;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyFactory;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
 import java.util.Base64;
@@ -47,6 +50,7 @@ class BlockchainServiceImpl implements BlockchainService {
     private static final String GOLDEN_HASH_FIELD = "goldenHash";
     private static final String SIGNATURE_FIELD = "manufacturerSignature";
     private static final String MANUFACTURER_FIELD = "manufacturerId";
+    private static final String VERIFY_READ_STATE = "VERIFY_READ";
 
     @Value("${gridgarrison.blockchain.rpc-url}")
     private String rpcUrl;
@@ -68,6 +72,9 @@ class BlockchainServiceImpl implements BlockchainService {
 
     @Value("${gridgarrison.trust.manufacturer.public-key-base64:}")
     private String manufacturerPublicKeyBase64;
+
+    @Value("${gridgarrison.trust.manufacturer.private-key-base64:}")
+    private String manufacturerPrivateKeyBase64;
 
     private Web3j             web3j;
     private Credentials       credentials;
@@ -138,6 +145,11 @@ class BlockchainServiceImpl implements BlockchainService {
                     signatureVerified
                 );
 
+                String verificationAuditTxHash = auditVerificationRead(
+                    firmwareHash.getStationId(),
+                    firmwareHash.getReportedHash()
+                );
+
                 log.info("[Trust] Verification result — stationId={} status={}",
                     firmwareHash.getStationId(), status);
 
@@ -163,7 +175,7 @@ class BlockchainServiceImpl implements BlockchainService {
                     manufacturerSignature,
                     signatureVerified,
                     contractAddress,
-                    null,
+                    verificationAuditTxHash,
                     TrustEvidence.RpcStatus.REACHABLE,
                     observedAt,
                     buildRationale(status, firmwareHash.getReportedHash(), goldenHash, signatureVerified),
@@ -197,6 +209,29 @@ class BlockchainServiceImpl implements BlockchainService {
                     observedAt
                 );
                 return new TrustVerificationResult(output, evidence);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<OnChainGoldenRecord> fetchOnChainGoldenRecord(String stationId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                GoldenRecord record = fetchGoldenRecord(stationId);
+                String manufacturerId = record.manufacturerId();
+                if (manufacturerId == null || manufacturerId.isBlank()) {
+                    manufacturerId = trustedManufacturerId;
+                }
+                return new OnChainGoldenRecord(
+                    stationId,
+                    record.goldenHash(),
+                    manufacturerId,
+                    record.manufacturerSignature(),
+                    contractAddress,
+                    Instant.now()
+                );
+            } catch (Exception ex) {
+                throw new RuntimeException("Failed to fetch on-chain golden record for " + stationId, ex);
             }
         });
     }
@@ -245,10 +280,11 @@ class BlockchainServiceImpl implements BlockchainService {
 
         return CompletableFuture.supplyAsync(() -> {
             try {
+                String normalizedHash = normalizeOnChainHash(goldenHash);
                 var receipt = firmwareRegistry
                     .registerSignedGoldenHash(
                         stationId,
-                        goldenHash,
+                        normalizedHash,
                         manufacturerSignature,
                         (manufacturerId == null || manufacturerId.isBlank()) ? trustedManufacturerId : manufacturerId)
                     .send();
@@ -256,6 +292,57 @@ class BlockchainServiceImpl implements BlockchainService {
                 return receipt.getTransactionHash();
             } catch (Exception ex) {
                 throw new RuntimeException("Failed to register signed golden hash for " + stationId, ex);
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<SignedGoldenRegistrationResult> registerRuntimeSignedGoldenHash(String stationId,
+                                                                                              String goldenHash,
+                                                                                              boolean forceOverwrite) {
+        return CompletableFuture.supplyAsync(() -> {
+            String normalizedStationId = (stationId == null || stationId.isBlank()) ? "CS-101" : stationId;
+            String normalizedHash = normalizeOnChainHash(goldenHash);
+
+            try {
+                GoldenRecord existing = fetchGoldenRecord(normalizedStationId);
+                boolean hasExistingBaseline = existing.goldenHash() != null && !existing.goldenHash().isBlank();
+                if (hasExistingBaseline && !forceOverwrite) {
+                    throw new IllegalStateException(
+                        "On-chain golden hash already exists for station " + normalizedStationId
+                            + ". Re-run with forceOverwrite=true to replace it.");
+                }
+
+                String signature = signGoldenHashWithConfiguredPrivateKey(normalizedHash);
+                String manufacturerId = (trustedManufacturerId == null || trustedManufacturerId.isBlank())
+                    ? "ACME-MFG"
+                    : trustedManufacturerId;
+
+                TransactionReceipt receipt = firmwareRegistry
+                    .registerSignedGoldenHash(normalizedStationId, normalizedHash, signature, manufacturerId)
+                    .send();
+
+                String txHash = receipt.getTransactionHash();
+                log.info("[Trust] Runtime signed baseline stored — stationId={} txHash={} overwritten={}",
+                    normalizedStationId, txHash, hasExistingBaseline);
+
+                return new SignedGoldenRegistrationResult(
+                    normalizedStationId,
+                    normalizedHash,
+                    manufacturerId,
+                    signature,
+                    txHash,
+                    Instant.now(),
+                    hasExistingBaseline
+                );
+            } catch (Exception ex) {
+                if (ex instanceof IllegalStateException) {
+                    throw (IllegalStateException) ex;
+                }
+                throw new RuntimeException(
+                    "Failed to register runtime signed golden hash for " + normalizedStationId,
+                    ex
+                );
             }
         });
     }
@@ -392,6 +479,7 @@ class BlockchainServiceImpl implements BlockchainService {
 
     private GoldenRecord fetchGoldenRecord(String stationId) throws Exception {
         try {
+            log.info("[Trust] Calling on-chain read getSignedGoldenRecord — stationId={}", stationId);
             FirmwareRegistryContract.SignedGoldenRecord nativeRecord = firmwareRegistry
                 .getSignedGoldenRecord(stationId)
                 .send();
@@ -399,6 +487,10 @@ class BlockchainServiceImpl implements BlockchainService {
             if (nativeRecord != null
                 && nativeRecord.goldenHash() != null
                 && !nativeRecord.goldenHash().isBlank()) {
+                log.info("[Trust] On-chain read completed — stationId={} goldenHash={} manufacturerId={}",
+                    stationId,
+                    nativeRecord.goldenHash(),
+                    nativeRecord.manufacturerId());
                 String manufacturerId = nativeRecord.manufacturerId();
                 if (manufacturerId == null || manufacturerId.isBlank()) {
                     manufacturerId = trustedManufacturerId;
@@ -414,8 +506,32 @@ class BlockchainServiceImpl implements BlockchainService {
             log.debug("[Trust] Native signed-record lookup unavailable, falling back to legacy golden hash", nativeReadError);
         }
 
-        String legacyValue = firmwareRegistry.getGoldenHash(stationId).send();
-        return decodeGoldenRecord(legacyValue);
+        try {
+            log.info("[Trust] Calling legacy on-chain read getGoldenHash — stationId={}", stationId);
+            String legacyValue = firmwareRegistry.getGoldenHash(stationId).send();
+            log.info("[Trust] Legacy on-chain read completed — stationId={} valuePresent={}",
+                stationId,
+                legacyValue != null && !legacyValue.isBlank());
+            return decodeGoldenRecord(legacyValue);
+        } catch (Exception legacyReadError) {
+            if (isEmptyContractReadError(legacyReadError)) {
+                log.warn("[Trust] Legacy on-chain read returned empty value — stationId={} (treating as missing golden hash)", stationId);
+                return new GoldenRecord(null, null, trustedManufacturerId);
+            }
+            throw legacyReadError;
+        }
+    }
+
+    private boolean isEmptyContractReadError(Throwable error) {
+        Throwable cursor = error;
+        while (cursor != null) {
+            String message = cursor.getMessage();
+            if (message != null && message.toLowerCase().contains("empty value returned from contract")) {
+                return true;
+            }
+            cursor = cursor.getCause();
+        }
+        return false;
     }
 
     private boolean verifyManufacturerSignature(String goldenHash,
@@ -483,6 +599,54 @@ class BlockchainServiceImpl implements BlockchainService {
             return "UPDATE";
         }
         return state.trim().toUpperCase();
+    }
+
+    private String normalizeOnChainHash(String hash) {
+        if (hash == null || hash.isBlank()) {
+            throw new IllegalArgumentException("goldenHash must not be blank");
+        }
+        String normalized = normalise(hash).toLowerCase();
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("goldenHash must not be blank");
+        }
+        return "0x" + normalized;
+    }
+
+    private String signGoldenHashWithConfiguredPrivateKey(String goldenHash) {
+        if (manufacturerPrivateKeyBase64 == null || manufacturerPrivateKeyBase64.isBlank()) {
+            throw new IllegalStateException("Manufacturer private key is not configured for runtime signing");
+        }
+
+        try {
+            byte[] privateBytes = Base64.getDecoder().decode(manufacturerPrivateKeyBase64);
+            PrivateKey privateKey = KeyFactory.getInstance("RSA")
+                .generatePrivate(new PKCS8EncodedKeySpec(privateBytes));
+
+            Signature signer = Signature.getInstance("SHA256withRSA");
+            signer.initSign(privateKey);
+            signer.update(goldenHash.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(signer.sign());
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to sign golden hash with configured manufacturer private key", ex);
+        }
+    }
+
+    private String auditVerificationRead(String stationId, String reportedHash) {
+        String sessionId = "VERIFY-" + stationId;
+        try {
+            TransactionReceipt receipt = firmwareRegistry
+                .recordSessionEvent(stationId, sessionId, VERIFY_READ_STATE)
+                .send();
+            String txHash = receipt.getTransactionHash();
+            log.info("[Trust] Verification read audit marker written — stationId={} txHash={} reportedHash={}",
+                stationId, txHash, reportedHash);
+            return txHash;
+        } catch (Exception ex) {
+            log.warn("[Trust] Verification read audit marker skipped — stationId={} reason={}",
+                stationId,
+                ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage());
+            return null;
+        }
     }
 
     String extractSessionId(String rawPayload) {

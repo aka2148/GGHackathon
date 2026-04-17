@@ -72,6 +72,28 @@ orchestrator  ──[TransactionEvent]───► watchdog  (updates session st
 
 \* For full mTLS, generate certs and place in `src/main/resources/certs/`.
 
+## Local Env Setup
+
+If you do not want to retype Ganache variables every session, use the helper files under `scripts/`:
+
+```powershell
+Copy-Item scripts/local-env.ps1.example scripts/local-env.ps1
+```
+
+Edit `scripts/local-env.ps1` once, then start the app with:
+
+```powershell
+.
+scripts\start-local.ps1
+```
+
+Use `-Bootstrap` the first time if you want the app to deploy and seed the contract automatically:
+
+```powershell
+.
+scripts\start-local.ps1 -Bootstrap
+```
+
 ## Environment Variables
 
 | Variable | Description | Default |

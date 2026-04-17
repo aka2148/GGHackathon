@@ -38,15 +38,25 @@ class MtlsSecurityConfig {
             )
             // x509 extracts the CN from the client cert as the principal
             // Disable CSRF — stateless WebSocket sessions
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**"));
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**", "/trust/**"));
 
         http.authorizeHttpRequests(auth -> {
             auth.requestMatchers("/ocpp/**").authenticated();
             auth.requestMatchers("/actuator/health").permitAll();
             if (visualizerPublic) {
-                auth.requestMatchers("/visualizer", "/visualizer.html", "/visualizer/**").permitAll();
+                auth.requestMatchers(
+                    "/visualizer", "/visualizer.html", "/visualizer/**",
+                    "/panel", "/panel.html",
+                    "/ev-control-panel", "/ev-control-panel.html",
+                    "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
+                ).permitAll();
             } else {
-                auth.requestMatchers("/visualizer", "/visualizer.html", "/visualizer/**").authenticated();
+                auth.requestMatchers(
+                    "/visualizer", "/visualizer.html", "/visualizer/**",
+                    "/panel", "/panel.html",
+                    "/ev-control-panel", "/ev-control-panel.html",
+                    "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
+                ).authenticated();
             }
             auth.anyRequest().denyAll();
         });
