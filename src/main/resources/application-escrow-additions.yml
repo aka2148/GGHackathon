@@ -1,0 +1,42 @@
+# ════════════════════════════════════════════════════════════════════════════
+# ADD THESE SECTIONS to your existing src/main/resources/application.yml
+# ════════════════════════════════════════════════════════════════════════════
+
+gridgarrison:
+  blockchain:
+    rpc-url: http://127.0.0.1:7545          # Ganache 
+    private-key: "0xa24494200fe05c2324c9901ffe41ceefe21bda5f0e94adacd64e25530ded7771" #Account with index 0
+    contract-address: "0x0000000000000000000000000000000000000000"
+    gas-price-wei: 2000000000               # 2 Gwei — fine for Ganache
+    gas-limit: 6000000
+
+    # Bootstrap: auto-deploys FirmwareRegistry and seeds golden hashes on startup
+    bootstrap:
+      enabled: true
+      seed-golden-hashes:
+        CS-101: "0x67df6bc2bf0377e60a941ee895ff821f77314c06cea55e6208a993e7224508e1"
+        CS-102: "0x03f93ced1b2d17644bf4767a0198039ac67959c285d252e5ef8132d7bd7fcd4f"
+        CS-103: "0x681aac6293c43aaf5b212cfce3b3df5a2090930238c2309fd9a6c135cacf00cb"
+        # How to get a real SHA-256:
+        #   echo -n "firmware-v2.1.4-cs101" | shasum -a 256
+        # Prefix the result with 0x.
+
+  trust:
+    manufacturer:
+      id: "ACME-MFG"
+      # RSA key pair for manufacturer signature verification.
+      # Generate with:
+      #   openssl genrsa -out mfg-private.pem 2048
+      #   openssl rsa -in mfg-private.pem -pubout -out mfg-public.pem
+      #   openssl pkcs8 -topk8 -inform PEM -outform DER -nocrypt -in mfg-private.pem | base64
+      #   openssl rsa -pubin -in mfg-public.pem -outform DER | base64
+      public-key-base64: "BASE64_DER_ENCODED_RSA_PUBLIC_KEY"
+      private-key-base64: "BASE64_DER_ENCODED_RSA_PRIVATE_KEY"  # bootstrap only
+
+  watchdog:
+    sweep-interval-ms: 60000
+
+  # Escrow defaults — used when deploying ChargingEscrow contracts
+  escrow:
+    default-timeout-seconds: 3600    # 1 hour before buyer can self-cancel
+    default-target-soc: 80           # default charge target if not specified by user
