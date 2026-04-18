@@ -17,7 +17,7 @@ import java.util.Base64;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class BlockchainServiceImplSignatureTest {
+class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature verification logic in BlockchainServiceImpl.
 
     @Test
     void verifiesSignatureAndHashAsVerified() throws Exception {
