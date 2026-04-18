@@ -6,12 +6,13 @@
   <title>GridGarrison EV Cockpit</title>
   <style>
     :root {
-      --bg: #0b1020;
-      --panel: #111827;
-      --panel-2: #1f2937;
-      --line: #334155;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
+      --bg: #070b17;
+      --bg-glow: #111b3a;
+      --panel: rgba(11, 18, 36, 0.78);
+      --panel-2: rgba(19, 28, 52, 0.9);
+      --line: rgba(103, 125, 167, 0.28);
+      --text: #edf3ff;
+      --muted: #9ab0d3;
       --ok: #22c55e;
       --warn: #f59e0b;
       --danger: #ef4444;
@@ -27,43 +28,51 @@
       margin: 0;
       font-family: "Bahnschrift", "Trebuchet MS", "Candara", sans-serif;
       color: var(--text);
-      background: radial-gradient(circle at top right, #16213e 0%, var(--bg) 55%);
+      font-family: Segoe UI, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 15% -5%, rgba(66, 212, 255, 0.2) 0%, transparent 38%),
+        radial-gradient(circle at 95% 0%, rgba(139, 92, 246, 0.22) 0%, transparent 35%),
+        linear-gradient(160deg, var(--bg) 0%, #070d1f 52%, #060910 100%);
+      min-height: 100vh;
     }
 
     .wrap {
-      max-width: 1200px;
+      max-width: 1280px;
       margin: 0 auto;
       padding: 16px;
     }
 
-    h1, h2, h3 { margin: 0; }
-    p { margin: 0; }
+    h1, h2, h3, p {
+      margin: 0;
+    }
 
     .header {
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
       margin-bottom: 12px;
+      flex-wrap: wrap;
     }
 
     .title h1 {
-      font-size: 28px;
-      margin-bottom: 4px;
+      font-size: 30px;
+      letter-spacing: 0.4px;
     }
 
     .title p {
       color: var(--muted);
       font-size: 14px;
+      margin-top: 4px;
     }
 
     .status-pill {
-      padding: 8px 12px;
       border-radius: 999px;
+      padding: 10px 14px;
       border: 1px solid var(--line);
-      background: rgba(15, 23, 42, 0.7);
+      background: rgba(10, 16, 30, 0.8);
       font-weight: 700;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
     }
 
     .status-pill.ok { color: #86efac; border-color: rgba(34,197,94,.45); }
@@ -115,6 +124,68 @@
       background: rgba(51, 65, 85, 0.45);
     }
 
+    .flow-track {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .flow-step {
+      border: 1px solid rgba(91, 114, 152, 0.55);
+      border-radius: 11px;
+      padding: 10px;
+      background: rgba(12, 20, 39, 0.82);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .flow-step .num {
+      color: #93c5fd;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .flow-step .name {
+      margin-top: 4px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #e2e8f0;
+    }
+
+    .flow-step.active {
+      border-color: rgba(56, 189, 248, 0.75);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25) inset;
+    }
+
+    .flow-step.done {
+      border-color: rgba(34, 197, 94, 0.68);
+      background: rgba(21, 78, 48, 0.32);
+    }
+
+    .step {
+      border: 1px solid rgba(91, 114, 152, 0.55);
+      border-radius: 10px;
+      padding: 8px;
+      background: rgba(12, 20, 39, 0.82);
+      color: #dbeafe;
+      font-size: 13px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .step.active {
+      border-color: rgba(56, 189, 248, 0.75);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25) inset;
+    }
+
+    .step.done {
+      border-color: rgba(34, 197, 94, 0.68);
+      background: rgba(21, 78, 48, 0.32);
+      color: #bbf7d0;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
@@ -122,49 +193,180 @@
     }
 
     .panel {
-      background: linear-gradient(180deg, rgba(17,24,39,0.98) 0%, rgba(15,23,42,0.98) 100%);
+      background: linear-gradient(180deg, var(--panel) 0%, rgba(8, 13, 27, 0.88) 100%);
       border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px;
+      border-radius: 14px;
+      padding: 14px;
+      backdrop-filter: blur(4px);
+    }
+
+    .hero {
+      overflow: hidden;
+      position: relative;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      width: 360px;
+      height: 360px;
+      border-radius: 50%;
+      right: -140px;
+      top: -180px;
+      background: radial-gradient(circle, rgba(66, 212, 255, 0.22) 0%, transparent 68%);
+      pointer-events: none;
     }
 
     .span-12 { grid-column: span 12; }
     .span-8 { grid-column: span 8; }
+    .span-7 { grid-column: span 7; }
     .span-6 { grid-column: span 6; }
+    .span-5 { grid-column: span 5; }
     .span-4 { grid-column: span 4; }
 
-    @media (max-width: 1000px) {
-      .span-8, .span-6, .span-4 { grid-column: span 12; }
+    @media (max-width: 1040px) {
+      .span-8, .span-7, .span-6, .span-5, .span-4 { grid-column: span 12; }
+      .flow-track { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
-    .top-metrics {
+    .hero-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin-top: 12px;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 14px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
     }
 
-    @media (max-width: 900px) {
-      .top-metrics { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 1040px) {
+      .hero-grid { grid-template-columns: 1fr; }
     }
 
-    .metric {
-      background: rgba(31, 41, 55, 0.8);
-      border: 1px solid var(--line);
+    .ev-state {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .state-card {
+      border: 1px solid rgba(132, 152, 194, 0.23);
       border-radius: 10px;
-      padding: 10px;
+      background: rgba(18, 27, 49, 0.65);
+      padding: 8px;
+      min-height: 58px;
     }
 
-    .metric .label {
-      font-size: 12px;
+    .state-card .label {
+      font-size: 11px;
       color: var(--muted);
-      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
     }
 
-    .metric .value {
-      font-size: 18px;
+    .state-card .value {
+      margin-top: 5px;
+      font-size: 17px;
       font-weight: 700;
       word-break: break-word;
+    }
+
+    .ev-model-wrap {
+      border: 1px solid rgba(91, 114, 152, 0.48);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(14, 23, 42, 0.65);
+    }
+
+    .road {
+      position: relative;
+      height: 126px;
+      border-radius: 12px;
+      border: 1px solid rgba(101, 123, 160, 0.35);
+      background:
+        linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+      overflow: hidden;
+      margin-top: 10px;
+    }
+
+    .road::before {
+      content: '';
+      position: absolute;
+      inset: 55% -220px auto -220px;
+      height: 3px;
+      background: repeating-linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.45) 0,
+        rgba(148, 163, 184, 0.45) 28px,
+        transparent 28px,
+        transparent 56px
+      );
+      animation: laneShift 2.5s linear infinite;
+    }
+
+    .ev-car {
+      position: absolute;
+      left: 12px;
+      bottom: 24px;
+      width: 156px;
+      height: 58px;
+      transition: transform 0.28s ease;
+    }
+
+    .ev-car.moving {
+      transform: translateX(16px);
+    }
+
+    .car-body {
+      position: absolute;
+      inset: 14px 0 0;
+      border-radius: 15px 24px 12px 12px;
+      background: linear-gradient(90deg, #38bdf8 0%, #4f46e5 100%);
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+    }
+
+    .car-window {
+      position: absolute;
+      top: 2px;
+      left: 30px;
+      right: 30px;
+      height: 18px;
+      border-radius: 12px 12px 8px 8px;
+      background: linear-gradient(90deg, rgba(224, 242, 254, 0.86), rgba(186, 230, 253, 0.55));
+    }
+
+    .wheel {
+      position: absolute;
+      bottom: 0;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 4px solid #1f2937;
+      background: #94a3b8;
+    }
+
+    .wheel.left {
+      left: 18px;
+    }
+
+    .wheel.right {
+      right: 18px;
+    }
+
+    .ev-car.moving .wheel {
+      animation: wheelSpin 0.8s linear infinite;
+    }
+
+    .charge-beam {
+      position: absolute;
+      right: 12px;
+      bottom: 30px;
+      width: 54px;
+      height: 6px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(34, 211, 238, 0.2), rgba(34, 211, 238, 0.96));
+      opacity: 0.38;
+      animation: beamPulse 1.5s ease-in-out infinite;
     }
 
     .hidden {
@@ -441,39 +643,96 @@
 
     .journey {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 8px;
-      margin-top: 10px;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
     }
 
-    @media (max-width: 800px) {
-      .journey { grid-template-columns: repeat(2, 1fr); }
+    .telemetry {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
     }
 
-    .step {
-      border: 1px solid #374151;
+    @media (max-width: 900px) {
+      .telemetry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    .telemetry-card {
+      border: 1px solid rgba(116, 141, 187, 0.26);
       border-radius: 10px;
-      padding: 8px;
-      background: rgba(15, 23, 42, 0.45);
-      text-align: center;
-      font-size: 13px;
-      color: #cbd5e1;
+      padding: 10px;
+      background: rgba(19, 29, 54, 0.62);
     }
 
-    .step.active {
-      border-color: #0ea5e9;
-      box-shadow: 0 0 0 1px rgba(56,189,248,0.4) inset;
-      color: #e0f2fe;
+    .telemetry-card .label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
     }
 
-    .step.done {
-      border-color: rgba(34,197,94,0.5);
-      color: #bbf7d0;
+    .telemetry-card .value {
+      font-size: 22px;
+      margin-top: 4px;
+      font-weight: 800;
+    }
+
+    .progress {
+      height: 8px;
+      width: 100%;
+      border-radius: 999px;
+      background: rgba(146, 166, 204, 0.24);
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      transition: width 0.3s ease;
+      background: linear-gradient(90deg, #22c55e, #86efac);
+    }
+
+    .temp-fill { background: linear-gradient(90deg, #0ea5e9, #f59e0b, #ef4444); }
+    .speed-fill { background: linear-gradient(90deg, #22d3ee, #2563eb); }
+    .power-fill { background: linear-gradient(90deg, #06b6d4, #8b5cf6); }
+
+    .top-metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      background: rgba(15, 23, 42, 0.62);
+      border: 1px solid rgba(101, 123, 160, 0.36);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .metric .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .metric .value {
+      font-size: 18px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    @media (max-width: 900px) {
+      .top-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
     .row {
       display: grid;
-      grid-template-columns: repeat(12, 1fr);
+      grid-template-columns: repeat(12, minmax(0, 1fr));
       gap: 8px;
       margin-top: 8px;
     }
@@ -484,29 +743,42 @@
     .col-4 { grid-column: span 4; }
     .col-3 { grid-column: span 3; }
 
-    @media (max-width: 800px) {
+    @media (max-width: 900px) {
       .col-8, .col-6, .col-4, .col-3 { grid-column: span 12; }
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: #bfd1ee;
+      margin-bottom: 5px;
     }
 
     input, select, button, pre {
       width: 100%;
-      background: #0b1220;
+      border-radius: 9px;
+      border: 1px solid rgba(114, 136, 177, 0.38);
+      background: rgba(7, 14, 30, 0.95);
       color: var(--text);
-      border: 1px solid #334155;
-      border-radius: 8px;
       padding: 9px;
       font-size: 14px;
     }
 
     button {
-      cursor: pointer;
       font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease;
     }
 
-    button.primary { background: #0ea5e9; color: #001018; border: none; }
-    button.ok { background: #16a34a; color: #041a0d; border: none; }
-    button.warn { background: #f59e0b; color: #221503; border: none; }
-    button.danger { background: #dc2626; color: #fff; border: none; }
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.08);
+    }
+
+    button.primary { background: linear-gradient(90deg, #42d4ff, #4c8dff); color: #03111e; border: none; }
+    button.ok { background: linear-gradient(90deg, #22c55e, #14b8a6); color: #02110b; border: none; }
+    button.warn { background: linear-gradient(90deg, #f59e0b, #fb7185); color: #281603; border: none; }
+    button.danger { background: linear-gradient(90deg, #ef4444, #dc2626); color: white; border: none; }
 
     .hint {
       color: var(--muted);
@@ -515,15 +787,15 @@
     }
 
     .log {
-      max-height: 280px;
+      max-height: 290px;
       overflow: auto;
-      background: #0b1220;
-      border: 1px solid #334155;
-      border-radius: 8px;
+      background: rgba(6, 11, 23, 0.95);
+      border: 1px solid rgba(101, 123, 160, 0.34);
+      border-radius: 10px;
       padding: 8px;
       font-family: Consolas, monospace;
       font-size: 12px;
-      line-height: 1.5;
+      line-height: 1.45;
     }
 
     .line { margin: 2px 0; }
@@ -532,38 +804,53 @@
     .line.info { color: #93c5fd; }
 
     details {
-      border: 1px solid #374151;
-      border-radius: 8px;
-      margin-top: 8px;
+      border: 1px solid rgba(109, 131, 170, 0.34);
+      border-radius: 10px;
       padding: 8px;
-      background: rgba(15,23,42,0.45);
+      margin-top: 6px;
+      background: rgba(11, 18, 35, 0.82);
     }
 
     summary {
       cursor: pointer;
-      font-weight: 600;
-      color: #cbd5e1;
+      font-weight: 700;
+      color: #d7e5ff;
     }
 
     .badge {
       display: inline-block;
-      padding: 2px 8px;
+      padding: 3px 8px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: 700;
     }
 
-    .badge.ok { background: rgba(34,197,94,.18); color: #86efac; }
-    .badge.warn { background: rgba(245,158,11,.18); color: #fcd34d; }
+    .badge.ok { background: rgba(34, 197, 94, 0.2); color: #86efac; }
+    .badge.warn { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
     .mono { font-family: Consolas, monospace; }
+
+    @keyframes laneShift {
+      from { transform: translateX(0); }
+      to { transform: translateX(120px); }
+    }
+
+    @keyframes wheelSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes beamPulse {
+      0%, 100% { opacity: 0.45; transform: translateX(0); }
+      50% { opacity: 1; transform: translateX(8px); }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="header">
       <div class="title">
-        <h1>Single EV Cockpit</h1>
-        <p>Demo-friendly controls for one EV: connect, start charging, stream energy, and finish session.</p>
+        <h1>EV Dynamic Cockpit</h1>
+        <p>Clear demo flow + dynamic EV visuals: connect, profile, charge, monitor telemetry, and close session.</p>
       </div>
       <div class="mode-switch">
         <span class="mode-label">Dashboard mode</span>
@@ -575,79 +862,146 @@
       </div>
     </div>
 
-    <div class="panel span-12">
-      <div class="row">
-        <div class="col-8">
-          <label>Simulator URL</label>
-          <input id="apiBase" value="" />
-          <div class="hint">Defaults to this page origin (auto-fallback if wrong).</div>
-        </div>
-        <div class="col-4">
-          <label>Live refresh</label>
-          <div class="row">
-            <div class="col-6"><input id="pollSec" type="number" min="1" value="3" /></div>
-            <div class="col-6"><button id="togglePoll" class="primary">Auto: ON</button></div>
-          </div>
-          <button id="refreshAll" class="ok">Refresh Dashboard</button>
-        </div>
+    <div class="flow-track">
+      <div id="stepConnect" class="flow-step">
+        <div class="num">Step 1</div>
+        <div class="name">Connect EV</div>
+      </div>
+      <div id="stepProfile" class="flow-step">
+        <div class="num">Step 2</div>
+        <div class="name">Pick Profile</div>
+      </div>
+      <div id="stepStart" class="flow-step">
+        <div class="num">Step 3</div>
+        <div class="name">Start Charging</div>
+      </div>
+      <div id="stepMeter" class="flow-step">
+        <div class="num">Step 4</div>
+        <div class="name">Stream Energy</div>
+      </div>
+      <div id="stepEnd" class="flow-step">
+        <div class="num">Step 5</div>
+        <div class="name">End Session</div>
       </div>
     </div>
 
-    <div class="panel span-12">
-      <div class="ev-visual">
-        <div class="car-box">
-          <h3>EV State</h3>
-          <div class="car-row"><span>Connection</span><span id="kpiConnected">-</span></div>
-          <div class="car-row"><span>Current session</span><span id="kpiTx" class="mono">-</span></div>
-          <div class="car-row"><span>Driving mode</span><span id="kpiProfile">-</span></div>
-          <div class="car-row"><span>Simulation</span><span id="kpiScenario">-</span></div>
-          <div class="car-row"><span>Verification gate</span><span id="kpiVerification">-</span></div>
+    <div class="grid">
+      <div class="panel span-12">
+        <div class="row" style="margin-top:0;">
+          <div class="col-8">
+            <label>Simulator URL</label>
+            <input id="apiBase" value="" />
+            <div class="hint">Defaults to this page origin (auto-fallback if wrong).</div>
+          </div>
+          <div class="col-4">
+            <label>Live refresh (seconds)</label>
+            <div class="row" style="margin-top:0;">
+              <div class="col-6"><input id="pollSec" type="number" min="1" value="3" /></div>
+              <div class="col-6"><button id="togglePoll" class="primary">Auto: ON</button></div>
+            </div>
+            <button id="refreshAll" class="ok">Refresh Dashboard</button>
+          </div>
+        </div>
+      </div>
 
-          <div class="journey">
-            <div id="stepConnect" class="step">1. Connected</div>
-            <div id="stepStart" class="step">2. Charging Started</div>
-            <div id="stepMeter" class="step">3. Energy Flow</div>
-            <div id="stepEnd" class="step">4. Session Ended</div>
+      <div class="panel span-12 hero">
+        <div class="hero-grid">
+          <div>
+            <h3>Live EV State</h3>
+            <p class="hint" style="margin-top:4px;">This panel mirrors what judges should watch first during the demo flow.</p>
+            <div class="ev-state">
+              <div class="state-card">
+                <div class="label">Connection</div>
+                <div id="kpiConnected" class="value"><span class="badge warn">Disconnected</span></div>
+              </div>
+              <div class="state-card">
+                <div class="label">Current Session</div>
+                <div id="kpiTx" class="value mono">-</div>
+              </div>
+              <div class="state-card">
+                <div class="label">Drive Profile</div>
+                <div id="kpiProfile" class="value">-</div>
+              </div>
+              <div class="state-card">
+                <div class="label">Scenario</div>
+                <div id="kpiScenario" class="value">Idle</div>
+              </div>
+              <div class="state-card">
+                <div class="label">Verification Gate</div>
+                <div id="kpiVerification" class="value">-</div>
+              </div>
+              <div class="state-card">
+                <div class="label">Gate Reason</div>
+                <div id="kpiGateReason" class="value">-</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ev-model-wrap">
+            <h3>EV Model</h3>
+            <div class="road">
+              <div id="evCar" class="ev-car">
+                <div class="car-body"></div>
+                <div class="car-window"></div>
+                <div class="wheel left"></div>
+                <div class="wheel right"></div>
+              </div>
+              <div class="charge-beam"></div>
+            </div>
+            <div class="hint" id="vehicleModeText" style="margin-top:8px;">Vehicle mode: Parked</div>
           </div>
         </div>
 
-        <div class="battery">
-          <div id="batteryFill" class="battery-fill"></div>
-          <div id="batteryText" class="battery-text">0%</div>
+        <div class="telemetry">
+          <div class="telemetry-card">
+            <div class="label">Battery</div>
+            <div id="batteryText" class="value">24%</div>
+            <div class="progress"><div id="batteryFill" class="progress-fill" style="width: 24%;"></div></div>
+          </div>
+          <div class="telemetry-card">
+            <div class="label">Temperature</div>
+            <div id="tempText" class="value">27.0&deg;C</div>
+            <div class="progress"><div id="tempFill" class="progress-fill temp-fill" style="width: 9%;"></div></div>
+          </div>
+          <div class="telemetry-card">
+            <div class="label">Speed</div>
+            <div id="speedText" class="value">0 km/h</div>
+            <div class="progress"><div id="speedFill" class="progress-fill speed-fill" style="width: 0%;"></div></div>
+          </div>
+          <div class="telemetry-card">
+            <div class="label">Charge Power</div>
+            <div id="powerText" class="value">0 kW</div>
+            <div class="progress"><div id="powerFill" class="progress-fill power-fill" style="width: 0%;"></div></div>
+          </div>
         </div>
-      </div>
 
-      <div class="top-metrics">
-        <div class="metric">
-          <div class="label">Energy sent this demo</div>
-          <div class="value" id="kpiEnergy">0.00 kWh</div>
-        </div>
-        <div class="metric">
-          <div class="label">Meter updates sent</div>
-          <div class="value" id="kpiMeterCount">0</div>
-        </div>
-        <div class="metric">
-          <div class="label">Last firmware signal</div>
-          <div class="value" id="kpiFirmware">-</div>
-        </div>
-        <div class="metric">
-          <div class="label">Scenario mode</div>
-          <div class="value" id="kpiScenarioSimple">Idle</div>
-        </div>
-        <div class="metric">
-          <div class="label">Gate reason</div>
-          <div class="value" id="kpiGateReason">-</div>
-        </div>
-        <div class="metric user-only hidden" id="metricWallet">
-          <div class="label">Wallet balance</div>
-          <div class="value" id="kpiWallet">0.00</div>
-        </div>
-        <div class="metric user-only hidden" id="metricEscrowState">
-          <div class="label">Escrow lifecycle</div>
-          <div class="value" id="kpiEscrowLifecycle">NOT_CREATED</div>
+        <div class="top-metrics">
+          <div class="metric">
+            <div class="label">Energy sent this demo</div>
+            <div class="value" id="kpiEnergy">0.00 kWh</div>
+          </div>
+          <div class="metric">
+            <div class="label">Meter updates sent</div>
+            <div class="value" id="kpiMeterCount">0</div>
+          </div>
+          <div class="metric">
+            <div class="label">Last firmware signal</div>
+            <div class="value" id="kpiFirmware">-</div>
+          </div>
+          <div class="metric">
+            <div class="label">Scenario mode</div>
+            <div class="value" id="kpiScenarioSimple">Idle</div>
+          </div>
+          <div class="metric user-only hidden" id="metricWallet">
+            <div class="label">Wallet balance</div>
+            <div class="value" id="kpiWallet">0.00</div>
+          </div>
+          <div class="metric user-only hidden" id="metricEscrowState">
+            <div class="label">Escrow lifecycle</div>
+            <div class="value" id="kpiEscrowLifecycle">NOT_CREATED</div>
+          </div>
         </div>
       </div>
-    </div>
 
     <div id="userModePanel" class="panel span-12 user-only hidden">
       <h3>User Charging Shell</h3>
@@ -795,13 +1149,12 @@
       </div>
     </div>
 
-    <div class="grid">
       <div class="panel span-8">
         <h3 id="quickControlsTitle">Quick Demo Controls</h3>
         <p class="hint" id="quickControlsHint" style="margin-top:6px;">Use these in order for a simple judge demo.</p>
 
         <div class="row">
-          <div class="col-6"><button id="connectBtn" class="ok">Connect EV</button></div>
+          <div class="col-6"><button id="connectBtn" class="ok">Step 1: Connect EV</button></div>
           <div class="col-6"><button id="disconnectBtn" class="danger">Disconnect EV</button></div>
 
           <div class="col-8 dev-only">
@@ -841,6 +1194,8 @@
               <option value="normalCharging">Normal charging</option>
               <option value="firmwareTamper">Tampered firmware</option>
               <option value="reconnectLoop">Unstable connection</option>
+              <option value="isoPnCHappyPath">ISO-15118 Plug & Charge (valid)</option>
+              <option value="isoPnCCertMissing">ISO-15118 Plug & Charge (missing cert)</option>
             </select>
           </div>
           <div class="col-12"><button id="runScenarioBtn" class="primary">Run Scenario</button></div>
@@ -909,7 +1264,10 @@
       profiles: {},
       meterEvents: 0,
       energySentKwh: 0,
-      batteryPct: 20,
+      batteryPct: 24,
+      temperatureC: 27,
+      speedKmh: 0,
+      chargePowerKw: 0,
       lastFirmwareStatus: '-',
       completedSessions: 0,
       paymentWindowVisible: false,
@@ -971,19 +1329,29 @@
 
     function setJourneyStep(status, hasTx, meterEvents, completedSessions) {
       const connect = el('stepConnect');
+      const profile = el('stepProfile');
       const start = el('stepStart');
       const meter = el('stepMeter');
       const end = el('stepEnd');
+      const profileReady = !!(state.lastStatus?.activeProfile && state.lastStatus.activeProfile !== '-');
 
-      [connect, start, meter, end].forEach((stepNode) => {
-        stepNode.className = 'step';
+      [connect, profile, start, meter, end].filter(Boolean).forEach((stepNode) => {
+        const baseClass = stepNode.dataset.baseClass
+          || (stepNode.classList.contains('flow-step') ? 'flow-step' : 'step');
+        stepNode.dataset.baseClass = baseClass;
+        stepNode.className = baseClass;
       });
 
       if (status) connect.classList.add('done');
       else connect.classList.add('active');
 
+      if (profile) {
+        if (profileReady) profile.classList.add('done');
+        else if (status) profile.classList.add('active');
+      }
+
       if (hasTx) start.classList.add('done');
-      else if (status) start.classList.add('active');
+      else if (status && (!profile || profileReady)) start.classList.add('active');
 
       if (meterEvents > 0) meter.classList.add('done');
       else if (hasTx) meter.classList.add('active');
@@ -994,8 +1362,88 @@
 
     function updateBatteryDisplay() {
       const pct = Math.max(0, Math.min(100, Number(state.batteryPct || 0)));
-      el('batteryFill').style.height = `${pct}%`;
-      el('batteryText').textContent = `${Math.round(pct)}%`;
+      const legacyFill = el('batteryFill');
+      const legacyText = el('batteryText');
+      const progressFill = el('batteryProgressFill');
+      const progressPct = el('batteryProgressPct');
+
+      // Support both the legacy battery widget and the current progress bar.
+      if (legacyFill) {
+        if (legacyFill.classList.contains('progress-fill')) {
+          legacyFill.style.width = `${pct}%`;
+        } else {
+          legacyFill.style.height = `${pct}%`;
+        }
+      }
+      if (progressFill) {
+        progressFill.style.width = `${pct}%`;
+      }
+
+      const pctText = `${Math.round(pct)}%`;
+      if (legacyText) {
+        legacyText.textContent = pctText;
+      }
+      if (progressPct) {
+        progressPct.textContent = pctText;
+      }
+    }
+
+    function updateTelemetryDisplay(connected, hasTx) {
+      const speedValue = connected ? clamp(state.speedKmh || 0, 0, 160) : 0;
+      const powerValue = connected ? clamp(state.chargePowerKw || 0, 0, 200) : 0;
+      const tempValue = clamp(state.temperatureC || 27, 18, 95);
+
+      state.speedKmh = speedValue;
+      state.chargePowerKw = powerValue;
+      state.temperatureC = tempValue;
+
+      const tempPct = clamp(((tempValue - 18) / 77) * 100, 0, 100);
+      const speedPct = clamp((speedValue / 160) * 100, 0, 100);
+      const powerPct = clamp((powerValue / 200) * 100, 0, 100);
+
+      const tempText = el('tempText');
+      const tempFill = el('tempFill');
+      const speedText = el('speedText');
+      const speedFill = el('speedFill');
+      const powerText = el('powerText');
+      const powerFill = el('powerFill');
+      const carNode = el('evCar');
+      const vehicleModeText = el('vehicleModeText');
+
+      if (tempText) {
+        tempText.textContent = `${tempValue.toFixed(1)}°C`;
+      }
+      if (tempFill) {
+        tempFill.style.width = `${tempPct}%`;
+      }
+
+      if (speedText) {
+        speedText.textContent = `${Math.round(speedValue)} km/h`;
+      }
+      if (speedFill) {
+        speedFill.style.width = `${speedPct}%`;
+      }
+
+      if (powerText) {
+        powerText.textContent = `${Math.round(powerValue)} kW`;
+      }
+      if (powerFill) {
+        powerFill.style.width = `${powerPct}%`;
+      }
+
+      if (carNode) {
+        carNode.classList.toggle('moving', connected && (hasTx || speedValue > 0));
+      }
+
+      if (vehicleModeText) {
+        if (!connected) {
+          vehicleModeText.textContent = 'Vehicle mode: Parked';
+        } else if (hasTx) {
+          vehicleModeText.textContent = `Vehicle mode: Charging (${Math.round(powerValue)} kW)`;
+        } else {
+          vehicleModeText.textContent = `Vehicle mode: Driving (${Math.round(speedValue)} km/h)`;
+        }
+      }
     }
 
     function isUserMode() {
@@ -1122,6 +1570,14 @@
       return num.toFixed(2);
     }
 
+    function clamp(value, min, max) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) {
+        return min;
+      }
+      return Math.min(max, Math.max(min, num));
+    }
+
     function hasPositiveWei(value) {
       try {
         return BigInt(value ?? '0') > 0n;
@@ -1167,6 +1623,17 @@
         ? Number(statusData.batteryPct)
         : state.batteryPct;
 
+      if (connected && !tx && state.speedKmh <= 0) {
+        state.speedKmh = 12;
+      }
+      if (!connected) {
+        state.speedKmh = 0;
+        state.chargePowerKw = 0;
+      }
+      if (tx && state.chargePowerKw <= 0) {
+        state.chargePowerKw = 35;
+      }
+
       el('connectionPill').textContent = connected ? 'EV Online' : 'EV Offline';
       el('connectionPill').className = connected ? 'status-pill ok' : 'status-pill off';
 
@@ -1198,6 +1665,7 @@
 
       setJourneyStep(connected, !!tx, state.meterEvents, state.completedSessions);
       updateBatteryDisplay();
+      updateTelemetryDisplay(connected, !!tx);
     }
 
     function updateMilestones(userFlow, statusData) {
@@ -1281,11 +1749,23 @@
       const escrowPct = Math.round((doneCount / milestones.length) * 100);
       const batteryPct = Math.max(0, Math.min(100, Number(journey.batteryPct ?? statusData.batteryPct ?? 0)));
 
-      el('escrowProgressFill').style.width = `${escrowPct}%`;
-      el('escrowProgressPct').textContent = `${escrowPct}%`;
+      const escrowProgressFill = el('escrowProgressFill');
+      const escrowProgressPct = el('escrowProgressPct');
+      if (escrowProgressFill) {
+        escrowProgressFill.style.width = `${escrowPct}%`;
+      }
+      if (escrowProgressPct) {
+        escrowProgressPct.textContent = `${escrowPct}%`;
+      }
 
-      el('batteryProgressFill').style.width = `${batteryPct}%`;
-      el('batteryProgressPct').textContent = `${Math.round(batteryPct)}%`;
+      const batteryProgressFill = el('batteryProgressFill');
+      const batteryProgressPct = el('batteryProgressPct');
+      if (batteryProgressFill) {
+        batteryProgressFill.style.width = `${batteryPct}%`;
+      }
+      if (batteryProgressPct) {
+        batteryProgressPct.textContent = `${Math.round(batteryPct)}%`;
+      }
     }
 
     function updateSettlementSummary(settlement) {
@@ -1494,13 +1974,18 @@
     );
 
     el('disconnectBtn').addEventListener('click', () =>
-      runAction('EV disconnected', () => callApi('POST', '/api/ev/disconnect'))
+      runAction('EV disconnected', () => callApi('POST', '/api/ev/disconnect'), () => {
+        state.speedKmh = 0;
+        state.chargePowerKw = 0;
+      })
     );
 
     el('setProfileBtn').addEventListener('click', () =>
       runAction('Driving profile applied', () =>
         callApi('POST', '/api/ev/profile', { name: el('profileSelect').value })
-      )
+      , () => {
+        state.profileApplied = true;
+      })
     );
 
     el('txStartBtn').addEventListener('click', () =>
@@ -1510,6 +1995,8 @@
         if (payload.transactionId) {
           el('txId').value = payload.transactionId;
         }
+        state.chargePowerKw = Math.max(state.chargePowerKw, 42);
+        state.temperatureC = clamp(state.temperatureC + 1.1, 24, 86);
       })
     );
 
@@ -1523,7 +2010,9 @@
         if (!Number.isNaN(kwh) && kwh > 0) {
           state.energySentKwh += kwh;
           state.meterEvents += 1;
-          state.batteryPct = Math.min(100, state.batteryPct + (kwh * 2));
+          state.batteryPct = clamp(state.batteryPct + (kwh * 1.8), 0, 100);
+          state.temperatureC = clamp(state.temperatureC + 0.7, 24, 90);
+          state.chargePowerKw = clamp(state.chargePowerKw + 4, 20, 145);
         }
         return payload;
       })
@@ -1540,7 +2029,9 @@
           if (!Number.isNaN(kwh) && kwh > 0) {
             state.energySentKwh += kwh;
             state.meterEvents += 1;
-            state.batteryPct = Math.min(100, state.batteryPct + (kwh * 2));
+            state.batteryPct = clamp(state.batteryPct + (kwh * 1.8), 0, 100);
+            state.temperatureC = clamp(state.temperatureC + 0.8, 24, 92);
+            state.chargePowerKw = clamp(state.chargePowerKw + 5, 20, 150);
           }
           return payload;
         });

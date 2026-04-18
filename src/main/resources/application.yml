@@ -139,4 +139,11 @@ spring:
 server:
   ssl:
     enabled: true
-    client-auth: need
+    key-store:            classpath:certs/server.jks
+    key-store-type:       JKS
+    key-store-password:   ${GG_SERVER_KS_PASSWORD:changeit}
+    key-alias:            server
+    client-auth: ${GG_CLIENT_AUTH:want}
+    trust-store:          classpath:certs/truststore.jks
+    trust-store-type:     JKS
+    trust-store-password: ${GG_CA_TS_PASSWORD:changeit}

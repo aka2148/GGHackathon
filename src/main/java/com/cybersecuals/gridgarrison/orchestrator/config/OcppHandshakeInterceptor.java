@@ -1,5 +1,6 @@
 package com.cybersecuals.gridgarrison.orchestrator.config;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
 import org.springframework.http.server.ServletServerHttpRequest;
@@ -21,6 +22,7 @@ import java.util.Map;
  * Connections advertising only older protocol versions are rejected here
  * before the handler is invoked.
  */
+@Slf4j
 class OcppHandshakeInterceptor implements HandshakeInterceptor {
 
     private static final String OCPP_201 = "ocpp2.0.1";
@@ -35,6 +37,8 @@ class OcppHandshakeInterceptor implements HandshakeInterceptor {
             .getOrDefault("Sec-WebSocket-Protocol", List.of());
 
         if (!protocols.contains(OCPP_201)) {
+            log.warn("[OCPP] Handshake rejected: missing required subprotocol '{}' uri={} advertised={}",
+                OCPP_201, request.getURI(), protocols);
             // Reject — station must negotiate ocpp2.0.1
             return false;
         }
@@ -42,16 +46,24 @@ class OcppHandshakeInterceptor implements HandshakeInterceptor {
         // Stash stationId from path for the handler
         String path = request.getURI().getPath();
         String stationId = path.substring(path.lastIndexOf('/') + 1);
+        if (stationId.isBlank()) {
+            log.warn("[OCPP] Handshake rejected: missing stationId in path uri={}", request.getURI());
+            return false;
+        }
         attributes.put("stationId", stationId);
 
         X509Certificate[] certificates = extractCertificates(request);
         if (certificates != null && certificates.length > 0) {
             String certCn = extractCommonName(certificates[0]);
             if (certCn == null || certCn.isBlank()) {
+                log.warn("[OCPP] Handshake rejected: client certificate CN missing stationId={} uri={}",
+                    stationId, request.getURI());
                 return false;
             }
             attributes.put("certCn", certCn);
             if (!stationId.equals(certCn)) {
+                log.warn("[OCPP] Handshake rejected: stationId/certificate CN mismatch stationId={} certCn={} uri={}",
+                    stationId, certCn, request.getURI());
                 return false;
             }
         }

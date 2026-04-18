@@ -43,6 +43,7 @@ public class EvSimulatorController {
     public ResponseEntity<Map<String, Object>> status() {
         Map<String, Object> body = new LinkedHashMap<>();
         String resolvedActiveTransactionId = getCurrentActiveTransactionId();
+        body.put("stationId", client.getStationId());
         body.put("connected", client.isConnected());
         body.put("stationId", client.getStationId());
         body.put("lastFirmwareHash", client.getLastFirmwareHash());
@@ -115,8 +116,8 @@ public class EvSimulatorController {
     @PostMapping("/disconnect")
     public ResponseEntity<Map<String, Object>> disconnect() throws Exception {
         client.disconnect();
-        userJourneyState.markDisconnected();
-
+        activeTransactionId.set(null);
+        scenarios.clearCurrentTransactionId();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("ok", true);
         body.put("connected", client.isConnected());
@@ -572,7 +573,7 @@ public class EvSimulatorController {
         body.put("running", scenarios.isScenarioRunning());
         body.put("currentScenario", scenarios.getCurrentScenarioName());
         body.put("canStop", scenarios.isScenarioRunning());
-        body.put("availableScenarios", new String[] {"normalCharging", "firmwareTamper", "reconnectLoop"});
+        body.put("availableScenarios", scenarios.getAvailableScenarioNames());
         return ResponseEntity.ok(body);
     }
 
@@ -592,7 +593,7 @@ public class EvSimulatorController {
 
         if (!started) {
             body.put("message", "Scenario not started. It may already be running, or the name is invalid.");
-            body.put("availableScenarios", new String[] {"normalCharging", "firmwareTamper", "reconnectLoop"});
+            body.put("availableScenarios", scenarios.getAvailableScenarioNames());
             return ResponseEntity.badRequest().body(body);
         }
 
@@ -652,8 +653,19 @@ public class EvSimulatorController {
             return manualTransactionId;
         }
 
+        if (scenarios.isScenarioRunning()) {
+            String scenarioTransactionId = scenarios.getCurrentTransactionId();
+            if (scenarioTransactionId != null && !scenarioTransactionId.isBlank()) {
+                return scenarioTransactionId;
+            }
+        }
+
+        if (client.isConnected() && activeTransactionId.get() == null) {
+            return null;
+        }
+
         String scenarioTransactionId = scenarios.getCurrentTransactionId();
-        if (scenarioTransactionId != null && !scenarioTransactionId.isBlank()) {
+        if (scenarioTransactionId != null && !scenarioTransactionId.isBlank() && scenarios.isScenarioRunning()) {
             return scenarioTransactionId;
         }
 

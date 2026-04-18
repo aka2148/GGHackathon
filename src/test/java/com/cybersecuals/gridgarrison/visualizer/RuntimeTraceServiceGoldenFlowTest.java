@@ -8,6 +8,28 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RuntimeTraceServiceGoldenFlowTest {
 
     @Test
+    void stationViewCapturesAuthorizationModeFromTransactionPayload() {
+        RuntimeTraceService service = new RuntimeTraceService();
+
+        service.appendEvent(
+            "orchestrator",
+            "TransactionEvent",
+            "CS-ISO-101",
+            "{\"eventType\":\"Started\",\"authorizationMode\":\"PlugAndCharge\",\"transactionId\":\"TXN-ISO-1\"}",
+            "INFO"
+        );
+
+        RuntimeTraceService.RuntimeSnapshot snapshot = service.snapshot();
+        RuntimeTraceService.StationView station = snapshot.stations().stream()
+            .filter(s -> "CS-ISO-101".equals(s.stationId()))
+            .findFirst()
+            .orElse(null);
+
+        assertThat(station).isNotNull();
+        assertThat(station.lastAuthorizationMode()).isEqualTo("PlugAndCharge");
+    }
+
+    @Test
     void normalScenarioProducesCompletedEightStepFlow() {
         RuntimeTraceService service = new RuntimeTraceService();
 

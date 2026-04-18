@@ -1,5 +1,8 @@
 package com.cybersecuals.gridgarrison.visualizer;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -22,6 +25,7 @@ public class RuntimeTraceService {
 
     private static final int MAX_EVENTS = 200;
     private static final String ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final List<ComponentTemplate> DEFAULT_COMPONENTS = List.of(
         new ComponentTemplate("power-supply", "Power Supply Unit", "AC input, DC rails and surge tolerance"),
@@ -512,7 +516,8 @@ public class RuntimeTraceService {
                               int firmwareEventCount,
                               int securityAlertCount,
                               String lastEventType,
-                              String operationalState) {
+                              String operationalState,
+                              String lastAuthorizationMode) {
     }
 
     private static final class StationState {
@@ -524,6 +529,7 @@ public class RuntimeTraceService {
         private int securityAlertCount;
         private String lastEventType = "None";
         private String operationalState = "DISCOVERED";
+        private String lastAuthorizationMode = "UNKNOWN";
 
         private StationState(String stationId) {
             this.stationId = stationId;
@@ -544,6 +550,10 @@ public class RuntimeTraceService {
             }
             if (type.contains("Transaction") || type.contains("Session")) {
                 transactionCount++;
+                String authorizationMode = resolveAuthorizationMode(event.summary());
+                if (authorizationMode != null && !authorizationMode.isBlank()) {
+                    lastAuthorizationMode = authorizationMode;
+                }
             }
             if (type.contains("Firmware") || type.contains("Hash")) {
                 firmwareEventCount++;
@@ -572,8 +582,26 @@ public class RuntimeTraceService {
                 firmwareEventCount,
                 securityAlertCount,
                 lastEventType,
-                operationalState
+                operationalState,
+                lastAuthorizationMode
             );
+        }
+
+        private String resolveAuthorizationMode(String summary) {
+            if (summary == null || summary.isBlank() || !summary.contains("authorizationMode")) {
+                return null;
+            }
+            try {
+                JsonNode root = JSON.readTree(summary);
+                JsonNode value = root.get("authorizationMode");
+                if (value != null && !value.isNull()) {
+                    String text = value.asText();
+                    return text == null || text.isBlank() ? null : text;
+                }
+            } catch (Exception ignored) {
+                return null;
+            }
+            return null;
         }
     }
 

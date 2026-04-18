@@ -1,8 +1,8 @@
 package com.cybersecuals.gridgarrison.orchestrator.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,15 +21,17 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 class MtlsSecurityConfig {
 
-    @Value("${GG_SSL_ENABLED:false}")
-    private boolean sslEnabled;
+    private final Environment environment;
 
-    @Value("${gridgarrison.security.visualizer.public:true}")
-    private boolean visualizerPublic;
+    MtlsSecurityConfig(Environment environment) {
+        this.environment = environment;
+    }
 
     @Bean
     @SuppressWarnings("unused")
     SecurityFilterChain ocppSecurityFilterChain(HttpSecurity http) throws Exception {
+        boolean sslEnabled = isSslEnabled();
+
         http
             .authorizeHttpRequests(auth -> {
                 if (sslEnabled) {
@@ -40,25 +42,14 @@ class MtlsSecurityConfig {
 
                 auth.requestMatchers("/actuator/health").permitAll();
 
-                if (visualizerPublic) {
-                    auth.requestMatchers(
-                            "/visualizer", "/visualizer.html", "/visualizer/**",
-                            "/panel", "/panel.html",
-                            "/ev-control-panel", "/ev-control-panel.html",
-                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
-                            "/trust/api/verify-firmware", "/trust/api/latest-verdict",
-                            "/trust/api/escrow/**"
-                        ).permitAll();
-                } else {
-                    auth.requestMatchers(
-                            "/visualizer", "/visualizer.html", "/visualizer/**",
-                            "/panel", "/panel.html",
-                            "/ev-control-panel", "/ev-control-panel.html",
-                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
-                            "/trust/api/verify-firmware", "/trust/api/latest-verdict",
-                            "/trust/api/escrow/**"
-                        ).authenticated();
-                }
+                auth.requestMatchers(
+                        "/visualizer", "/visualizer.html", "/visualizer/**",
+                        "/panel", "/panel.html",
+                        "/ev-control-panel", "/ev-control-panel.html",
+                    "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
+                    "/trust/api/verify-firmware", "/trust/api/latest-verdict",
+                    "/trust/api/escrow/**"
+                    ).permitAll();
 
                 auth.anyRequest().denyAll();
             })
@@ -75,5 +66,20 @@ class MtlsSecurityConfig {
             .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**", "/trust/**"));
 
         return http.build();
+    }
+
+    private boolean isSslEnabled() {
+        Boolean serverSslEnabled = environment.getProperty("server.ssl.enabled", Boolean.class);
+        if (Boolean.TRUE.equals(serverSslEnabled)) {
+            return true;
+        }
+
+        Boolean springSslEnabled = environment.getProperty("spring.ssl.enabled", Boolean.class);
+        if (Boolean.TRUE.equals(springSslEnabled)) {
+            return true;
+        }
+
+        Boolean legacyFlag = environment.getProperty("GG_SSL_ENABLED", Boolean.class);
+        return Boolean.TRUE.equals(legacyFlag);
     }
 }

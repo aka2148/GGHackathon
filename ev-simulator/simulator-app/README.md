@@ -5,6 +5,7 @@ Dummy EV/charging station simulator that connects to GridGarrison over OCPP 2.0.
 ## What it supports
 
 - OCPP messages: `BootNotification`, `Heartbeat`, `TransactionEvent`, `FirmwareStatusNotification`
+- ISO-15118 bridge context inside transaction payloads (`authorizationMode`, `contractCertificateId`, `seccId`)
 - Auto reconnection with exponential backoff
 - Runtime telemetry profiles (`normal`, `fast`)
 - Manual REST controls for connect/disconnect, transactions, firmware status, and scenarios
@@ -51,6 +52,20 @@ Run with automatic scheduled scenarios:
 
 ```bash
 mvn spring-boot:run "-Dspring-boot.run.arguments=--ev.simulator.auto-scenarios=true"
+```
+
+## Simulator tests
+
+Run all simulator-module tests:
+
+```bash
+mvn test
+```
+
+Run only the simulator controller contract tests:
+
+```bash
+mvn -Dtest=EvSimulatorControllerTest test
 ```
 
 ## Key configuration
@@ -131,6 +146,13 @@ Base URL: `http://localhost:8080/api/ev`
 - `POST /scenario/run?name=normalCharging|firmwareTamper|reconnectLoop`
 - `POST /scenario/stop`
 
+Behavior notes:
+
+- `GET /status` returns `stationId`, `connected`, `activeTransactionId`, and `activeProfile`.
+- `POST /scenario/run` accepts `normalCharging`, `firmwareTamper`, `reconnectLoop`, `isoPnCHappyPath`, and `isoPnCCertMissing`; unknown names return `400`.
+- `POST /firmware/status?status=...` maps `status` into the OCPP payload field `status`.
+- Backend validates ISO-15118 policy hints: `PlugAndCharge` mode requires `contractCertificateId`.
+
 ## Web dashboard
 
 The simulator now includes an interactive dashboard that uses all implemented simulator APIs.
@@ -141,12 +163,15 @@ Open in browser after starting simulator:
 
 What you can do from the dashboard:
 
+- Follow a guided 5-step demo flow (connect → profile → start → stream energy → end)
+- View dynamic EV visuals (animated EV model, charging beam, wheel motion)
+- Monitor live telemetry-style metrics (battery %, temperature, speed, charge power)
 - Connect/disconnect WebSocket session
-- View live status (connection, active transaction, active profile, scenario)
+- View live status (station ID, connection, active transaction, active profile, scenario)
 - Switch telemetry profile (`normal` / `fast`)
 - Start/meter-update/end transactions
 - Send firmware status notifications
-- Run/stop scenarios (`normalCharging`, `firmwareTamper`, `reconnectLoop`)
+- Run/stop scenarios (`normalCharging`, `firmwareTamper`, `reconnectLoop`, `isoPnCHappyPath`, `isoPnCCertMissing`)
 - Watch API responses and EV event log in real time
 
 ## Multi-EV demo orchestration (Day 3)

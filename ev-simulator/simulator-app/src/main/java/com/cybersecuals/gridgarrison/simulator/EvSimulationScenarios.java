@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -17,8 +18,21 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EvSimulationScenarios {
 
+    private static final String NORMAL_CHARGING_SCENARIO = "normalCharging";
+    private static final String FIRMWARE_TAMPER_SCENARIO = "firmwareTamper";
+    private static final String RECONNECT_LOOP_SCENARIO = "reconnectLoop";
+    private static final String ISO_PNC_HAPPY_PATH_SCENARIO = "isoPnCHappyPath";
+    private static final String ISO_PNC_CERT_MISSING_SCENARIO = "isoPnCCertMissing";
     private static final String HEALTHY_BASELINE_HASH =
         "0x02c67b670e370ba17f7627f99a8f75e42c7265ec12d3eccd041a6698d009e34f";
+
+    private static final List<String> AVAILABLE_SCENARIOS = List.of(
+        NORMAL_CHARGING_SCENARIO,
+        FIRMWARE_TAMPER_SCENARIO,
+        RECONNECT_LOOP_SCENARIO,
+        ISO_PNC_HAPPY_PATH_SCENARIO,
+        ISO_PNC_CERT_MISSING_SCENARIO
+    );
 
     private final EvWebSocketClient client;
     private final EvTelemetryProfileProperties telemetryProfiles;
@@ -46,6 +60,15 @@ public class EvSimulationScenarios {
         return currentTransactionId;
     }
 
+    public String[] getAvailableScenarioNames() {
+        return AVAILABLE_SCENARIOS.toArray(String[]::new);
+    }
+
+    public void clearCurrentTransactionId() {
+        currentTransactionId = null;
+        currentMeterValue = 0.0;
+    }
+
     public boolean stopCurrentScenario() {
         if (!chargingActive) {
             return false;
@@ -66,6 +89,9 @@ public class EvSimulationScenarios {
             log.warn("Scenario '{}' blocked: {}", scenarioName, verificationGateState.blockReason());
             return false;
         }
+        if (!isValidScenarioName(scenarioName)) {
+            return false;
+        }
 
         synchronized (this) {
             if (chargingActive) {
@@ -79,10 +105,12 @@ public class EvSimulationScenarios {
         Thread scenarioThread = new Thread(() -> {
             try {
                 switch (scenarioName) {
-                    case "normalCharging" -> runNormalChargingScenario();
-                    case "firmwareTamper" -> runFirmwareTamperScenario();
-                    case "reconnectLoop" -> runReconnectLoopScenario();
-                    default -> log.warn("Unknown scenario '{}'. Expected one of: normalCharging, firmwareTamper, reconnectLoop", scenarioName);
+                    case NORMAL_CHARGING_SCENARIO -> runNormalChargingScenario();
+                    case FIRMWARE_TAMPER_SCENARIO -> runFirmwareTamperScenario();
+                    case RECONNECT_LOOP_SCENARIO -> runReconnectLoopScenario();
+                    case ISO_PNC_HAPPY_PATH_SCENARIO -> runIsoPnCHappyPathScenario();
+                    case ISO_PNC_CERT_MISSING_SCENARIO -> runIsoPnCCertMissingScenario();
+                    default -> log.warn("Unknown scenario '{}'. Expected one of: {}", scenarioName, AVAILABLE_SCENARIOS);
                 }
             } catch (ScenarioStoppedException e) {
                 log.info("Scenario '{}' stopped", scenarioName);
@@ -96,14 +124,17 @@ public class EvSimulationScenarios {
                 stopRequested = false;
                 chargingActive = false;
                 currentScenarioName = null;
-                currentTransactionId = null;
-                currentMeterValue = 0.0;
+                clearCurrentTransactionId();
             }
         }, "ev-scenario-" + scenarioName);
         scenarioThread.setDaemon(true);
         currentScenarioThread = scenarioThread;
         scenarioThread.start();
         return true;
+    }
+
+    private boolean isValidScenarioName(String scenarioName) {
+        return AVAILABLE_SCENARIOS.contains(scenarioName);
     }
 
     private void checkStopRequested() {
@@ -135,7 +166,7 @@ public class EvSimulationScenarios {
         } finally {
             chargingActive = false;
             currentScenarioName = null;
-            currentTransactionId = null;
+            clearCurrentTransactionId();
         }
     }
 
@@ -208,7 +239,7 @@ public class EvSimulationScenarios {
         } finally {
             chargingActive = false;
             currentScenarioName = null;
-            currentTransactionId = null;
+            clearCurrentTransactionId();
         }
     }
 
@@ -264,7 +295,7 @@ public class EvSimulationScenarios {
         } finally {
             chargingActive = false;
             currentScenarioName = null;
-            currentTransactionId = null;
+            clearCurrentTransactionId();
         }
     }
 
@@ -290,6 +321,52 @@ public class EvSimulationScenarios {
                 log.error("Reconnect attempt {} failed", i + 1, e);
             }
         }
+    }
+
+    private void runIsoPnCHappyPathScenario() throws Exception {
+        log.info("🚗 SCENARIO: ISO-15118 Plug and Charge happy path");
+        EvTelemetryProfileProperties.TelemetryProfile profile = telemetryProfiles.resolveActiveProfile();
+        long meterUpdateIntervalMs = Math.max(1000, profile.getMeterUpdateIntervalMs());
+        checkStopRequested();
+
+        currentTransactionId = "TXN-ISO-PNC-" + UUID.randomUUID();
+        currentMeterValue = 0.0;
+
+        client.sendFirmwareStatus("Downloaded", "abc123def456ghi789jkl012mno345pqr");
+        checkStopRequested();
+        client.sendTransactionStart(currentTransactionId, "PlugAndCharge", "ISO15118-CERT-LOCAL-001");
+
+        for (int i = 0; i < 3; i++) {
+            Thread.sleep(meterUpdateIntervalMs);
+            checkStopRequested();
+            currentMeterValue += profile.getEnergyPerUpdateKwh();
+            client.sendMeterUpdate(currentTransactionId, currentMeterValue);
+        }
+
+        checkStopRequested();
+        client.sendTransactionEnd(currentTransactionId, currentMeterValue);
+    }
+
+    private void runIsoPnCCertMissingScenario() throws Exception {
+        log.info("🚗 SCENARIO: ISO-15118 Plug and Charge misconfiguration (missing contract certificate)");
+        EvTelemetryProfileProperties.TelemetryProfile profile = telemetryProfiles.resolveActiveProfile();
+        long meterUpdateIntervalMs = Math.max(1000, profile.getMeterUpdateIntervalMs());
+        checkStopRequested();
+
+        currentTransactionId = "TXN-ISO-MISS-" + UUID.randomUUID();
+        currentMeterValue = 0.0;
+
+        client.sendTransactionStart(currentTransactionId, "PlugAndCharge", "");
+
+        for (int i = 0; i < 2; i++) {
+            Thread.sleep(meterUpdateIntervalMs);
+            checkStopRequested();
+            currentMeterValue += profile.getEnergyPerUpdateKwh();
+            client.sendMeterUpdate(currentTransactionId, currentMeterValue);
+        }
+
+        checkStopRequested();
+        client.sendTransactionEnd(currentTransactionId, currentMeterValue);
     }
 
     private static final class ScenarioStoppedException extends RuntimeException {
