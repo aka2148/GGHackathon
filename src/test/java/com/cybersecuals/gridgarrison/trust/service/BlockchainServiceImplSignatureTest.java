@@ -4,7 +4,7 @@ import com.cybersecuals.gridgarrison.shared.dto.FirmwareHash;
 import com.cybersecuals.gridgarrison.trust.contract.FirmwareRegistryContract;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.web3j.protocol.core.RemoteCall;
+import org.web3j.protocol.core.RemoteFunctionCall;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -15,13 +15,13 @@ import java.time.Instant;
 import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 class BlockchainServiceImplSignatureTest {
 
     @Test
     void verifiesSignatureAndHashAsVerified() throws Exception {
+
         KeyPair keyPair = newRsaKeyPair();
         String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
         String goldenHash = "0xabc123";
@@ -29,15 +29,22 @@ class BlockchainServiceImplSignatureTest {
 
         BlockchainServiceImpl service = new BlockchainServiceImpl();
         FirmwareRegistryContract contract = mock(FirmwareRegistryContract.class);
-        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> call = mock(RemoteCall.class);
 
-        when(contract.getSignedGoldenRecord("CS-101")).thenReturn(call);
-        when(call.send()).thenReturn(new FirmwareRegistryContract.SignedGoldenRecord(
-            goldenHash,
-            signature,
-            "ACME-MFG",
-            BigInteger.ONE
-        ));
+        RemoteFunctionCall<FirmwareRegistryContract.SignedGoldenRecord> call =
+                mock(RemoteFunctionCall.class);
+
+        FirmwareRegistryContract.SignedGoldenRecord record =
+                new FirmwareRegistryContract.SignedGoldenRecord(
+                        goldenHash,
+                        signature,
+                        "ACME-MFG"
+                );
+
+        doReturn(call)
+                .when(contract)
+                .getSignedGoldenRecord("CS-101");
+
+        when(call.send()).thenReturn(record);
 
         ReflectionTestUtils.setField(service, "firmwareRegistry", contract);
         ReflectionTestUtils.setField(service, "contractAddress", "0xcontract");
@@ -45,22 +52,27 @@ class BlockchainServiceImplSignatureTest {
         ReflectionTestUtils.setField(service, "manufacturerPublicKeyBase64", publicKey);
 
         FirmwareHash input = FirmwareHash.builder()
-            .stationId("CS-101")
-            .reportedHash(goldenHash)
-            .firmwareVersion("1.0.0")
-            .reportedAt(Instant.now())
-            .status(FirmwareHash.VerificationStatus.PENDING)
-            .build();
+                .stationId("CS-101")
+                .reportedHash(goldenHash)
+                .firmwareVersion("1.0.0")
+                .reportedAt(Instant.now())
+                .status(FirmwareHash.VerificationStatus.PENDING)
+                .build();
 
-        TrustVerificationResult result = service.verifyGoldenHashWithEvidence(input).join();
+        TrustVerificationResult result =
+                service.verifyGoldenHashWithEvidence(input).join();
 
-        assertThat(result.firmwareHash().getStatus()).isEqualTo(FirmwareHash.VerificationStatus.VERIFIED);
+        assertThat(result.firmwareHash().getStatus())
+                .isEqualTo(FirmwareHash.VerificationStatus.VERIFIED);
+
         assertThat(result.firmwareHash().getSignatureVerified()).isTrue();
-        assertThat(result.evidence().verdict()).isEqualTo(TrustEvidence.Verdict.VERIFIED);
+        assertThat(result.evidence().verdict())
+                .isEqualTo(TrustEvidence.Verdict.VERIFIED);
     }
 
     @Test
     void failsVerificationWhenSignatureIsInvalid() throws Exception {
+
         KeyPair keyPair = newRsaKeyPair();
         String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
         String goldenHash = "0xabc123";
@@ -68,15 +80,22 @@ class BlockchainServiceImplSignatureTest {
 
         BlockchainServiceImpl service = new BlockchainServiceImpl();
         FirmwareRegistryContract contract = mock(FirmwareRegistryContract.class);
-        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> call = mock(RemoteCall.class);
 
-        when(contract.getSignedGoldenRecord("CS-101")).thenReturn(call);
-        when(call.send()).thenReturn(new FirmwareRegistryContract.SignedGoldenRecord(
-            goldenHash,
-            invalidSignature,
-            "ACME-MFG",
-            BigInteger.ONE
-        ));
+        RemoteFunctionCall<FirmwareRegistryContract.SignedGoldenRecord> call =
+                mock(RemoteFunctionCall.class);
+
+        FirmwareRegistryContract.SignedGoldenRecord record =
+                new FirmwareRegistryContract.SignedGoldenRecord(
+                        goldenHash,
+                        invalidSignature,
+                        "ACME-MFG"
+                );
+
+        doReturn(call)
+                .when(contract)
+                .getSignedGoldenRecord("CS-101");
+
+        when(call.send()).thenReturn(record);
 
         ReflectionTestUtils.setField(service, "firmwareRegistry", contract);
         ReflectionTestUtils.setField(service, "contractAddress", "0xcontract");
@@ -84,18 +103,22 @@ class BlockchainServiceImplSignatureTest {
         ReflectionTestUtils.setField(service, "manufacturerPublicKeyBase64", publicKey);
 
         FirmwareHash input = FirmwareHash.builder()
-            .stationId("CS-101")
-            .reportedHash(goldenHash)
-            .firmwareVersion("1.0.0")
-            .reportedAt(Instant.now())
-            .status(FirmwareHash.VerificationStatus.PENDING)
-            .build();
+                .stationId("CS-101")
+                .reportedHash(goldenHash)
+                .firmwareVersion("1.0.0")
+                .reportedAt(Instant.now())
+                .status(FirmwareHash.VerificationStatus.PENDING)
+                .build();
 
-        TrustVerificationResult result = service.verifyGoldenHashWithEvidence(input).join();
+        TrustVerificationResult result =
+                service.verifyGoldenHashWithEvidence(input).join();
 
-        assertThat(result.firmwareHash().getStatus()).isEqualTo(FirmwareHash.VerificationStatus.TAMPERED);
+        assertThat(result.firmwareHash().getStatus())
+                .isEqualTo(FirmwareHash.VerificationStatus.TAMPERED);
+
         assertThat(result.firmwareHash().getSignatureVerified()).isFalse();
-        assertThat(result.evidence().rationale()).contains("signature verification failed");
+        assertThat(result.evidence().rationale())
+                .contains("signature verification failed");
     }
 
     private static KeyPair newRsaKeyPair() throws Exception {

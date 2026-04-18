@@ -1,4 +1,4 @@
-com\cybersecuals\gridgarrison\trust\service\FirmwareStatusVerificationListenerTest.class
-com\cybersecuals\gridgarrison\trust\service\BlockchainServiceImplSignatureTest.class
-com\cybersecuals\gridgarrison\visualizer\RuntimeTraceServiceGoldenFlowTest.class
-com\cybersecuals\gridgarrison\ModularityVerificationTest.class
+com/cybersecuals/gridgarrison/ModularityVerificationTest.class
+com/cybersecuals/gridgarrison/visualizer/RuntimeTraceServiceGoldenFlowTest.class
+com/cybersecuals/gridgarrison/trust/service/FirmwareStatusVerificationListenerTest.class
+com/cybersecuals/gridgarrison/trust/service/BlockchainServiceImplSignatureTest.class

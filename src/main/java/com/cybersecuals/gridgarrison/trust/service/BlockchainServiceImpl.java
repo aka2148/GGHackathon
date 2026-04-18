@@ -397,16 +397,16 @@ class BlockchainServiceImpl implements BlockchainService {
                 .send();
 
             if (nativeRecord != null
-                && nativeRecord.goldenHash() != null
-                && !nativeRecord.goldenHash().isBlank()) {
-                String manufacturerId = nativeRecord.manufacturerId();
+                && nativeRecord.goldenHash != null
+                && !nativeRecord.goldenHash.isBlank()) {
+                String manufacturerId = nativeRecord.manufacturerId;
                 if (manufacturerId == null || manufacturerId.isBlank()) {
                     manufacturerId = trustedManufacturerId;
                 }
 
                 return new GoldenRecord(
-                    nativeRecord.goldenHash(),
-                    nativeRecord.manufacturerSignature(),
+                    nativeRecord.goldenHash,
+                    nativeRecord.manufacturerSignature,
                     manufacturerId
                 );
             }
