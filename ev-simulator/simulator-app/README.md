@@ -42,10 +42,10 @@ Run in explicit mTLS mode (matches backend `demo-mtls`):
 mvn spring-boot:run -Dspring-boot.run.profiles=demo-mtls
 ```
 
-Run on 8082 (useful if 8080 is busy on Windows):
+Run on 8080:
 
 ```bash
-mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8082"
+mvn spring-boot:run
 ```
 
 Run with automatic scheduled scenarios:
@@ -118,7 +118,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=demo-mtls
 
 ```powershell
 Set-Location C:/Users/jujhar/Videos/GGHackathon/ev-simulator/simulator-app
-mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls -Dspring-boot.run.arguments=--server.port=8082 --ev.simulator.station-id=CS-101-EV"
+mvn spring-boot:run -Dspring-boot.run.profiles=demo-mtls --ev.simulator.station-id=CS-101-EV
 ```
 
 3) Negative check with mismatched station ID (expected handshake rejection):
@@ -131,7 +131,7 @@ Expected negative outcome: handshake fails (`Response code was not 101`) and no 
 
 ## REST API
 
-Base URL: `http://localhost:8080/api/ev` (or 8082 if overridden)
+Base URL: `http://localhost:8080/api/ev`
 
 - `GET /status`
 - `POST /connect`
@@ -178,7 +178,7 @@ What you can do from the dashboard:
 
 Use the helper scripts under `ev-simulator/scripts` to run multiple simulator instances in parallel.
 
-Launch 3 EV simulators (ports 8080-8082):
+Launch 3 EV simulators on consecutive ports starting at 8080:
 
 ```powershell
 cd c:\Users\jujhar\Videos\GGHackathon\ev-simulator\scripts
@@ -206,6 +206,6 @@ Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/stop" -Method Post
 ## Troubleshooting
 
 - `mvn clean compile` succeeds but `mvn spring-boot:run` fails: verify runtime `JAVA_HOME` is Java 17 and Maven uses the same JDK.
-- Port 8080 conflicts are common on Windows dev machines; run simulator with `--server.port=8082`.
+- Port 8080 conflicts are common on Windows dev machines; stop the conflicting app or change the simulator port only if absolutely necessary.
 - If not connecting to backend, confirm backend is listening on 8443 and simulator `gateway-uri` points to `/ocpp/{stationId}`.
 - For `wss://` endpoints, check TLS store paths/passwords and ensure certificates are valid.
