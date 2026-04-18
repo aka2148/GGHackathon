@@ -1,12 +1,23 @@
 package com.cybersecuals.gridgarrison.simulator;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.annotation.PostConstruct;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.security.KeyStore;
 import java.math.BigInteger;
 import java.time.Duration;
 import java.time.Instant;
@@ -23,6 +34,27 @@ public class EvTrustVerificationClient {
     private final EvVerificationGateState gateState;
     private final AtomicBoolean verificationInProgress = new AtomicBoolean(false);
 
+    @Value("${ev.simulator.tls.enabled:false}")
+    private boolean tlsEnabled;
+
+    @Value("${ev.simulator.tls.key-store-path:}")
+    private String tlsKeyStorePath;
+
+    @Value("${ev.simulator.tls.key-store-password:}")
+    private String tlsKeyStorePassword;
+
+    @Value("${ev.simulator.tls.key-store-type:PKCS12}")
+    private String tlsKeyStoreType;
+
+    @Value("${ev.simulator.tls.trust-store-path:}")
+    private String tlsTrustStorePath;
+
+    @Value("${ev.simulator.tls.trust-store-password:}")
+    private String tlsTrustStorePassword;
+
+    @Value("${ev.simulator.tls.trust-store-type:PKCS12}")
+    private String tlsTrustStoreType;
+
     private RestTemplate restTemplate;
 
     public EvTrustVerificationClient(RestTemplateBuilder restTemplateBuilder,
@@ -35,10 +67,88 @@ public class EvTrustVerificationClient {
 
     @PostConstruct
     void init() {
-        restTemplate = restTemplateBuilder
+        RestTemplateBuilder builder = restTemplateBuilder
             .setConnectTimeout(Duration.ofMillis(Math.max(100, verificationProperties.getConnectTimeoutMs())))
-            .setReadTimeout(Duration.ofMillis(Math.max(100, verificationProperties.getReadTimeoutMs())))
-            .build();
+            .setReadTimeout(Duration.ofMillis(Math.max(100, verificationProperties.getReadTimeoutMs())));
+
+        if (tlsEnabled) {
+            try {
+                SSLContext sslContext = buildSslContext();
+                builder = builder.requestFactory(() -> createTlsRequestFactory(sslContext));
+                log.info("Custom TLS context configured for verification REST client");
+            } catch (Exception ex) {
+                throw new IllegalStateException("Failed to configure TLS for verification REST client", ex);
+            }
+        }
+
+        restTemplate = builder.build();
+    }
+
+    private SimpleClientHttpRequestFactory createTlsRequestFactory(SSLContext sslContext) {
+        return new SimpleClientHttpRequestFactory() {
+            @Override
+            protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
+                super.prepareConnection(connection, httpMethod);
+                if (connection instanceof HttpsURLConnection httpsConnection) {
+                    httpsConnection.setSSLSocketFactory(sslContext.getSocketFactory());
+                }
+            }
+        };
+    }
+
+    private SSLContext buildSslContext() throws Exception {
+        KeyStore trustStore = loadKeyStore(tlsTrustStorePath, tlsTrustStoreType, tlsTrustStorePassword);
+        KeyStore keyStore = loadOptionalKeyStore(tlsKeyStorePath, tlsKeyStoreType, tlsKeyStorePassword);
+
+        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+        trustManagerFactory.init(trustStore);
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        if (keyStore != null) {
+            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+            keyManagerFactory.init(keyStore, safePassword(tlsKeyStorePassword));
+            sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+        } else {
+            sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
+        }
+        return sslContext;
+    }
+
+    private KeyStore loadOptionalKeyStore(String path, String type, String password) throws Exception {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        return loadKeyStore(path, type, password);
+    }
+
+    private KeyStore loadKeyStore(String path, String type, String password) throws Exception {
+        if (path == null || path.isBlank()) {
+            throw new IllegalArgumentException("TLS store path is required when ev.simulator.tls.enabled=true");
+        }
+
+        KeyStore keyStore = KeyStore.getInstance(type == null || type.isBlank() ? "PKCS12" : type);
+        try (InputStream inputStream = openStoreStream(path)) {
+            keyStore.load(inputStream, safePassword(password));
+        }
+        return keyStore;
+    }
+
+    private InputStream openStoreStream(String path) throws Exception {
+        if (path.startsWith("classpath:")) {
+            String classpathLocation = path.substring("classpath:".length());
+            InputStream stream = getClass().getResourceAsStream(
+                classpathLocation.startsWith("/") ? classpathLocation : "/" + classpathLocation
+            );
+            if (stream == null) {
+                throw new IllegalArgumentException("Classpath resource not found: " + path);
+            }
+            return stream;
+        }
+        return new FileInputStream(path);
+    }
+
+    private char[] safePassword(String password) {
+        return password == null ? new char[0] : password.toCharArray();
     }
 
     public void verifyAfterConnectAsync(String stationId,
@@ -500,7 +610,7 @@ public class EvTrustVerificationClient {
     private String normalizeBaseUrl() {
         String configured = verificationProperties.getBackendBaseUrl();
         if (configured == null || configured.isBlank()) {
-            return "http://localhost:8443";
+            return "https://localhost:8443";
         }
         return configured.endsWith("/") ? configured.substring(0, configured.length() - 1) : configured;
     }

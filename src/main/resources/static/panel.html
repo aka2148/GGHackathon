@@ -5,54 +5,96 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>GridGarrison EV Module Control Panel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Josefin+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0b1115;
-  --panel:#121a20;
-  --panel2:#18222b;
-  --ink:#e5edf3;
-  --ink2:#9eb2c1;
-  --line:#2a3a46;
-  --teal:#31c5a2;
-  --teal2:#5ce1c1;
-  --orange:#e9a43b;
-  --red:#ef5f5f;
-  --red2:#ff8d8d;
-  --ff:'Space Grotesk',sans-serif;
-  --mono:'JetBrains Mono',monospace;
+  --bg:#0a0a0a;
+  --panel:#121212;
+  --panel2:#171717;
+  --ink:#f2f0e4;
+  --ink2:#8f98a3;
+  --line:rgba(212,175,55,0.35);
+  --gold:#d4af37;
+  --gold-lt:#f2e8c4;
+  --blue:#4f7cc8;
+  --blue-lt:#bcd7ff;
+  --red:#c0392b;
+  --red2:#e79c95;
+  --ff:'Josefin Sans',sans-serif;
+  --display:'Marcellus',serif;
+  --mono:Consolas,monospace;
 }
-body{font-family:var(--ff);background:radial-gradient(circle at 15% -10%,rgba(49,197,162,.12),transparent 45%),radial-gradient(circle at 85% 0,rgba(233,164,59,.11),transparent 42%),var(--bg);color:var(--ink);min-height:100vh;padding:14px}
+body.light-mode{
+  --bg:#f5f1e6;
+  --panel:#fffdfa;
+  --panel2:#f6f1e8;
+  --ink:#1c2330;
+  --ink2:#36404b;
+  --line:rgba(143,109,23,0.3);
+  --gold:#5f470d;
+  --gold-lt:#7a5c14;
+  --blue:#2c5ca5;
+  --blue-lt:#204d90;
+  --red:#b93a2d;
+  --red2:#a84a41;
+}
+body{font-family:var(--ff);background:
+  radial-gradient(circle at 24% 18%,rgba(79,124,200,.06) 0,transparent 32%),
+  radial-gradient(circle at 80% 14%,rgba(109,71,184,.05) 0,transparent 30%),
+  radial-gradient(circle at 62% 80%,rgba(42,143,99,.04) 0,transparent 26%),
+  linear-gradient(180deg,#0a0a0a 0,#070707 100%);
+  color:var(--ink);min-height:100vh;padding:14px}
+body.light-mode{background:radial-gradient(circle at 24% 18%,rgba(79,124,200,.08) 0,transparent 34%),radial-gradient(circle at 80% 14%,rgba(44,92,165,.07) 0,transparent 30%),linear-gradient(180deg,#f7f3ea 0,#ece6d7 100%)}
+body.light-mode .card{background:rgba(255,253,248,.96)}
+body.light-mode .module-card,
+body.light-mode .hash-view{background:rgba(255,253,248,.96)}
+body.light-mode .pill{background:rgba(240,234,220,.65)}
 .app{width:min(1680px,calc(100vw - 16px));margin:0 auto;display:grid;gap:14px}
-.card{background:linear-gradient(180deg,rgba(24,34,43,.95),rgba(18,26,32,.95));border:1px solid var(--line);border-radius:14px;padding:18px}
+.card{background:rgba(18,18,18,.94);border:1px solid var(--line);border-radius:2px;padding:18px;box-shadow:inset 0 0 0 1px rgba(212,175,55,.08)}
 .head{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
-.title h1{font-size:1.35rem;letter-spacing:.01em}
+.title h1{font-family:var(--display);font-size:1.35rem;letter-spacing:.11em;text-transform:uppercase;color:var(--gold)}
 .title p{font-size:.85rem;color:var(--ink2);margin-top:5px}
-.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 input,select,button{font-family:var(--ff)}
-input[type=text],select{background:var(--panel2);border:1px solid var(--line);color:var(--ink);padding:8px 10px;border-radius:10px;font-size:.78rem}
-button{background:var(--panel2);border:1px solid var(--line);color:var(--ink2);padding:8px 12px;border-radius:10px;font-size:.76rem;font-weight:600;cursor:pointer;transition:.18s}
-button:hover{color:var(--ink);border-color:#4a6474;transform:translateY(-1px)}
-.btn-primary{background:linear-gradient(135deg,#1cae90,#2e8db6);border-color:transparent;color:#fff}
-.btn-warn{border-color:rgba(233,164,59,.35);color:var(--orange)}
-.btn-danger{border-color:rgba(239,95,95,.4);color:var(--red2)}
-.btn-link{background:transparent}
+input[type=text],select{background:transparent;border:none;border-bottom:2px solid rgba(212,175,55,.78);color:var(--ink);padding:10px 4px;border-radius:0;font-size:15px}
+input[type=text]:focus,select:focus{outline:none;border-bottom-color:var(--blue-lt);box-shadow:0 4px 10px rgba(79,124,200,.24)}
+button{background:radial-gradient(circle at 50% 45%,rgba(79,124,200,.2) 0,rgba(12,12,12,.95) 100%);border:1px solid rgba(79,124,200,.58);color:var(--blue-lt);padding:6px 10px;border-radius:2px;font-size:12px;font-weight:700;cursor:pointer;transition:transform .3s ease,filter .3s ease,box-shadow .3s ease,background .3s ease,color .3s ease;letter-spacing:.1em;text-transform:uppercase;min-height:34px}
+button:hover{border-color:rgba(127,179,255,.8);transform:translateY(-1px);background:radial-gradient(circle at 50% 45%,rgba(182,213,255,.9) 0,rgba(79,124,200,.8) 58%,rgba(16,20,30,.95) 100%);color:#06101f;box-shadow:0 0 8px rgba(212,175,55,.14);filter:brightness(1.02)}
+.btn-primary{background:radial-gradient(circle at 50% 45%,rgba(242,232,196,.9) 0,rgba(212,175,55,.75) 58%,rgba(24,24,24,.95) 100%);border-color:rgba(212,175,55,.62);color:#0a0a0a}
+.btn-warn{border-color:rgba(212,175,55,.55);color:var(--gold);background:radial-gradient(circle at 50% 45%,rgba(212,175,55,.16) 0,rgba(12,12,12,.95) 100%)}
+.btn-danger{border-color:rgba(192,57,43,.55);color:var(--red2);background:radial-gradient(circle at 50% 45%,rgba(192,57,43,.16) 0,rgba(12,12,12,.95) 100%)}
+.btn-link{background:transparent;border-color:rgba(79,124,200,.48);color:var(--blue-lt)}
+body.light-mode button{background:#eef3fb;border-color:rgba(44,92,165,.45);color:#173f78;box-shadow:none}
+body.light-mode button:hover{background:#dbe8f8;color:#0f325f;border-color:rgba(44,92,165,.75)}
+body.light-mode .btn-warn{background:#f8efda;border-color:rgba(143,109,23,.55);color:#6f5412}
+body.light-mode .btn-danger{background:#f8e4e2;border-color:rgba(185,58,45,.55);color:#8f2319}
+body.light-mode .btn-link{background:#e2edf9;border-color:rgba(44,92,165,.5);color:#17457f}
+
+.theme-switch-float{position:relative;z-index:20;display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid rgba(212,175,55,0.35);background:rgba(18,18,18,0.92);color:var(--ink);border-radius:999px;backdrop-filter:blur(6px);width:fit-content;margin:10px 14px 0 auto}
+body.light-mode .theme-switch-float{background:rgba(255,253,248,0.95);border-color:rgba(143,109,23,0.35)}
+.theme-switch-float .mode-label{font-size:11px;letter-spacing:.08em;line-height:1;font-weight:600;text-transform:uppercase;color:var(--ink2);margin:0}
+.theme-switch{position:relative;display:inline-block;width:44px;height:24px}
+.theme-switch input{opacity:0;width:0;height:0}
+.theme-slider{position:absolute;inset:0;background:rgba(79,124,200,0.32);border:1px solid rgba(79,124,200,0.58);border-radius:999px;transition:.25s}
+.theme-slider:before{content:'';position:absolute;height:18px;width:18px;left:2px;top:2px;background:#f8fafc;border-radius:50%;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+.theme-switch input:checked + .theme-slider{background:rgba(212,175,55,0.45);border-color:rgba(212,175,55,0.65)}
+.theme-switch input:checked + .theme-slider:before{transform:translateX(20px);background:#fff7dc}
 .meta{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:8px;margin-top:14px}
-.pill{border:1px solid var(--line);border-radius:999px;padding:6px 10px;font-size:.68rem;color:var(--ink2);font-family:var(--mono);background:rgba(255,255,255,.01)}
+.pill{border:1px solid rgba(212,175,55,.3);border-radius:999px;padding:6px 10px;font-size:.68rem;color:var(--ink2);font-family:var(--mono);background:rgba(255,255,255,.01)}
 .pill strong{color:var(--ink);font-weight:500}
 .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
 .modules{grid-column:span 9}
 .hash-box{grid-column:span 3}
 .module-grid{display:grid;grid-template-columns:repeat(3,minmax(170px,1fr));gap:10px;margin-top:8px}
-.module-card{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px;display:grid;gap:6px}
+.module-card{border:1px solid rgba(212,175,55,.24);border-radius:2px;background:var(--panel);padding:12px;display:grid;gap:6px}
 .module-card.abnormal{border-color:rgba(239,95,95,.55);box-shadow:0 0 0 1px rgba(239,95,95,.2) inset}
 .module-name{font-size:.84rem;font-weight:700}
 .module-desc{font-size:.7rem;color:var(--ink2);line-height:1.35}
 .module-state{font-family:var(--mono);font-size:.67rem}
-.module-state.ok{color:var(--teal2)}
+.module-state.ok{color:var(--blue-lt)}
 .module-state.bad{color:var(--red2)}
-.hash-view{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px;display:grid;gap:8px}
+.hash-view{border:1px solid rgba(212,175,55,.24);border-radius:2px;background:var(--panel);padding:12px;display:grid;gap:8px}
 .hash-row{font-size:.73rem;color:var(--ink2)}
 .hash-row span{font-family:var(--mono);color:var(--ink);word-break:break-all}
 .status{font-size:.78rem;color:var(--ink2);font-family:var(--mono)}
@@ -69,6 +111,13 @@ button:hover{color:var(--ink);border-color:#4a6474;transform:translateY(-1px)}
 </style>
 </head>
 <body>
+<div class="theme-switch-float">
+  <span class="mode-label">Theme</span>
+  <label class="theme-switch" for="themeToggleInput">
+    <input id="themeToggleInput" type="checkbox" aria-label="Toggle light mode">
+    <span class="theme-slider"></span>
+  </label>
+</div>
 <div class="app">
   <section class="card">
     <div class="head">
@@ -80,7 +129,7 @@ button:hover{color:var(--ink);border-color:#4a6474;transform:translateY(-1px)}
         <input id="stationId" type="text" value="CS-101" aria-label="Station ID">
         <button id="refreshBtn">Refresh Modules</button>
         <button id="loadBaselineBtn" class="btn-warn">Load Live Baseline</button>
-        <button id="generateBtn" class="btn-primary">Generate Faulty Hash</button>
+        <button id="generateBtn" class="btn-warn">Generate Faulty Hash</button>
         <button id="registerBaselineBtn" class="btn-warn">Register Signed Baseline</button>
         <button id="verifyGeneratedBtn" class="btn-danger">Verify Generated Baseline</button>
         <a href="/visualizer.html"><button class="btn-link" type="button">Open Runtime Visualizer</button></a>
@@ -122,11 +171,30 @@ const tamperedModulesEl=document.getElementById("tamperedModules");
 const generatedModeEl=document.getElementById("generatedMode");
 const registrationTxEl=document.getElementById("registrationTx");
 const statusLineEl=document.getElementById("statusLine");
+const themeToggleInputEl=document.getElementById("themeToggleInput");
+const THEME_KEY="gg.theme.mode";
 
 let currentPanel=null;
 let currentBaseline=null;
 let currentGenerated=null;
 let currentRegistration=null;
+
+function applyTheme(mode){
+  const light=mode==="light";
+  document.body.classList.toggle("light-mode",light);
+  themeToggleInputEl.checked=light;
+}
+
+function getSavedTheme(){
+  const saved=(localStorage.getItem(THEME_KEY)||"").toLowerCase();
+  return saved==="light"?"light":"dark";
+}
+
+function toggleTheme(){
+  const next=document.body.classList.contains("light-mode")?"dark":"light";
+  localStorage.setItem(THEME_KEY,next);
+  applyTheme(next);
+}
 
 function esc(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;")}
 function fmt(v){if(!v)return"-";const d=new Date(v);if(Number.isNaN(d.getTime()))return"-";return d.toLocaleTimeString()}
@@ -259,6 +327,8 @@ document.getElementById("registerBaselineBtn").addEventListener("click",async()=
   catch(e){statusLineEl.textContent=`Baseline registration failed: ${e.message}`}
 });
 
+themeToggleInputEl.addEventListener("change",toggleTheme);
+
 moduleGridEl.addEventListener("click",async(event)=>{
   const target=event.target;
   if(!(target instanceof HTMLElement))return;
@@ -274,6 +344,7 @@ moduleGridEl.addEventListener("click",async(event)=>{
 
 (async()=>{
   try{
+    applyTheme(getSavedTheme());
     await loadModules();
     await loadLiveBaseline();
   }catch(e){
