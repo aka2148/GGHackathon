@@ -131,6 +131,24 @@ Base URL: `http://localhost:8080/api/ev` (or 8082 if overridden)
 - `POST /scenario/run?name=normalCharging|firmwareTamper|reconnectLoop`
 - `POST /scenario/stop`
 
+## Web dashboard
+
+The simulator now includes an interactive dashboard that uses all implemented simulator APIs.
+
+Open in browser after starting simulator:
+
+- `http://localhost:8080/ev-dashboard.html`
+
+What you can do from the dashboard:
+
+- Connect/disconnect WebSocket session
+- View live status (connection, active transaction, active profile, scenario)
+- Switch telemetry profile (`normal` / `fast`)
+- Start/meter-update/end transactions
+- Send firmware status notifications
+- Run/stop scenarios (`normalCharging`, `firmwareTamper`, `reconnectLoop`)
+- Watch API responses and EV event log in real time
+
 ## Multi-EV demo orchestration (Day 3)
 
 Use the helper scripts under `ev-simulator/scripts` to run multiple simulator instances in parallel.

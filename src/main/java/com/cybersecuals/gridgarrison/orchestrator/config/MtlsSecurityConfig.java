@@ -70,23 +70,6 @@ class MtlsSecurityConfig {
             // Disable CSRF — stateless WebSocket sessions
             .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**", "/trust/**"));
 
-<<<<<<< HEAD
-        http.authorizeHttpRequests(auth -> {
-            auth.requestMatchers("/ocpp/**").authenticated();
-            auth.requestMatchers("/actuator/health").permitAll();
-            // Demo UI and supporting APIs must remain browser-accessible in local runs.
-            auth.requestMatchers(
-                "/visualizer", "/visualizer.html", "/visualizer/**",
-                "/panel", "/panel.html", "/panel/**",
-                "/ev-control-panel", "/ev-control-panel.html", "/ev-control-panel/**",
-                "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
-                "/trust/api/escrow/**"
-            ).permitAll();
-            auth.anyRequest().denyAll();
-        });
-
-=======
->>>>>>> ad047f6 (wired simulator)
         return http.build();
     }
 }

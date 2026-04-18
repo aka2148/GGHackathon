@@ -16,6 +16,7 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * Web3j Java wrapper for the {@code FirmwareRegistry} smart contract.
@@ -120,16 +121,6 @@ public class FirmwareRegistryContract extends Contract {
             )
         );
 
-<<<<<<< HEAD
-        return new RemoteCall<>(() -> {
-            List<Type> values = executeCallMultipleValueReturn(function);
-            return new SignedGoldenRecord(
-                values.get(0).getValue().toString(),
-                values.get(1).getValue().toString(),
-                values.get(2).getValue().toString(),
-                (BigInteger) values.get(3).getValue()
-            );
-=======
         return new RemoteCall<>(new Callable<>() {
             @Override
             @SuppressWarnings("rawtypes")
@@ -142,7 +133,6 @@ public class FirmwareRegistryContract extends Contract {
                     (BigInteger) values.get(3).getValue()
                 );
             }
->>>>>>> ad047f6 (wired simulator)
         });
     }
 
