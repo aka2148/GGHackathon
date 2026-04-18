@@ -29,6 +29,9 @@ class FirmwareStatusVerificationListenerTest {
     @Mock
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private LatestTrustVerdictStore latestTrustVerdictStore;
+
     @Captor
     private ArgumentCaptor<Object> eventCaptor;
 

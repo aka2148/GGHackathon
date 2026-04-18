@@ -5,35 +5,71 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GridGarrison EV Cockpit</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Marcellus&display=swap');
+
     :root {
-      --bg: #070b17;
-      --bg-glow: #111b3a;
-      --panel: rgba(11, 18, 36, 0.78);
-      --panel-2: rgba(19, 28, 52, 0.9);
-      --line: rgba(103, 125, 167, 0.28);
-      --text: #edf3ff;
-      --muted: #9ab0d3;
+      --bg: #0a0a0a;
+      --bg-glow: #1a1306;
+      --panel: rgba(20, 20, 20, 0.92);
+      --panel-2: rgba(30, 30, 30, 0.9);
+      --line: rgba(212, 175, 55, 0.42);
+      --text: #f2f0e4;
+      --muted: #888888;
       --ok: #22c55e;
       --warn: #f59e0b;
       --danger: #ef4444;
-      --accent: #38bdf8;
-      --accent-2: #14b8a6;
-      --gold: #fbbf24;
+      --accent: #d4af37;
+      --accent-2: #1e3d59;
+      --accent-blue: #4f7cc8;
+      --accent-purple: #6d47b8;
+      --accent-green: #2a8f63;
+      --gold: #d4af37;
+      --gold-bright: #f2e8c4;
       --rose: #fb7185;
+      --deco-glow: 0 0 10px rgba(212, 175, 55, 0.14);
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: "Bahnschrift", "Trebuchet MS", "Candara", sans-serif;
+      font-family: "Josefin Sans", "Trebuchet MS", "Candara", sans-serif;
       color: var(--text);
-      font-family: Segoe UI, Arial, sans-serif;
+      font-family: "Josefin Sans", Segoe UI, Arial, sans-serif;
       background:
-        radial-gradient(circle at 15% -5%, rgba(66, 212, 255, 0.2) 0%, transparent 38%),
-        radial-gradient(circle at 95% 0%, rgba(139, 92, 246, 0.22) 0%, transparent 35%),
-        linear-gradient(160deg, var(--bg) 0%, #070d1f 52%, #060910 100%);
+        radial-gradient(circle at 50% -8%, rgba(212, 175, 55, 0.1) 0%, transparent 34%),
+        radial-gradient(circle at 18% 18%, rgba(79, 124, 200, 0.08) 0%, transparent 32%),
+        radial-gradient(circle at 82% 16%, rgba(109, 71, 184, 0.075) 0%, transparent 30%),
+        radial-gradient(circle at 64% 78%, rgba(42, 143, 99, 0.06) 0%, transparent 28%),
+        repeating-linear-gradient(45deg, rgba(212, 175, 55, 0.03) 0 1px, transparent 1px 16px),
+        repeating-linear-gradient(-45deg, rgba(212, 175, 55, 0.025) 0 1px, transparent 1px 16px),
+        linear-gradient(160deg, #0a0a0a 0%, #080808 52%, #040404 100%);
       min-height: 100vh;
+    }
+
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(103, 232, 249, 0.55) rgba(15, 23, 42, 0.72);
+    }
+
+    *::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    *::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.72);
+      border-radius: 999px;
+    }
+
+    *::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, rgba(103, 232, 249, 0.85), rgba(59, 130, 246, 0.9));
+      border-radius: 999px;
+      border: 2px solid rgba(15, 23, 42, 0.72);
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, rgba(125, 211, 252, 0.95), rgba(96, 165, 250, 1));
     }
 
     .wrap {
@@ -53,17 +89,49 @@
       gap: 10px;
       margin-bottom: 12px;
       flex-wrap: wrap;
+      position: relative;
     }
 
     .title h1 {
-      font-size: 30px;
-      letter-spacing: 0.4px;
+      font-family: "Marcellus", serif;
+      font-size: 38px;
+      letter-spacing: 0.17em;
+      text-transform: uppercase;
+      position: relative;
+      display: inline-block;
+      padding: 6px 0;
+    }
+
+    .title h1::before,
+    .title h1::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(212, 175, 55, 0.95) 30%, rgba(212, 175, 55, 0.95) 70%, transparent 100%);
+    }
+
+    .title h1::before {
+      top: -3px;
+    }
+
+    .title h1::after {
+      bottom: -3px;
     }
 
     .title p {
       color: var(--muted);
-      font-size: 14px;
-      margin-top: 4px;
+      font-size: 16px;
+      margin-top: 8px;
+    }
+
+    .panel h3,
+    .overview-card h3,
+    .user-card h3 {
+      font-family: "Marcellus", serif;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
     }
 
     .status-pill {
@@ -95,9 +163,9 @@
 
     .mode-buttons {
       display: inline-flex;
-      background: rgba(15, 23, 42, 0.72);
+      background: rgba(20, 20, 20, 0.84);
       border: 1px solid var(--line);
-      border-radius: 999px;
+      border-radius: 2px;
       padding: 4px;
       gap: 4px;
     }
@@ -105,18 +173,20 @@
     .mode-btn {
       width: auto;
       border: none;
-      border-radius: 999px;
+      border-radius: 2px;
       background: transparent;
       color: var(--muted);
-      padding: 8px 14px;
+      padding: 6px 12px;
       font-weight: 700;
-      letter-spacing: 0.01em;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
       transition: background .25s ease, color .25s ease;
     }
 
     .mode-btn.active {
-      color: #062a2f;
-      background: linear-gradient(90deg, #67e8f9 0%, #2dd4bf 100%);
+      color: #0a0a0a;
+      background: radial-gradient(circle at 50% 42%, #f2e8c4 0%, #d4af37 46%, #7a6324 100%);
+      box-shadow: var(--deco-glow);
     }
 
     .mode-btn:not(.active):hover {
@@ -129,21 +199,42 @@
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 12px;
+      position: relative;
+    }
+
+    .flow-track::before {
+      content: '';
+      position: absolute;
+      inset: -6px;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        90deg,
+        transparent 0 18%,
+        rgba(212, 175, 55, 0.08) 18% 18.3%,
+        transparent 18.3% 20%
+      );
+      z-index: 0;
+    }
+
+    .flow-track > * {
+      position: relative;
+      z-index: 1;
     }
 
     .flow-step {
-      border: 1px solid rgba(91, 114, 152, 0.55);
-      border-radius: 11px;
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      border-radius: 2px;
       padding: 10px;
-      background: rgba(12, 20, 39, 0.82);
-      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      background: rgba(20, 20, 20, 0.9);
+      transition: border-color 0.35s ease, box-shadow 0.35s ease, transform 0.35s ease;
     }
 
     .flow-step .num {
-      color: #93c5fd;
-      font-size: 11px;
+      color: var(--gold);
+      font-family: "Marcellus", serif;
+      font-size: 15px;
       font-weight: 700;
-      letter-spacing: 0.06em;
+      letter-spacing: 0.16em;
       text-transform: uppercase;
     }
 
@@ -151,12 +242,14 @@
       margin-top: 4px;
       font-size: 14px;
       font-weight: 700;
-      color: #e2e8f0;
+      color: var(--text);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
     }
 
     .flow-step.active {
-      border-color: rgba(56, 189, 248, 0.75);
-      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.25) inset;
+      border-color: rgba(212, 175, 55, 0.9);
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.35), var(--deco-glow);
     }
 
     .flow-step.done {
@@ -193,11 +286,40 @@
     }
 
     .panel {
-      background: linear-gradient(180deg, var(--panel) 0%, rgba(8, 13, 27, 0.88) 100%);
+      background:
+        radial-gradient(circle at 14% 12%, rgba(79, 124, 200, 0.08) 0%, transparent 30%),
+        radial-gradient(circle at 86% 84%, rgba(109, 71, 184, 0.07) 0%, transparent 32%),
+        linear-gradient(180deg, var(--panel) 0%, rgba(10, 10, 10, 0.96) 100%);
       border: 1px solid var(--line);
-      border-radius: 14px;
+      border-radius: 2px;
       padding: 14px;
       backdrop-filter: blur(4px);
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.14);
+    }
+
+    .panel::before,
+    .panel::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      pointer-events: none;
+      border-color: rgba(212, 175, 55, 0.8);
+    }
+
+    .panel::before {
+      top: 6px;
+      left: 6px;
+      border-top: 2px solid;
+      border-left: 2px solid;
+    }
+
+    .panel::after {
+      right: 6px;
+      bottom: 6px;
+      border-right: 2px solid;
+      border-bottom: 2px solid;
     }
 
     .hero {
@@ -250,11 +372,12 @@
     }
 
     .state-card {
-      border: 1px solid rgba(132, 152, 194, 0.23);
-      border-radius: 10px;
-      background: rgba(18, 27, 49, 0.65);
+      border: 1px solid rgba(212, 175, 55, 0.34);
+      border-radius: 2px;
+      background: rgba(20, 20, 20, 0.88);
       padding: 8px;
       min-height: 58px;
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.12);
     }
 
     .state-card .label {
@@ -269,24 +392,28 @@
       font-size: 17px;
       font-weight: 700;
       word-break: break-word;
+      letter-spacing: 0.06em;
     }
 
     .ev-model-wrap {
-      border: 1px solid rgba(91, 114, 152, 0.48);
-      border-radius: 12px;
+      border: 1px solid rgba(212, 175, 55, 0.46);
+      border-radius: 2px;
       padding: 10px;
-      background: rgba(14, 23, 42, 0.65);
+      background: linear-gradient(180deg, rgba(18, 18, 18, 0.9) 0%, rgba(10, 10, 10, 0.96) 100%);
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.2), 0 0 15px rgba(212, 175, 55, 0.16);
     }
 
     .road {
       position: relative;
       height: 126px;
-      border-radius: 12px;
-      border: 1px solid rgba(101, 123, 160, 0.35);
+      border-radius: 2px;
+      border: 1px solid rgba(212, 175, 55, 0.45);
       background:
-        linear-gradient(180deg, rgba(30, 41, 59, 0.9) 0%, rgba(15, 23, 42, 0.95) 100%);
+        radial-gradient(circle at 42% 18%, rgba(212, 175, 55, 0.18) 0%, transparent 30%),
+        linear-gradient(180deg, rgba(26, 24, 20, 0.95) 0%, rgba(11, 11, 11, 0.98) 100%);
       overflow: hidden;
       margin-top: 10px;
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.14), inset 0 0 0 7px rgba(0, 0, 0, 0.44);
     }
 
     .road::before {
@@ -297,24 +424,25 @@
       background: repeating-linear-gradient(
         90deg,
         rgba(148, 163, 184, 0.45) 0,
-        rgba(148, 163, 184, 0.45) 28px,
-        transparent 28px,
-        transparent 56px
+        rgba(148, 163, 184, 0.45) 26px,
+        transparent 26px,
+        transparent 52px
       );
-      animation: laneShift 2.5s linear infinite;
+      animation: laneShift 2.4s linear infinite;
     }
 
     .ev-car {
       position: absolute;
-      left: 12px;
+      left: 50%;
       bottom: 24px;
       width: 156px;
       height: 58px;
+      transform: translateX(-50%);
       transition: transform 0.28s ease;
     }
 
     .ev-car.moving {
-      transform: translateX(16px);
+      transform: translateX(calc(-50% + 16px));
     }
 
     .car-body {
@@ -358,15 +486,7 @@
     }
 
     .charge-beam {
-      position: absolute;
-      right: 12px;
-      bottom: 30px;
-      width: 54px;
-      height: 6px;
-      border-radius: 999px;
-      background: linear-gradient(90deg, rgba(34, 211, 238, 0.2), rgba(34, 211, 238, 0.96));
-      opacity: 0.38;
-      animation: beamPulse 1.5s ease-in-out infinite;
+      display: none;
     }
 
     .hidden {
@@ -381,11 +501,37 @@
     }
 
     .user-card {
-      grid-column: span 4;
-      background: linear-gradient(165deg, rgba(17,24,39,0.9) 0%, rgba(15,23,42,0.9) 100%);
-      border: 1px solid rgba(56, 189, 248, 0.24);
-      border-radius: 12px;
+      grid-column: span 6;
+      background: linear-gradient(165deg, rgba(20, 20, 20, 0.95) 0%, rgba(12, 12, 12, 0.95) 100%);
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      border-radius: 2px;
       padding: 12px;
+      position: relative;
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.11);
+    }
+
+    .user-card::before,
+    .user-card::after {
+      content: '';
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-color: rgba(212, 175, 55, 0.85);
+      pointer-events: none;
+    }
+
+    .user-card::before {
+      top: 6px;
+      left: 6px;
+      border-top: 2px solid;
+      border-left: 2px solid;
+    }
+
+    .user-card::after {
+      right: 6px;
+      bottom: 6px;
+      border-right: 2px solid;
+      border-bottom: 2px solid;
     }
 
     .user-card.full {
@@ -394,7 +540,11 @@
 
     .user-card h3 {
       margin-bottom: 8px;
-      font-size: 17px;
+      font-size: 20px;
+      font-family: "Marcellus", serif;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: var(--gold);
     }
 
     .user-key {
@@ -410,14 +560,81 @@
       font-weight: 700;
     }
 
+    .charge-target-shell {
+      border: 1px solid rgba(212, 175, 55, 0.42);
+      border-radius: 2px;
+      padding: 12px;
+      background: rgba(18, 18, 18, 0.78);
+      margin-bottom: 8px;
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.12);
+    }
+
+    .charge-target-row {
+      display: grid;
+      grid-template-columns: 92px minmax(0, 1fr) 88px;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .charge-target-badge {
+      border-radius: 2px;
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      background: rgba(14, 14, 14, 0.78);
+      padding: 8px;
+      text-align: center;
+      font-weight: 700;
+      color: var(--text);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .charge-target-row input[type="range"] {
+      accent-color: #d4af37;
+      padding: 0;
+      height: 6px;
+      background: transparent;
+      border: none;
+    }
+
+    .charge-plan-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .charge-plan-card {
+      border: 1px solid rgba(212, 175, 55, 0.34);
+      border-radius: 2px;
+      padding: 9px;
+      background: rgba(18, 18, 18, 0.78);
+    }
+
+    .charge-plan-card .label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .charge-plan-card .value {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--gold-bright);
+    }
+
     .payment-window {
       margin-top: 12px;
-      border: 1px solid rgba(251,191,36,0.32);
-      border-radius: 12px;
+      border: 1px solid rgba(212, 175, 55, 0.65);
+      border-radius: 2px;
       padding: 12px;
       background:
-        radial-gradient(circle at 95% 5%, rgba(251,191,36,0.2) 0%, rgba(251,191,36,0) 36%),
-        linear-gradient(180deg, rgba(12,23,37,0.93) 0%, rgba(9,14,28,0.92) 100%);
+        radial-gradient(circle at 88% 12%, rgba(212, 175, 55, 0.2) 0%, rgba(212, 175, 55, 0) 44%),
+        linear-gradient(180deg, rgba(16, 16, 16, 0.97) 0%, rgba(10, 10, 10, 0.95) 100%);
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.12), 0 0 20px rgba(212, 175, 55, 0.18);
     }
 
     .payment-title {
@@ -426,7 +643,7 @@
     }
 
     .secure-copy {
-      color: #d1fae5;
+      color: #d8c894;
       font-size: 13px;
       margin-bottom: 10px;
     }
@@ -443,15 +660,23 @@
         grid-column: span 12;
       }
 
+      .charge-target-row {
+        grid-template-columns: 1fr;
+      }
+
+      .charge-plan-grid {
+        grid-template-columns: 1fr;
+      }
+
       .progress-grid {
         grid-template-columns: 1fr;
       }
     }
 
     .progress-wrap {
-      border: 1px solid rgba(100, 116, 139, 0.6);
-      border-radius: 10px;
-      background: rgba(15,23,42,0.56);
+      border: 1px solid rgba(212, 175, 55, 0.36);
+      border-radius: 2px;
+      background: rgba(15, 15, 15, 0.82);
       padding: 8px;
     }
 
@@ -467,10 +692,10 @@
     .bar-track {
       width: 100%;
       height: 11px;
-      border-radius: 999px;
-      background: rgba(51,65,85,0.72);
+      border-radius: 2px;
+      background: rgba(35, 35, 35, 0.72);
       overflow: hidden;
-      border: 1px solid rgba(100,116,139,0.45);
+      border: 1px solid rgba(212, 175, 55, 0.45);
     }
 
     .bar-fill {
@@ -502,12 +727,12 @@
     }
 
     .milestone {
-      border: 1px solid rgba(71, 85, 105, 0.85);
-      border-radius: 9px;
+      border: 1px solid rgba(212, 175, 55, 0.5);
+      border-radius: 2px;
       padding: 8px;
-      background: rgba(15,23,42,0.45);
+      background: rgba(14, 14, 14, 0.8);
       font-size: 12px;
-      color: #cbd5e1;
+      color: var(--text);
       min-height: 64px;
       display: flex;
       flex-direction: column;
@@ -552,22 +777,24 @@
     }
 
     .summary-chip {
-      border: 1px solid rgba(71,85,105,0.75);
-      border-radius: 10px;
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      border-radius: 2px;
       padding: 10px;
-      background: rgba(15,23,42,0.5);
+      background: rgba(16, 16, 16, 0.82);
     }
 
     .summary-chip .label {
-      color: #94a3b8;
+      color: var(--muted);
       font-size: 12px;
       margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
     }
 
     .summary-chip .value {
       font-size: 17px;
       font-weight: 700;
-      color: #e2e8f0;
+      color: var(--text);
       word-break: break-word;
     }
 
@@ -702,9 +929,24 @@
 
     .top-metrics {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 10px;
       margin-top: 12px;
+    }
+
+    .metric-wide {
+      grid-column: span 2;
+    }
+
+    .metric-highlight {
+      background: linear-gradient(140deg, rgba(37, 99, 235, 0.24), rgba(15, 23, 42, 0.72));
+      border-color: rgba(103, 232, 249, 0.45);
+      box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.1);
+    }
+
+    .metric-highlight .value {
+      color: #e0f2fe;
+      font-size: 22px;
     }
 
     .metric {
@@ -728,6 +970,7 @@
 
     @media (max-width: 900px) {
       .top-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric-wide { grid-column: span 2; }
     }
 
     .row {
@@ -750,48 +993,85 @@
     label {
       display: block;
       font-size: 12px;
-      color: #bfd1ee;
+      color: var(--gold);
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
       margin-bottom: 5px;
     }
 
     input, select, button, pre {
       width: 100%;
-      border-radius: 9px;
-      border: 1px solid rgba(114, 136, 177, 0.38);
-      background: rgba(7, 14, 30, 0.95);
+      border-radius: 2px;
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      background: rgba(8, 8, 8, 0.95);
       color: var(--text);
       padding: 9px;
       font-size: 14px;
     }
 
+    input:not([type="range"]):not([type="hidden"]),
+    select {
+      border: none;
+      border-bottom: 2px solid rgba(212, 175, 55, 0.78);
+      border-radius: 0;
+      background: transparent;
+      padding: 10px 4px;
+      font-size: 15px;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    input:not([type="range"]):not([type="hidden"]):focus,
+    select:focus {
+      outline: none;
+      border-bottom-color: var(--gold-bright);
+      box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
+    }
+
     button {
       font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
       cursor: pointer;
-      transition: transform 0.15s ease, filter 0.15s ease;
+      min-height: 40px;
+      padding: 7px 10px;
+      transition: transform 0.3s ease, filter 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, color 0.3s ease;
     }
 
     button:hover {
       transform: translateY(-1px);
-      filter: brightness(1.08);
+      filter: brightness(1.03);
+      box-shadow: 0 0 12px rgba(212, 175, 55, 0.18);
     }
 
-    button.primary { background: linear-gradient(90deg, #42d4ff, #4c8dff); color: #03111e; border: none; }
-    button.ok { background: linear-gradient(90deg, #22c55e, #14b8a6); color: #02110b; border: none; }
-    button.warn { background: linear-gradient(90deg, #f59e0b, #fb7185); color: #281603; border: none; }
-    button.danger { background: linear-gradient(90deg, #ef4444, #dc2626); color: white; border: none; }
+    button.primary,
+    button.ok,
+    button.warn,
+    button.danger {
+      background: radial-gradient(circle at 50% 40%, rgba(212, 175, 55, 0.24) 0%, rgba(212, 175, 55, 0.14) 35%, rgba(10, 10, 10, 0.96) 100%);
+      color: var(--gold);
+      border: 1px solid rgba(212, 175, 55, 0.75);
+    }
+
+    button.primary:hover,
+    button.ok:hover,
+    button.warn:hover,
+    button.danger:hover {
+      background: radial-gradient(circle at 50% 42%, #f2e8c4 0%, #d4af37 45%, #7a6324 100%);
+      color: #0a0a0a;
+    }
 
     .hint {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 13px;
       margin-top: 4px;
     }
 
     .log {
       max-height: 290px;
       overflow: auto;
-      background: rgba(6, 11, 23, 0.95);
-      border: 1px solid rgba(101, 123, 160, 0.34);
-      border-radius: 10px;
+      background: rgba(12, 12, 12, 0.95);
+      border: 1px solid rgba(212, 175, 55, 0.36);
+      border-radius: 2px;
       padding: 8px;
       font-family: Consolas, monospace;
       font-size: 12px;
@@ -829,9 +1109,691 @@
     .badge.warn { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
     .mono { font-family: Consolas, monospace; }
 
+    .dashboard-shell {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+      transition: grid-template-columns 0.3s ease;
+      position: relative;
+    }
+
+    .dashboard-shell::before,
+    .dashboard-shell::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(180deg, transparent 0%, rgba(212, 175, 55, 0.34) 10%, rgba(212, 175, 55, 0.34) 90%, transparent 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .dashboard-shell::before {
+      left: 28px;
+    }
+
+    .dashboard-shell::after {
+      right: 28px;
+    }
+
+    .dashboard-shell.sidebar-collapsed {
+      grid-template-columns: 76px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      align-self: start;
+      height: 100vh;
+      padding: 20px 18px;
+      border-right: 1px solid rgba(212, 175, 55, 0.38);
+      background: linear-gradient(180deg, rgba(8, 8, 8, 0.98) 0%, rgba(15, 12, 7, 0.94) 100%);
+      backdrop-filter: blur(12px);
+      box-shadow: 12px 0 24px rgba(0, 0, 0, 0.4), inset -1px 0 0 rgba(212, 175, 55, 0.25);
+      overflow: auto;
+      transition: padding 0.28s ease, background 0.28s ease;
+      position: sticky;
+      z-index: 1;
+    }
+
+    .sidebar-collapse-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      margin-top: 12px;
+      margin-bottom: 10px;
+      border-radius: 2px;
+      background: rgba(20, 20, 20, 0.85);
+      color: var(--gold);
+      border: 1px solid rgba(212, 175, 55, 0.6);
+      font-weight: 700;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .sidebar-collapse-btn:hover {
+      background: rgba(30, 30, 30, 0.94);
+      border-color: rgba(212, 175, 55, 0.95);
+      transform: translateY(-1px);
+    }
+
+    .sidebar-collapse-btn svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      transition: transform 0.25s ease;
+    }
+
+    .sidebar-brand h2 {
+      margin: 4px 0 8px;
+      font-family: "Marcellus", serif;
+      font-size: 26px;
+      line-height: 1.05;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+    }
+
+    .sidebar-brand {
+      position: relative;
+      min-height: 96px;
+      overflow: hidden;
+    }
+
+    .sidebar-brand-mark {
+      width: 34px;
+      height: 34px;
+      border-radius: 2px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: #0a0a0a;
+      background: linear-gradient(140deg, #d4af37 0%, #f2e8c4 100%);
+      box-shadow: var(--deco-glow);
+      margin-bottom: 10px;
+      transition: transform 0.25s ease;
+    }
+
+    .sidebar.collapsed .sidebar-brand h2,
+    .sidebar.collapsed .sidebar-brand p,
+    .sidebar.collapsed .sidebar-kicker,
+    .sidebar.collapsed .sidebar-label,
+    .sidebar.collapsed .sidebar-note,
+    .sidebar.collapsed .sidebar-value,
+    .sidebar.collapsed .sidebar-card {
+      display: none;
+    }
+
+    .sidebar.collapsed {
+      padding: 18px 10px;
+    }
+
+    .sidebar.collapsed .sidebar-collapse-btn {
+      width: 34px;
+      margin-top: 0;
+    }
+
+    .sidebar.collapsed .sidebar-collapse-btn svg {
+      transform: rotate(180deg);
+    }
+
+    .sidebar.collapsed .sidebar-brand {
+      min-height: auto;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .sidebar.collapsed .sidebar-brand-mark {
+      transform: scale(1.08);
+      margin-bottom: 2px;
+    }
+
+    .sidebar.collapsed .sidebar-link {
+      justify-content: center;
+      grid-template-columns: 24px minmax(0, 0px);
+      column-gap: 0;
+      padding: 12px 0;
+    }
+
+    .sidebar.collapsed .sidebar-text {
+      clip-path: inset(0 100% 0 0);
+      opacity: 0;
+      transform: translateX(-6px);
+      transition-delay: 0s;
+      margin: 0;
+      pointer-events: none;
+    }
+
+    .sidebar.sidebar-expanding .sidebar-text {
+      transition-delay: 0.2s;
+    }
+
+    .sidebar.collapsed .sidebar-link .icon {
+      margin: 0 auto;
+    }
+
+    .sidebar-brand p,
+    .sidebar-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .sidebar-kicker,
+    .sidebar-label {
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .sidebar-nav,
+    .sidebar-card {
+      margin-top: 18px;
+    }
+
+    .sidebar-card {
+      padding: 14px;
+      border-radius: 2px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      background: rgba(18, 16, 12, 0.78);
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.14);
+    }
+
+    .sidebar-value {
+      margin-top: 8px;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .sidebar-nav {
+      display: grid;
+      gap: 8px;
+    }
+
+    .sidebar-link .icon {
+      width: 24px;
+      height: 24px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: currentColor;
+      flex-shrink: 0;
+      border: 1px solid rgba(212, 175, 55, 0.5);
+      background: rgba(8, 8, 8, 0.8);
+      transform: rotate(45deg);
+    }
+
+    .sidebar-link .icon svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      transform: rotate(-45deg);
+    }
+
+    .sidebar-link .sidebar-text {
+      display: block;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: clip;
+      line-height: 20px;
+      height: 20px;
+      opacity: 1;
+      transform: translateX(0);
+      clip-path: inset(0 0 0 0);
+      transition: clip-path 0.2s ease, opacity 0.16s ease, transform 0.2s ease;
+      transition-delay: 0.06s;
+    }
+
+    .sidebar-link {
+      display: grid;
+      grid-template-columns: 24px minmax(0, 1fr);
+      align-items: center;
+      column-gap: 10px;
+      width: 100%;
+      min-height: 44px;
+      overflow: hidden;
+      border: 1px solid rgba(212, 175, 55, 0.25);
+      border-radius: 2px;
+      padding: 11px 12px;
+      background: rgba(14, 14, 14, 0.82);
+      color: var(--text);
+      text-align: left;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, column-gap 0.28s ease, padding 0.28s ease;
+    }
+
+    .sidebar-link:hover {
+      transform: translateX(3px);
+      border-color: rgba(212, 175, 55, 0.92);
+      background: rgba(24, 20, 14, 0.95);
+      box-shadow: var(--deco-glow);
+    }
+
+    .sidebar-link.active {
+      color: #0a0a0a;
+      border-color: rgba(212, 175, 55, 0.95);
+      background: linear-gradient(110deg, #8a6d25 0%, #f0e3bc 56%, #5f4db0 100%);
+      box-shadow: var(--deco-glow);
+    }
+
+    .content {
+      min-width: 0;
+    }
+
+    .wrap {
+      max-width: none;
+      margin: 0;
+      padding: 18px 18px 24px;
+    }
+
+    .dashboard-view {
+      margin-top: 14px;
+    }
+
+    .dashboard-view.hidden {
+      display: none;
+    }
+
+    .dashboard-view[data-view="logs"] .panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    .dashboard-view[data-view="logs"] .log {
+      flex: 1;
+      min-height: calc(100vh - 300px);
+      max-height: none;
+    }
+
+    .overview-info {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .overview-card {
+      border: 1px solid rgba(212, 175, 55, 0.32);
+      border-radius: 2px;
+      background: rgba(18, 18, 18, 0.86);
+      padding: 12px;
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.1);
+    }
+
+    .overview-card h3 {
+      font-family: "Marcellus", serif;
+      font-size: 22px;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+
+    .refresh-controls {
+      display: grid;
+      grid-template-columns: 120px 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .refresh-controls label {
+      margin-bottom: 0;
+      grid-column: span 3;
+    }
+
+    .refresh-controls input {
+      text-align: center;
+    }
+
+    .ev-model-wrap {
+      border: 1px solid rgba(212, 175, 55, 0.5);
+      border-radius: 2px;
+      padding: 12px;
+      background:
+        radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.22) 0%, transparent 40%),
+        linear-gradient(180deg, rgba(20, 20, 20, 0.9) 0%, rgba(10, 10, 10, 0.98) 100%);
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.15), 0 0 20px rgba(212, 175, 55, 0.15);
+    }
+
+    .ev-model-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .ev-model-tag {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      padding: 6px 10px;
+      border-radius: 2px;
+      border: 1px solid rgba(212, 175, 55, 0.42);
+      background: rgba(18, 15, 10, 0.72);
+      white-space: nowrap;
+    }
+
+    .road {
+      position: relative;
+      height: 160px;
+      border-radius: 2px;
+      border: 1px solid rgba(212, 175, 55, 0.45);
+      background:
+        radial-gradient(circle at 28% 20%, rgba(212, 175, 55, 0.2) 0%, transparent 30%),
+        linear-gradient(180deg, rgba(26, 24, 20, 0.96) 0%, rgba(10, 10, 10, 0.98) 100%);
+      overflow: hidden;
+      margin-top: 10px;
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.12), inset 0 0 0 7px rgba(0, 0, 0, 0.42);
+    }
+
+    .road::before {
+      content: '';
+      position: absolute;
+      inset: 50% -220px auto -220px;
+      height: 3px;
+      background: repeating-linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0.55) 0,
+        rgba(148, 163, 184, 0.55) 26px,
+        transparent 26px,
+        transparent 52px
+      );
+      animation: laneShift 2.4s linear infinite;
+    }
+
+    .road::after {
+      content: '';
+      position: absolute;
+      inset: auto 18px 12px 18px;
+      height: 22px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.28) 0%, transparent 68%);
+      filter: blur(6px);
+      opacity: 0.85;
+    }
+
+    .lane-glow {
+      position: absolute;
+      inset: auto 20px 24px 20px;
+      height: 4px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.38), transparent);
+      opacity: 0.8;
+    }
+
+    .ev-car {
+      position: absolute;
+      left: 50%;
+      bottom: 24px;
+      width: 188px;
+      height: 76px;
+      transform: translateX(-50%);
+      transition: transform 0.28s ease;
+      filter: drop-shadow(0 14px 22px rgba(15, 23, 42, 0.55));
+    }
+
+    .ev-car.moving {
+      transform: translateX(calc(-50% + 16px));
+    }
+
+    .car-glow {
+      position: absolute;
+      inset: auto 14px 5px 14px;
+      height: 14px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(212, 175, 55, 0.62) 0%, transparent 72%);
+      filter: blur(8px);
+      opacity: 0.9;
+    }
+
+    .car-body {
+      position: absolute;
+      inset: 18px 4px 10px;
+      border-radius: 24px 32px 16px 16px;
+      background: linear-gradient(135deg, #3b3120 0%, #d4af37 45%, #f2e8c4 100%);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      box-shadow: inset 0 -12px 24px rgba(15, 23, 42, 0.18);
+    }
+
+    .car-roof {
+      position: absolute;
+      top: 5px;
+      left: 44px;
+      width: 92px;
+      height: 30px;
+      border-radius: 18px 22px 10px 10px;
+      background: linear-gradient(180deg, rgba(226, 232, 240, 0.78), rgba(148, 163, 184, 0.14));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .car-window {
+      position: absolute;
+      top: 10px;
+      left: 48px;
+      right: 42px;
+      height: 20px;
+      border-radius: 14px 18px 8px 8px;
+      background: linear-gradient(90deg, rgba(224, 242, 254, 0.92), rgba(186, 230, 253, 0.34));
+    }
+
+    .car-light {
+      position: absolute;
+      top: 35px;
+      width: 18px;
+      height: 10px;
+      border-radius: 999px;
+    }
+
+    .car-light.front {
+      right: 10px;
+      background: linear-gradient(90deg, rgba(253, 224, 71, 0.3), rgba(253, 224, 71, 1));
+      box-shadow: 0 0 18px rgba(250, 204, 21, 0.8);
+    }
+
+    .car-light.rear {
+      left: 8px;
+      background: linear-gradient(90deg, rgba(248, 113, 113, 1), rgba(248, 113, 113, 0.32));
+      box-shadow: 0 0 16px rgba(248, 113, 113, 0.65);
+    }
+
+    .charge-port {
+      position: absolute;
+      top: 31px;
+      right: 42px;
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      background: #0f172a;
+      box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.34);
+    }
+
+    .wheel {
+      position: absolute;
+      bottom: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 4px solid #0f172a;
+      background: radial-gradient(circle, #cbd5e1 0%, #94a3b8 64%, #64748b 100%);
+      box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+    }
+
+    .wheel.left {
+      left: 22px;
+    }
+
+    .wheel.right {
+      right: 22px;
+    }
+
+    .ev-car.moving .wheel {
+      animation: wheelSpin 0.8s linear infinite;
+    }
+
+    .charge-beam {
+      display: none;
+    }
+
+    .vehicle-state-strip {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .vehicle-chip {
+      padding: 8px 10px;
+      border-radius: 2px;
+      border: 1px solid rgba(212, 175, 55, 0.32);
+      background: rgba(16, 16, 16, 0.85);
+      font-size: 12px;
+      color: var(--text);
+      box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.1);
+    }
+
+    .vehicle-chip .chip-label {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.11em;
+      font-size: 10px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      display: block;
+    }
+
+    .vehicle-chip span {
+      display: block;
+      color: var(--text);
+      font-weight: 800;
+      font-size: 14px;
+      letter-spacing: 0.05em;
+    }
+
+    .vehicle-chip-temp .progress {
+      margin-top: 7px;
+    }
+
+    .battery-chip-row {
+      display: grid;
+      grid-template-columns: minmax(0, auto) 46px;
+      align-items: center;
+      justify-content: start;
+      column-gap: 6px;
+    }
+
+    .battery-icon {
+      position: relative;
+      width: 46px;
+      height: 20px;
+      border-radius: 5px;
+      border: 2px solid rgba(203, 213, 225, 0.95);
+      background: rgba(15, 23, 42, 0.85);
+      padding: 2px;
+      flex-shrink: 0;
+      overflow: hidden;
+      justify-self: end;
+    }
+
+    .battery-icon::after {
+      content: '';
+      position: absolute;
+      right: -6px;
+      top: 5px;
+      width: 4px;
+      height: 8px;
+      border-radius: 1px 2px 2px 1px;
+      background: rgba(203, 213, 225, 0.95);
+    }
+
+    .battery-level {
+      height: 100%;
+      width: 24%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, #22c55e, #86efac);
+      transition: width 0.3s ease, background 0.3s ease;
+    }
+
+    .battery-chip-value {
+      font-size: 16px;
+      font-weight: 800;
+      color: #f8fafc;
+      margin-right: 0;
+      text-align: left;
+    }
+
+    .escrow-facts .user-key {
+      margin: 7px 0;
+      padding: 9px 10px;
+      border: 1px solid rgba(100, 116, 139, 0.45);
+      border-radius: 9px;
+      background: rgba(15, 23, 42, 0.52);
+      align-items: center;
+    }
+
+    .escrow-facts h3 {
+      font-size: 21px;
+    }
+
+    .escrow-facts .user-key span:first-child {
+      color: #a9bfdf;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.02em;
+      min-width: 130px;
+    }
+
+    .escrow-facts .user-key .value {
+      color: #f1f5f9;
+      font-weight: 800;
+      text-align: right;
+      word-break: break-word;
+    }
+
+    @media (max-width: 1120px) {
+      .dashboard-shell {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard-shell.sidebar-collapsed {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid rgba(103, 125, 167, 0.28);
+      }
+
+      .overview-info {
+        grid-template-columns: 1fr;
+      }
+
+      .vehicle-state-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
     @keyframes laneShift {
       from { transform: translateX(0); }
-      to { transform: translateX(120px); }
+      to { transform: translateX(52px); }
     }
 
     @keyframes wheelSpin {
@@ -839,428 +1801,449 @@
       to { transform: rotate(360deg); }
     }
 
-    @keyframes beamPulse {
-      0%, 100% { opacity: 0.45; transform: translateX(0); }
-      50% { opacity: 1; transform: translateX(8px); }
-    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="header">
-      <div class="title">
-        <h1>EV Dynamic Cockpit</h1>
-        <p>Clear demo flow + dynamic EV visuals: connect, profile, charge, monitor telemetry, and close session.</p>
+  <div class="dashboard-shell">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-mark">GG</div>
+        <div class="sidebar-kicker">GridGarrison</div>
+        <h2>EV Simulator Console</h2>
+        <p>Sidebar-driven cockpit for the demo flow. Keep the overview on the EV model, temperature, and charging state, then switch components as needed.</p>
       </div>
-      <div class="mode-switch">
-        <span class="mode-label">Dashboard mode</span>
-        <div class="mode-buttons">
-          <button id="modeUserBtn" class="mode-btn" type="button">User Mode</button>
-          <button id="modeDevBtn" class="mode-btn" type="button">Dev Mode</button>
-        </div>
-        <div id="connectionPill" class="status-pill off">Offline</div>
-      </div>
-    </div>
 
-    <div class="flow-track">
-      <div id="stepConnect" class="flow-step">
-        <div class="num">Step 1</div>
-        <div class="name">Connect EV</div>
-      </div>
-      <div id="stepProfile" class="flow-step">
-        <div class="num">Step 2</div>
-        <div class="name">Pick Profile</div>
-      </div>
-      <div id="stepStart" class="flow-step">
-        <div class="num">Step 3</div>
-        <div class="name">Start Charging</div>
-      </div>
-      <div id="stepMeter" class="flow-step">
-        <div class="num">Step 4</div>
-        <div class="name">Stream Energy</div>
-      </div>
-      <div id="stepEnd" class="flow-step">
-        <div class="num">Step 5</div>
-        <div class="name">End Session</div>
-      </div>
-    </div>
+      <button id="sidebarCollapseBtn" type="button" class="sidebar-collapse-btn" aria-expanded="true" aria-label="Collapse sidebar">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m9 18 6-6-6-6"/>
+        </svg>
+      </button>
 
-    <div class="grid">
-      <div class="panel span-12">
-        <div class="row" style="margin-top:0;">
-          <div class="col-8">
-            <label>Simulator URL</label>
-            <input id="apiBase" value="" />
-            <div class="hint">Defaults to this page origin (auto-fallback if wrong).</div>
+      <div class="sidebar-nav">
+        <div class="sidebar-label">Components</div>
+        <button type="button" class="sidebar-link active" data-view-target="overview"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg></span><span class="sidebar-text">Overview</span></button>
+        <button type="button" class="sidebar-link" data-view-target="trust"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 7v5c0 5 3.4 7.9 8 9 4.6-1.1 8-4 8-9V7l-8-4Z"/><path d="m9 12 2 2 4-4"/></svg></span><span class="sidebar-text">Trust & Scenarios</span></button>
+        <button type="button" class="sidebar-link" data-view-target="charging"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 6 13h5l-1 9 8-12h-5l0-8Z"/></svg></span><span class="sidebar-text">Charging</span></button>
+        <button type="button" class="sidebar-link" data-view-target="logs"><span class="icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"/><path d="M4 19h16"/><path d="m8 15 3-3 3 2 4-5"/></svg></span><span class="sidebar-text">Logs & API</span></button>
+      </div>
+
+      <div class="sidebar-card">
+        <div class="sidebar-label">Current component</div>
+        <div id="currentViewLabel" class="sidebar-value">Overview</div>
+        <p class="sidebar-note" style="margin-top:8px;">The overview keeps the core charging story visible. Everything else is tucked into the sidebar for cleaner demo navigation.</p>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="wrap">
+        <div class="header">
+          <div class="title">
+            <h1>EV Dynamic Cockpit</h1>
+            <p>Clear demo flow + dynamic EV visuals: connect, profile, charge, monitor telemetry, and close session.</p>
           </div>
-          <div class="col-4">
-            <label>Live refresh (seconds)</label>
-            <div class="row" style="margin-top:0;">
-              <div class="col-6"><input id="pollSec" type="number" min="1" value="3" /></div>
-              <div class="col-6"><button id="togglePoll" class="primary">Auto: ON</button></div>
+          <div class="mode-switch">
+            <span class="mode-label">Dashboard mode</span>
+            <div class="mode-buttons">
+              <button id="modeUserBtn" class="mode-btn" type="button">User Mode</button>
+              <button id="modeDevBtn" class="mode-btn" type="button">Dev Mode</button>
             </div>
-            <button id="refreshAll" class="ok">Refresh Dashboard</button>
+            <div id="connectionPill" class="status-pill off">Offline</div>
           </div>
         </div>
-      </div>
 
-      <div class="panel span-12 hero">
-        <div class="hero-grid">
-          <div>
-            <h3>Live EV State</h3>
-            <p class="hint" style="margin-top:4px;">This panel mirrors what judges should watch first during the demo flow.</p>
-            <div class="ev-state">
-              <div class="state-card">
-                <div class="label">Connection</div>
-                <div id="kpiConnected" class="value"><span class="badge warn">Disconnected</span></div>
+        <div class="flow-track">
+          <div id="stepConnect" class="flow-step">
+            <div class="num">I</div>
+            <div class="name">Connect EV</div>
+          </div>
+          <div id="stepProfile" class="flow-step">
+            <div class="num">II</div>
+            <div class="name">Pick Profile</div>
+          </div>
+          <div id="stepStart" class="flow-step">
+            <div class="num">III</div>
+            <div class="name">Start Charging</div>
+          </div>
+          <div id="stepMeter" class="flow-step">
+            <div class="num">IV</div>
+            <div class="name">Stream Energy</div>
+          </div>
+          <div id="stepEnd" class="flow-step">
+            <div class="num">V</div>
+            <div class="name">End Session</div>
+          </div>
+        </div>
+
+        <div class="dashboard-view" data-view="overview">
+          <div class="grid">
+            <div class="panel span-12">
+              <input id="apiBase" type="hidden" value="" />
+              <div class="overview-info">
+                <div class="overview-card">
+                  <h3>Charging At A Glance</h3>
+                  <p class="hint">Track progress, trust, and charging state in one place. Use refresh controls on the right to keep this view live.</p>
+                </div>
+                <div class="overview-card">
+                  <div class="refresh-controls">
+                    <label>Live refresh controls</label>
+                    <input id="pollSec" type="number" min="1" value="3" />
+                    <button id="togglePoll" class="primary">Auto: ON</button>
+                    <button id="refreshAll" class="ok">Refresh</button>
+                  </div>
+                </div>
               </div>
-              <div class="state-card">
-                <div class="label">Current Session</div>
-                <div id="kpiTx" class="value mono">-</div>
+            </div>
+
+            <div class="panel span-12 hero">
+              <div class="hero-grid">
+                <div>
+                  <h3>Live EV State</h3>
+                  <p class="hint" style="margin-top:4px;">This panel mirrors what judges should watch first during the demo flow.</p>
+                  <div class="ev-state">
+                    <div class="state-card">
+                      <div class="label">Connection</div>
+                      <div id="kpiConnected" class="value"><span class="badge warn">Disconnected</span></div>
+                    </div>
+                    <div class="state-card">
+                      <div class="label">Current Session</div>
+                      <div id="kpiTx" class="value mono">-</div>
+                    </div>
+                    <div class="state-card">
+                      <div class="label">Verification Gate</div>
+                      <div id="kpiVerification" class="value">-</div>
+                    </div>
+                    <div class="state-card">
+                      <div class="label">Gate Reason</div>
+                      <div id="kpiGateReason" class="value">-</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ev-model-wrap">
+                  <div class="ev-model-head">
+                    <div>
+                      <h3>EV Model</h3>
+                      <p class="hint" style="margin-top:4px;">A stylized side-profile that reflects the current charging state.</p>
+                    </div>
+                    <div class="ev-model-tag">Live chassis</div>
+                  </div>
+                  <div class="road">
+                    <div class="lane-glow"></div>
+                    <div id="evCar" class="ev-car">
+                      <div class="car-glow"></div>
+                      <div class="car-body"></div>
+                      <div class="car-roof"></div>
+                      <div class="car-window"></div>
+                      <div class="car-light rear"></div>
+                      <div class="car-light front"></div>
+                      <div class="charge-port"></div>
+                      <div class="wheel left"></div>
+                      <div class="wheel right"></div>
+                    </div>
+                  </div>
+                  <div class="vehicle-state-strip">
+                    <div class="vehicle-chip">
+                      <span class="chip-label">Charge mode</span>
+                      <span id="vehicleModeText">Vehicle mode: Parked</span>
+                    </div>
+                    <div class="vehicle-chip">
+                      <span class="chip-label">Battery</span>
+                      <div class="battery-chip-row">
+                        <div class="battery-icon"><div id="batteryFill" class="battery-level"></div></div>
+                        <div id="batteryText" class="battery-chip-value">24%</div>
+                      </div>
+                    </div>
+                    <div class="vehicle-chip vehicle-chip-temp">
+                      <span class="chip-label">Temperature</span>
+                      <span id="tempText">27.0&deg;C</span>
+                      <div class="progress"><div id="tempFill" class="progress-fill temp-fill" style="width: 9%;"></div></div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div class="state-card">
-                <div class="label">Drive Profile</div>
-                <div id="kpiProfile" class="value">-</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-view hidden" data-view="charging">
+          <div class="grid">
+            <div id="userModePanel" class="panel span-12 user-only hidden">
+              <h3>User Charging Shell</h3>
+              <p class="hint" style="margin-top:6px;">Simplified flow: choose your charging goal, confirm the hold, verify trust, and start charging.</p>
+
+              <div class="user-shell">
+                <div class="user-card">
+                  <h3>Wallet And Trust</h3>
+                  <div class="user-key"><span>Wallet balance</span><span id="userWalletBalance" class="value mono">0.00</span></div>
+                  <div class="user-key"><span>Battery</span><span id="userBatteryValue" class="value">0%</span></div>
+                  <div class="user-key"><span>Trust status</span><span id="userTrustValue" class="value">UNVERIFIED</span></div>
+                  <div class="user-key"><span>Escrow status</span><span id="userEscrowValue" class="value">NOT_CREATED</span></div>
+
+                  <div class="row">
+                    <div class="col-8">
+                      <label>Top up wallet amount</label>
+                      <input id="walletTopupAmount" type="number" min="0.01" step="0.01" value="5.00" />
+                    </div>
+                    <div class="col-4"><label>&nbsp;</label><button id="walletTopupBtn" class="warn">Top Up</button></div>
+                  </div>
+                </div>
+
+                <div class="user-card">
+                  <h3>Charging Setup</h3>
+                  <div class="hint" style="margin-bottom:10px;">Select your target battery percentage. We auto-calculate required energy and estimated rate.</div>
+                  <div class="row">
+                    <div class="col-12">
+                      <div class="charge-target-shell">
+                        <label style="margin-bottom:6px;">Target battery (%)</label>
+                        <div class="charge-target-row">
+                          <div class="charge-target-badge">Current <span id="chargeCurrentPct">24%</span></div>
+                          <input id="chargeTargetRange" type="range" min="30" max="100" step="10" value="80" />
+                          <input id="chargeTargetPct" type="number" min="30" max="100" step="10" value="80" />
+                        </div>
+                        <div class="charge-plan-grid">
+                          <div class="charge-plan-card">
+                            <div class="label">Energy needed</div>
+                            <div class="value" id="chargePlanKwh">0.00 kWh</div>
+                          </div>
+                          <div class="charge-plan-card">
+                            <div class="label">Rate</div>
+                            <div class="value" id="chargePlanRate">0.25 / kWh</div>
+                          </div>
+                          <div class="charge-plan-card">
+                            <div class="label">Estimated cost</div>
+                            <div class="value" id="chargePlanCost">0.00</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <input id="userHoldAmount" type="hidden" value="1000000000000000" />
+                    <input id="userTimeout" type="hidden" value="3600" />
+                    <input id="userInputMode" type="hidden" value="VOLTS" />
+                    <input id="userInputValue" type="hidden" value="0" />
+                    <input id="userEstimatedKwh" type="hidden" value="0" />
+                    <input id="userTargetSoc" type="hidden" value="80" />
+
+                    <div class="col-6"><button id="confirmIntentBtn" class="primary">Confirm Plan</button></div>
+                    <div class="col-6"><button id="startGuidedBtn" class="ok">Start Guided Charging</button></div>
+
+                    <div class="col-12"><button id="refreshFlowBtn" class="warn">Refresh User Flow Status</button></div>
+                  </div>
+                </div>
               </div>
-              <div class="state-card">
-                <div class="label">Scenario</div>
-                <div id="kpiScenario" class="value">Idle</div>
+
+              <div class="user-card full escrow-facts" style="margin-top:10px;">
+                <h3>Secure Escrow Facts</h3>
+                <div class="user-key"><span>Escrow address</span><span id="paymentEscrowAddress" class="value mono">-</span></div>
+                <div class="user-key"><span>Held amount</span><span id="paymentHeldAmount" class="value mono">0</span></div>
+                <div class="user-key"><span>Lifecycle state</span><span id="paymentLifecycle" class="value">NOT_CREATED</span></div>
+                <div class="user-key"><span>Latest trust verdict</span><span id="paymentVerdict" class="value">-</span></div>
+                <div class="hint" id="paymentMessage">No payment hold yet. Confirm a plan to open the payment window.</div>
               </div>
-              <div class="state-card">
-                <div class="label">Verification Gate</div>
-                <div id="kpiVerification" class="value">-</div>
+
+              <div id="paymentWindow" class="payment-window hidden">
+                <h3 class="payment-title">Escrow Payment Window</h3>
+                <p class="secure-copy">Funds are held in contract until completion. Release happens only after charging settlement.</p>
+
+                <div class="progress-grid">
+                  <div class="progress-wrap">
+                    <div class="progress-label"><span>Battery progress</span><span id="batteryProgressPct">0%</span></div>
+                    <div class="bar-track"><div id="batteryProgressFill" class="bar-fill battery"></div></div>
+                  </div>
+                  <div class="progress-wrap">
+                    <div class="progress-label"><span>Escrow progress</span><span id="escrowProgressPct">0%</span></div>
+                    <div class="bar-track"><div id="escrowProgressFill" class="bar-fill escrow"></div></div>
+                  </div>
+                </div>
+
+                <div class="milestones">
+                  <div id="milestoneHold" class="milestone wait"><strong>Hold requested</strong><span class="state">Waiting</span></div>
+                  <div id="milestoneCreating" class="milestone wait"><strong>Contract creating</strong><span class="state">Waiting</span></div>
+                  <div id="milestoneCreated" class="milestone wait"><strong>Contract created</strong><span class="state">Waiting</span></div>
+                  <div id="milestoneFunded" class="milestone wait"><strong>Funds held</strong><span class="state">Waiting</span></div>
+                  <div id="milestoneCharging" class="milestone wait"><strong>Charging active</strong><span class="state">Waiting</span></div>
+                  <div id="milestoneSettled" class="milestone wait"><strong>Settlement complete</strong><span class="state">Waiting</span></div>
+                </div>
               </div>
-              <div class="state-card">
-                <div class="label">Gate Reason</div>
-                <div id="kpiGateReason" class="value">-</div>
+
+              <div id="settlementSummary" class="user-card full hidden">
+                <h3>Settlement Summary</h3>
+                <p class="hint" id="settlementMessage" style="margin-top:6px;">Complete a guided session to populate settlement metrics.</p>
+
+                <div class="settlement-grid">
+                  <div class="summary-chip">
+                    <div class="label">Total energy</div>
+                    <div id="summaryEnergy" class="value">0.00 kWh</div>
+                  </div>
+                  <div class="summary-chip">
+                    <div class="label">Held amount</div>
+                    <div id="summaryHeld" class="value mono">0</div>
+                  </div>
+                  <div class="summary-chip">
+                    <div class="label">Charged amount</div>
+                    <div id="summaryCharged" class="value">0.00</div>
+                  </div>
+                  <div class="summary-chip">
+                    <div class="label">Debited amount</div>
+                    <div id="summaryDebited" class="value">0.00</div>
+                  </div>
+                  <div class="summary-chip">
+                    <div class="label">Remaining wallet</div>
+                    <div id="summaryWallet" class="value">0.00</div>
+                  </div>
+                  <div class="summary-chip">
+                    <div class="label">Final contract state</div>
+                    <div id="summaryContractState" class="value">-</div>
+                  </div>
+                  <div class="summary-chip">
+                    <div class="label">Escrow contract</div>
+                    <div id="summaryEscrow" class="value mono">-</div>
+                  </div>
+                  <div class="summary-chip">
+                    <div class="label">Transaction ID</div>
+                    <div id="summaryTx" class="value mono">-</div>
+                  </div>
+                  <div class="summary-chip">
+                    <div class="label">Settled at</div>
+                    <div id="summarySettledAt" class="value">-</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="panel span-8 dev-only">
+              <h3 id="quickControlsTitle">Quick Demo Controls</h3>
+              <p class="hint" id="quickControlsHint" style="margin-top:6px;">Use these in order for a simple judge demo.</p>
+
+              <div class="row">
+                <div class="col-6"><button id="connectBtn" class="ok">Step 1: Connect EV</button></div>
+                <div class="col-6"><button id="disconnectBtn" class="danger">Disconnect EV</button></div>
+
+                <div class="col-8 dev-only">
+                  <label>Choose driving profile</label>
+                  <select id="profileSelect"></select>
+                </div>
+                <div class="col-4 dev-only"><label>&nbsp;</label><button id="setProfileBtn" class="primary">Apply Profile</button></div>
+
+                <div class="col-8 dev-only">
+                  <label>Start charging session ID (optional)</label>
+                  <input id="txId" placeholder="leave blank to auto-create" />
+                </div>
+                <div class="col-4 dev-only"><label>&nbsp;</label><button id="txStartBtn" class="ok">Start Charging</button></div>
+
+                <div class="col-4 dev-only">
+                  <label>Send energy (kWh)</label>
+                  <input id="meterKwh" type="number" step="0.1" value="1.5" />
+                </div>
+                <div class="col-4 dev-only"><label>&nbsp;</label><button id="txMeterBtn" class="primary">Send Energy Update</button></div>
+                <div class="col-4 dev-only"><label>&nbsp;</label><button id="send3MetersBtn" class="warn">Send 3 Updates</button></div>
+
+                <div class="col-8 dev-only">
+                  <label>End session total (kWh)</label>
+                  <input id="totalKwh" type="number" step="0.1" value="0.0" />
+                </div>
+                <div class="col-4 dev-only"><label>&nbsp;</label><button id="txEndBtn" class="danger">End Charging</button></div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div class="ev-model-wrap">
-            <h3>EV Model</h3>
-            <div class="road">
-              <div id="evCar" class="ev-car">
-                <div class="car-body"></div>
-                <div class="car-window"></div>
-                <div class="wheel left"></div>
-                <div class="wheel right"></div>
+        <div class="dashboard-view hidden" data-view="trust">
+          <div class="grid">
+            <div class="panel span-12">
+              <h3 id="rightPanelTitle">Scenario Runner</h3>
+              <div class="hint" id="rightPanelHint" style="margin-top:6px;">One-click narratives for demo storytelling.</div>
+              <div class="row dev-only">
+                <div class="col-12">
+                  <label>Scenario</label>
+                  <select id="scenarioSelect">
+                    <option value="normalCharging">Normal charging</option>
+                    <option value="firmwareTamper">Tampered firmware</option>
+                    <option value="reconnectLoop">Unstable connection</option>
+                    <option value="isoPnCHappyPath">ISO-15118 Plug & Charge (valid)</option>
+                    <option value="isoPnCCertMissing">ISO-15118 Plug & Charge (missing cert)</option>
+                  </select>
+                </div>
+                <div class="col-12"><button id="runScenarioBtn" class="primary">Run Scenario</button></div>
+                <div class="col-12"><button id="stopScenarioBtn" class="warn">Stop Scenario</button></div>
               </div>
-              <div class="charge-beam"></div>
+
+              <h3 id="firmwareSignalTitle" style="margin-top:14px;">Firmware Signal</h3>
+              <div class="row dev-only">
+                <div class="col-12">
+                  <label>Firmware status</label>
+                  <select id="fwStatus">
+                    <option>Downloaded</option>
+                    <option>DownloadFailed</option>
+                    <option>Downloading</option>
+                    <option>Idle</option>
+                  </select>
+                </div>
+                <div class="col-12">
+                  <label>Firmware hash</label>
+                  <input id="fwHash" placeholder="Filled from backend-generated component hash" />
+                </div>
+                <div class="col-12">
+                  <label>Firmware version</label>
+                  <input id="fwVersion" value="1.0.0" />
+                </div>
+                <div class="col-12"><button id="fwSendBtn" class="primary">Send Firmware Signal</button></div>
+              </div>
+
+              <div class="row">
+                <div class="col-12"><button id="requestHashVerifyBtn" class="ok">Request Hash + Verify On Backend</button></div>
+                <div class="col-12"><p id="verifyHint" class="hint">Generates component hash and asks backend trust module to verify before charging.</p></div>
+              </div>
             </div>
-            <div class="hint" id="vehicleModeText" style="margin-top:8px;">Vehicle mode: Parked</div>
           </div>
         </div>
 
-        <div class="telemetry">
-          <div class="telemetry-card">
-            <div class="label">Battery</div>
-            <div id="batteryText" class="value">24%</div>
-            <div class="progress"><div id="batteryFill" class="progress-fill" style="width: 24%;"></div></div>
-          </div>
-          <div class="telemetry-card">
-            <div class="label">Temperature</div>
-            <div id="tempText" class="value">27.0&deg;C</div>
-            <div class="progress"><div id="tempFill" class="progress-fill temp-fill" style="width: 9%;"></div></div>
-          </div>
-          <div class="telemetry-card">
-            <div class="label">Speed</div>
-            <div id="speedText" class="value">0 km/h</div>
-            <div class="progress"><div id="speedFill" class="progress-fill speed-fill" style="width: 0%;"></div></div>
-          </div>
-          <div class="telemetry-card">
-            <div class="label">Charge Power</div>
-            <div id="powerText" class="value">0 kW</div>
-            <div class="progress"><div id="powerFill" class="progress-fill power-fill" style="width: 0%;"></div></div>
-          </div>
-        </div>
+        <div class="dashboard-view hidden" data-view="logs">
+          <div class="grid">
+            <div class="panel span-6">
+              <h3 id="timelineHeading">EV Event Timeline</h3>
+              <div id="eventLog" class="log" aria-live="polite"></div>
+            </div>
 
-        <div class="top-metrics">
-          <div class="metric">
-            <div class="label">Energy sent this demo</div>
-            <div class="value" id="kpiEnergy">0.00 kWh</div>
-          </div>
-          <div class="metric">
-            <div class="label">Meter updates sent</div>
-            <div class="value" id="kpiMeterCount">0</div>
-          </div>
-          <div class="metric">
-            <div class="label">Last firmware signal</div>
-            <div class="value" id="kpiFirmware">-</div>
-          </div>
-          <div class="metric">
-            <div class="label">Scenario mode</div>
-            <div class="value" id="kpiScenarioSimple">Idle</div>
-          </div>
-          <div class="metric user-only hidden" id="metricWallet">
-            <div class="label">Wallet balance</div>
-            <div class="value" id="kpiWallet">0.00</div>
-          </div>
-          <div class="metric user-only hidden" id="metricEscrowState">
-            <div class="label">Escrow lifecycle</div>
-            <div class="value" id="kpiEscrowLifecycle">NOT_CREATED</div>
+            <div class="panel span-6">
+              <h3 id="apiHeading">API Details (for technical Q&amp;A)</h3>
+              <pre id="apiResponse" class="log"></pre>
+            </div>
+
+            <div class="panel span-12 dev-only">
+              <details>
+                <summary>Advanced Controls (technical)</summary>
+                <div class="row">
+                  <div class="col-6"><button id="connectRawBtn" class="ok">POST /api/ev/connect</button></div>
+                  <div class="col-6"><button id="disconnectRawBtn" class="danger">POST /api/ev/disconnect</button></div>
+                  <div class="col-6"><button id="statusRawBtn" class="primary">GET /api/ev/status</button></div>
+                  <div class="col-6"><button id="profilesRawBtn" class="primary">GET /api/ev/profiles</button></div>
+                </div>
+              </details>
+            </div>
           </div>
         </div>
       </div>
-
-    <div id="userModePanel" class="panel span-12 user-only hidden">
-      <h3>User Charging Shell</h3>
-      <p class="hint" style="margin-top:6px;">Simplified flow: choose amount, confirm escrow hold, verify charging, and run guided start.</p>
-
-      <div class="user-shell">
-        <div class="user-card">
-          <h3>Wallet And Trust</h3>
-          <div class="user-key"><span>Wallet balance</span><span id="userWalletBalance" class="value mono">0.00</span></div>
-          <div class="user-key"><span>Battery</span><span id="userBatteryValue" class="value">0%</span></div>
-          <div class="user-key"><span>Trust status</span><span id="userTrustValue" class="value">UNVERIFIED</span></div>
-          <div class="user-key"><span>Escrow status</span><span id="userEscrowValue" class="value">NOT_CREATED</span></div>
-
-          <div class="row">
-            <div class="col-8">
-              <label>Top up wallet amount</label>
-              <input id="walletTopupAmount" type="number" min="0.01" step="0.01" value="5.00" />
-            </div>
-            <div class="col-4"><label>&nbsp;</label><button id="walletTopupBtn" class="warn">Top Up</button></div>
-          </div>
-        </div>
-
-        <div class="user-card">
-          <h3>Charge Request</h3>
-          <div class="row">
-            <div class="col-4">
-              <label>Input mode</label>
-              <select id="userInputMode">
-                <option value="MONEY">Money</option>
-                <option value="VOLTS">Volts</option>
-              </select>
-            </div>
-            <div class="col-4">
-              <label>Input value</label>
-              <input id="userInputValue" type="number" min="0" step="0.1" value="12.5" />
-            </div>
-            <div class="col-4">
-              <label>Estimated kWh</label>
-              <input id="userEstimatedKwh" type="number" min="0" step="0.1" value="5.0" />
-            </div>
-
-            <div class="col-4">
-              <label>Hold amount (wei)</label>
-              <input id="userHoldAmount" value="1000000000000000" />
-            </div>
-            <div class="col-4">
-              <label>Target SOC (%)</label>
-              <input id="userTargetSoc" type="number" min="1" max="100" value="80" />
-            </div>
-            <div class="col-4">
-              <label>Timeout (seconds)</label>
-              <input id="userTimeout" type="number" min="60" step="30" value="3600" />
-            </div>
-
-            <div class="col-6"><button id="confirmIntentBtn" class="primary">Confirm Amount</button></div>
-            <div class="col-6"><button id="startGuidedBtn" class="ok">Start Guided Charging</button></div>
-
-            <div class="col-8">
-              <label>Complete session total (kWh)</label>
-              <input id="userCompleteKwh" type="number" min="0" step="0.1" value="4.0" />
-            </div>
-            <div class="col-4"><label>&nbsp;</label><button id="completeGuidedBtn" class="danger">Complete And Settle</button></div>
-
-            <div class="col-12"><button id="refreshFlowBtn" class="warn">Refresh User Flow Status</button></div>
-          </div>
-        </div>
-
-        <div class="user-card">
-          <h3>Secure Escrow Facts</h3>
-          <div class="user-key"><span>Escrow address</span><span id="paymentEscrowAddress" class="value mono">-</span></div>
-          <div class="user-key"><span>Held amount</span><span id="paymentHeldAmount" class="value mono">0</span></div>
-          <div class="user-key"><span>Lifecycle state</span><span id="paymentLifecycle" class="value">NOT_CREATED</span></div>
-          <div class="user-key"><span>Latest trust verdict</span><span id="paymentVerdict" class="value">-</span></div>
-          <div class="hint" id="paymentMessage">No payment hold yet. Confirm an amount to open the payment window.</div>
-        </div>
-      </div>
-
-      <div id="paymentWindow" class="payment-window hidden">
-        <h3 class="payment-title">Escrow Payment Window</h3>
-        <p class="secure-copy">Funds are held in contract until completion. Release happens only after charging settlement.</p>
-
-        <div class="progress-grid">
-          <div class="progress-wrap">
-            <div class="progress-label"><span>Battery progress</span><span id="batteryProgressPct">0%</span></div>
-            <div class="bar-track"><div id="batteryProgressFill" class="bar-fill battery"></div></div>
-          </div>
-          <div class="progress-wrap">
-            <div class="progress-label"><span>Escrow progress</span><span id="escrowProgressPct">0%</span></div>
-            <div class="bar-track"><div id="escrowProgressFill" class="bar-fill escrow"></div></div>
-          </div>
-        </div>
-
-        <div class="milestones">
-          <div id="milestoneHold" class="milestone wait"><strong>Hold requested</strong><span class="state">Waiting</span></div>
-          <div id="milestoneCreating" class="milestone wait"><strong>Contract creating</strong><span class="state">Waiting</span></div>
-          <div id="milestoneCreated" class="milestone wait"><strong>Contract created</strong><span class="state">Waiting</span></div>
-          <div id="milestoneFunded" class="milestone wait"><strong>Funds held</strong><span class="state">Waiting</span></div>
-          <div id="milestoneCharging" class="milestone wait"><strong>Charging active</strong><span class="state">Waiting</span></div>
-          <div id="milestoneSettled" class="milestone wait"><strong>Settlement complete</strong><span class="state">Waiting</span></div>
-        </div>
-      </div>
-
-      <div id="settlementSummary" class="user-card full hidden">
-        <h3>Settlement Summary</h3>
-        <p class="hint" id="settlementMessage" style="margin-top:6px;">Complete a guided session to populate settlement metrics.</p>
-
-        <div class="settlement-grid">
-          <div class="summary-chip">
-            <div class="label">Total energy</div>
-            <div id="summaryEnergy" class="value">0.00 kWh</div>
-          </div>
-          <div class="summary-chip">
-            <div class="label">Held amount</div>
-            <div id="summaryHeld" class="value mono">0</div>
-          </div>
-          <div class="summary-chip">
-            <div class="label">Charged amount</div>
-            <div id="summaryCharged" class="value">0.00</div>
-          </div>
-          <div class="summary-chip">
-            <div class="label">Debited amount</div>
-            <div id="summaryDebited" class="value">0.00</div>
-          </div>
-          <div class="summary-chip">
-            <div class="label">Remaining wallet</div>
-            <div id="summaryWallet" class="value">0.00</div>
-          </div>
-          <div class="summary-chip">
-            <div class="label">Final contract state</div>
-            <div id="summaryContractState" class="value">-</div>
-          </div>
-          <div class="summary-chip">
-            <div class="label">Escrow contract</div>
-            <div id="summaryEscrow" class="value mono">-</div>
-          </div>
-          <div class="summary-chip">
-            <div class="label">Transaction ID</div>
-            <div id="summaryTx" class="value mono">-</div>
-          </div>
-          <div class="summary-chip">
-            <div class="label">Settled at</div>
-            <div id="summarySettledAt" class="value">-</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-      <div class="panel span-8">
-        <h3 id="quickControlsTitle">Quick Demo Controls</h3>
-        <p class="hint" id="quickControlsHint" style="margin-top:6px;">Use these in order for a simple judge demo.</p>
-
-        <div class="row">
-          <div class="col-6"><button id="connectBtn" class="ok">Step 1: Connect EV</button></div>
-          <div class="col-6"><button id="disconnectBtn" class="danger">Disconnect EV</button></div>
-
-          <div class="col-8 dev-only">
-            <label>Choose driving profile</label>
-            <select id="profileSelect"></select>
-          </div>
-          <div class="col-4 dev-only"><label>&nbsp;</label><button id="setProfileBtn" class="primary">Apply Profile</button></div>
-
-          <div class="col-8 dev-only">
-            <label>Start charging session ID (optional)</label>
-            <input id="txId" placeholder="leave blank to auto-create" />
-          </div>
-          <div class="col-4 dev-only"><label>&nbsp;</label><button id="txStartBtn" class="ok">Start Charging</button></div>
-
-          <div class="col-4 dev-only">
-            <label>Send energy (kWh)</label>
-            <input id="meterKwh" type="number" step="0.1" value="1.5" />
-          </div>
-          <div class="col-4 dev-only"><label>&nbsp;</label><button id="txMeterBtn" class="primary">Send Energy Update</button></div>
-          <div class="col-4 dev-only"><label>&nbsp;</label><button id="send3MetersBtn" class="warn">Send 3 Updates</button></div>
-
-          <div class="col-8 dev-only">
-            <label>End session total (kWh)</label>
-            <input id="totalKwh" type="number" step="0.1" value="0.0" />
-          </div>
-          <div class="col-4 dev-only"><label>&nbsp;</label><button id="txEndBtn" class="danger">End Charging</button></div>
-        </div>
-      </div>
-
-      <div class="panel span-4">
-        <h3 id="rightPanelTitle">Scenario Runner</h3>
-        <div class="hint" id="rightPanelHint" style="margin-top:6px;">One-click narratives for demo storytelling.</div>
-        <div class="row dev-only">
-          <div class="col-12">
-            <label>Scenario</label>
-            <select id="scenarioSelect">
-              <option value="normalCharging">Normal charging</option>
-              <option value="firmwareTamper">Tampered firmware</option>
-              <option value="reconnectLoop">Unstable connection</option>
-              <option value="isoPnCHappyPath">ISO-15118 Plug & Charge (valid)</option>
-              <option value="isoPnCCertMissing">ISO-15118 Plug & Charge (missing cert)</option>
-            </select>
-          </div>
-          <div class="col-12"><button id="runScenarioBtn" class="primary">Run Scenario</button></div>
-          <div class="col-12"><button id="stopScenarioBtn" class="warn">Stop Scenario</button></div>
-        </div>
-
-        <h3 id="firmwareSignalTitle" style="margin-top:14px;">Firmware Signal</h3>
-        <div class="row dev-only">
-          <div class="col-12">
-            <label>Firmware status</label>
-            <select id="fwStatus">
-              <option>Downloaded</option>
-              <option>DownloadFailed</option>
-              <option>Downloading</option>
-              <option>Idle</option>
-            </select>
-          </div>
-          <div class="col-12">
-            <label>Firmware hash</label>
-            <input id="fwHash" placeholder="Filled from backend-generated component hash" />
-          </div>
-          <div class="col-12">
-            <label>Firmware version</label>
-            <input id="fwVersion" value="1.0.0" />
-          </div>
-          <div class="col-12"><button id="fwSendBtn" class="primary">Send Firmware Signal</button></div>
-        </div>
-
-        <div class="row">
-          <div class="col-12"><button id="requestHashVerifyBtn" class="ok">Request Hash + Verify On Backend</button></div>
-          <div class="col-12"><p id="verifyHint" class="hint">Generates component hash and asks backend trust module to verify before charging.</p></div>
-        </div>
-      </div>
-
-      <div class="panel span-6">
-        <h3 id="timelineHeading">EV Event Timeline</h3>
-        <div id="eventLog" class="log" aria-live="polite"></div>
-      </div>
-
-      <div class="panel span-6">
-        <h3 id="apiHeading">API Details (for technical Q&amp;A)</h3>
-        <pre id="apiResponse" class="log"></pre>
-      </div>
-
-      <div class="panel span-12 dev-only">
-        <details>
-          <summary>Advanced Controls (technical)</summary>
-          <div class="row">
-            <div class="col-6"><button id="connectRawBtn" class="ok">POST /api/ev/connect</button></div>
-            <div class="col-6"><button id="disconnectRawBtn" class="danger">POST /api/ev/disconnect</button></div>
-            <div class="col-6"><button id="statusRawBtn" class="primary">GET /api/ev/status</button></div>
-            <div class="col-6"><button id="profilesRawBtn" class="primary">GET /api/ev/profiles</button></div>
-          </div>
-        </details>
-      </div>
-    </div>
+    </main>
   </div>
 
   <script>
     const MODE_KEY = 'gridgarrison.ev.dashboard.mode';
+    const VIEW_KEY = 'gridgarrison.ev.dashboard.view';
+    const SIDEBAR_KEY = 'gridgarrison.ev.dashboard.sidebarCollapsed';
+    const SIDEBAR_ANIMATION_MS = 320;
+    const BATTERY_CAPACITY_KWH = 60;
+    const CHARGE_RATE_PER_KWH = 0.25;
 
     const state = {
       autoPoll: true,
       timer: null,
       mode: (localStorage.getItem(MODE_KEY) || 'dev').toLowerCase() === 'user' ? 'user' : 'dev',
+      view: ['overview', 'charging', 'trust', 'logs'].includes((localStorage.getItem(VIEW_KEY) || 'overview').toLowerCase())
+        ? (localStorage.getItem(VIEW_KEY) || 'overview').toLowerCase()
+        : 'overview',
+      sidebarCollapsed: localStorage.getItem(SIDEBAR_KEY) === 'true',
       profiles: {},
       meterEvents: 0,
       energySentKwh: 0,
@@ -1327,6 +2310,71 @@
       el('apiResponse').textContent = JSON.stringify(payload, null, 2);
     }
 
+    function getViewLabel(view) {
+      return view === 'charging' ? 'Charging'
+        : view === 'trust' ? 'Trust & Scenarios'
+          : view === 'logs' ? 'Logs & API'
+            : 'Overview';
+    }
+
+    function applyView() {
+      const view = ['overview', 'charging', 'trust', 'logs'].includes(state.view) ? state.view : 'overview';
+      state.view = view;
+      document.body.dataset.view = view;
+
+      document.querySelectorAll('.dashboard-view').forEach((node) => {
+        node.classList.toggle('hidden', node.dataset.view !== view);
+      });
+
+      document.querySelectorAll('.sidebar-link').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.viewTarget === view);
+      });
+
+      const viewLabel = el('currentViewLabel');
+      if (viewLabel) {
+        viewLabel.textContent = getViewLabel(view);
+      }
+    }
+
+    function setView(view) {
+      state.view = ['overview', 'charging', 'trust', 'logs'].includes(view) ? view : 'overview';
+      localStorage.setItem(VIEW_KEY, state.view);
+      applyView();
+      refreshAll();
+    }
+
+    function applySidebarState(animate = false) {
+      const shell = document.querySelector('.dashboard-shell');
+      const sidebar = document.querySelector('.sidebar');
+      const btn = el('sidebarCollapseBtn');
+      if (!shell || !sidebar || !btn) {
+        return;
+      }
+
+      shell.classList.toggle('sidebar-collapsed', state.sidebarCollapsed);
+      sidebar.classList.toggle('collapsed', state.sidebarCollapsed);
+      btn.setAttribute('aria-expanded', String(!state.sidebarCollapsed));
+      btn.setAttribute('aria-label', state.sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar');
+      localStorage.setItem(SIDEBAR_KEY, String(state.sidebarCollapsed));
+
+      if (typeof applySidebarState.timerId === 'number') {
+        clearTimeout(applySidebarState.timerId);
+        applySidebarState.timerId = undefined;
+      }
+
+      if (!animate) {
+        sidebar.classList.remove('sidebar-animating', 'sidebar-expanding');
+        return;
+      }
+
+      sidebar.classList.add('sidebar-animating');
+      sidebar.classList.toggle('sidebar-expanding', !state.sidebarCollapsed);
+      applySidebarState.timerId = window.setTimeout(() => {
+        sidebar.classList.remove('sidebar-animating', 'sidebar-expanding');
+        applySidebarState.timerId = undefined;
+      }, SIDEBAR_ANIMATION_MS);
+    }
+
     function setJourneyStep(status, hasTx, meterEvents, completedSessions) {
       const connect = el('stepConnect');
       const profile = el('stepProfile');
@@ -1369,10 +2417,20 @@
 
       // Support both the legacy battery widget and the current progress bar.
       if (legacyFill) {
-        if (legacyFill.classList.contains('progress-fill')) {
+        if (legacyFill.classList.contains('progress-fill') || legacyFill.classList.contains('battery-level')) {
           legacyFill.style.width = `${pct}%`;
         } else {
           legacyFill.style.height = `${pct}%`;
+        }
+
+        if (legacyFill.classList.contains('battery-level')) {
+          if (pct < 20) {
+            legacyFill.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+          } else if (pct < 45) {
+            legacyFill.style.background = 'linear-gradient(90deg, #f59e0b, #fbbf24)';
+          } else {
+            legacyFill.style.background = 'linear-gradient(90deg, #22c55e, #86efac)';
+          }
         }
       }
       if (progressFill) {
@@ -1389,24 +2447,14 @@
     }
 
     function updateTelemetryDisplay(connected, hasTx) {
-      const speedValue = connected ? clamp(state.speedKmh || 0, 0, 160) : 0;
-      const powerValue = connected ? clamp(state.chargePowerKw || 0, 0, 200) : 0;
       const tempValue = clamp(state.temperatureC || 27, 18, 95);
 
-      state.speedKmh = speedValue;
-      state.chargePowerKw = powerValue;
       state.temperatureC = tempValue;
 
       const tempPct = clamp(((tempValue - 18) / 77) * 100, 0, 100);
-      const speedPct = clamp((speedValue / 160) * 100, 0, 100);
-      const powerPct = clamp((powerValue / 200) * 100, 0, 100);
 
       const tempText = el('tempText');
       const tempFill = el('tempFill');
-      const speedText = el('speedText');
-      const speedFill = el('speedFill');
-      const powerText = el('powerText');
-      const powerFill = el('powerFill');
       const carNode = el('evCar');
       const vehicleModeText = el('vehicleModeText');
 
@@ -1417,33 +2465,74 @@
         tempFill.style.width = `${tempPct}%`;
       }
 
-      if (speedText) {
-        speedText.textContent = `${Math.round(speedValue)} km/h`;
-      }
-      if (speedFill) {
-        speedFill.style.width = `${speedPct}%`;
-      }
-
-      if (powerText) {
-        powerText.textContent = `${Math.round(powerValue)} kW`;
-      }
-      if (powerFill) {
-        powerFill.style.width = `${powerPct}%`;
-      }
-
       if (carNode) {
-        carNode.classList.toggle('moving', connected && (hasTx || speedValue > 0));
+        carNode.classList.toggle('moving', connected && hasTx);
       }
 
       if (vehicleModeText) {
         if (!connected) {
           vehicleModeText.textContent = 'Vehicle mode: Parked';
         } else if (hasTx) {
-          vehicleModeText.textContent = `Vehicle mode: Charging (${Math.round(powerValue)} kW)`;
+          vehicleModeText.textContent = 'Vehicle mode: Charging';
         } else {
-          vehicleModeText.textContent = `Vehicle mode: Driving (${Math.round(speedValue)} km/h)`;
+          vehicleModeText.textContent = 'Vehicle mode: Ready';
         }
       }
+    }
+
+    function syncChargePlanner(source = 'hidden') {
+      const rangeInput = el('chargeTargetRange');
+      const numberInput = el('chargeTargetPct');
+      const currentPctNode = el('chargeCurrentPct');
+
+      if (!rangeInput || !numberInput) {
+        return;
+      }
+
+      const currentPct = clamp(Number(state.batteryPct || 0), 0, 100);
+      const minTarget = Math.min(100, Math.max(10, Math.ceil(currentPct / 10) * 10));
+
+      rangeInput.min = `${minTarget}`;
+      numberInput.min = `${minTarget}`;
+      rangeInput.step = '10';
+      numberInput.step = '10';
+
+      const sourceValue = source === 'range'
+        ? Number(rangeInput.value)
+        : source === 'number'
+          ? Number(numberInput.value)
+          : Number(el('userTargetSoc').value || rangeInput.value || numberInput.value || 80);
+
+      const clamped = clamp(sourceValue, minTarget, 100);
+      const targetPct = Math.max(minTarget, Math.round(clamped / 10) * 10);
+      rangeInput.value = `${targetPct}`;
+      numberInput.value = `${targetPct}`;
+
+      if (currentPctNode) {
+        currentPctNode.textContent = `${Math.round(currentPct)}%`;
+      }
+
+      const neededKwh = Math.max(0, ((targetPct - currentPct) / 100) * BATTERY_CAPACITY_KWH);
+      const estimatedCost = neededKwh * CHARGE_RATE_PER_KWH;
+
+      const neededNode = el('chargePlanKwh');
+      const rateNode = el('chargePlanRate');
+      const costNode = el('chargePlanCost');
+
+      if (neededNode) {
+        neededNode.textContent = `${neededKwh.toFixed(2)} kWh`;
+      }
+      if (rateNode) {
+        rateNode.textContent = `${CHARGE_RATE_PER_KWH.toFixed(2)} / kWh`;
+      }
+      if (costNode) {
+        costNode.textContent = `${estimatedCost.toFixed(2)}`;
+      }
+
+      el('userInputMode').value = 'VOLTS';
+      el('userInputValue').value = neededKwh.toFixed(2);
+      el('userEstimatedKwh').value = neededKwh.toFixed(2);
+      el('userTargetSoc').value = `${targetPct}`;
     }
 
     function isUserMode() {
@@ -1476,7 +2565,7 @@
 
       el('quickControlsTitle').textContent = userMode ? 'Connection Controls' : 'Quick Demo Controls';
       el('quickControlsHint').textContent = userMode
-        ? 'For user mode, continue in the User Charging Shell to request funds hold and guided charging.'
+        ? 'Use the charging setup to confirm your plan and start guided charging.'
         : 'Use these in order for a simple judge demo.';
 
       el('requestHashVerifyBtn').textContent = userMode
@@ -1497,6 +2586,9 @@
       el('apiHeading').textContent = userMode
         ? 'Session Details'
         : 'API Details (for technical Q&A)';
+
+      applyView();
+      applySidebarState();
     }
 
     async function callApi(method, path, query = null, options = {}) {
@@ -1609,14 +2701,36 @@
       return parsed.toLocaleString();
     }
 
+    function formatGateReason(rawValue) {
+      const raw = `${rawValue || ''}`.trim();
+      if (!raw) {
+        return '-';
+      }
+
+      const compact = raw
+        .replace(/<EOL>/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .replace(/"/g, '')
+        .trim();
+
+      if (/requires tls/i.test(compact)) {
+        return 'Connection requires TLS. Check simulator protocol/port settings.';
+      }
+
+      if (/bad request/i.test(compact) && /verification failed/i.test(compact)) {
+        return 'Verification request rejected by endpoint. Check API base and protocol.';
+      }
+
+      return compact.length > 120 ? `${compact.slice(0, 117)}...` : compact;
+    }
+
     function updateTopUi(statusData, scenarioData) {
       const connected = !!statusData.connected;
       const tx = statusData.activeTransactionId || null;
-      const profile = statusData.activeProfile || '-';
       const scenario = scenarioData.running ? (scenarioData.currentScenario || 'running') : 'Idle';
       const verificationGate = statusData.verificationGateStatus || 'UNVERIFIED';
       const chargingAllowed = statusData.chargingAllowed === true;
-      const verificationMessage = statusData.verificationMessage || '-';
+      const verificationMessage = formatGateReason(statusData.verificationMessage);
       const lastFirmwareHash = statusData.lastFirmwareHash || '';
 
       state.batteryPct = Number.isFinite(Number(statusData.batteryPct))
@@ -1641,19 +2755,21 @@
         ? '<span class="badge ok">Connected</span>'
         : '<span class="badge warn">Disconnected</span>';
       el('kpiTx').textContent = tx || '-';
-      el('kpiProfile').textContent = profile;
-      el('kpiScenario').textContent = scenario;
       el('kpiVerification').innerHTML = chargingAllowed
         ? `<span class="badge ok">${verificationGate}</span>`
         : `<span class="badge warn">${verificationGate}</span>`;
 
-      el('kpiEnergy').textContent = `${state.energySentKwh.toFixed(2)} kWh`;
-      el('kpiMeterCount').textContent = `${state.meterEvents}`;
-      el('kpiFirmware').textContent = state.lastFirmwareStatus;
-      el('kpiScenarioSimple').textContent = scenario;
       el('kpiGateReason').textContent = verificationMessage;
-      el('kpiWallet').textContent = formatMoney(statusData.walletBalance);
-      el('kpiEscrowLifecycle').textContent = statusData.escrowStatus || '-';
+
+      const scenarioNode = el('kpiScenario');
+      if (scenarioNode) {
+        scenarioNode.textContent = scenario;
+      }
+
+      const walletNode = el('kpiWallet');
+      if (walletNode) {
+        walletNode.textContent = formatMoney(statusData.walletBalance);
+      }
 
       if (!el('txId').value && tx) {
         el('txId').value = tx;
@@ -1664,6 +2780,7 @@
       }
 
       setJourneyStep(connected, !!tx, state.meterEvents, state.completedSessions);
+      syncChargePlanner();
       updateBatteryDisplay();
       updateTelemetryDisplay(connected, !!tx);
     }
@@ -1949,6 +3066,7 @@
     }
 
     function readUserIntentInput() {
+      syncChargePlanner();
       return {
         inputMode: el('userInputMode').value,
         inputValue: Number(el('userInputValue').value || 0),
@@ -1961,6 +3079,19 @@
 
     el('modeUserBtn').addEventListener('click', () => setMode('user'));
     el('modeDevBtn').addEventListener('click', () => setMode('dev'));
+
+    el('sidebarCollapseBtn').addEventListener('click', () => {
+      state.sidebarCollapsed = !state.sidebarCollapsed;
+      applySidebarState(true);
+    });
+
+    el('chargeTargetRange').addEventListener('input', () => syncChargePlanner('range'));
+    el('chargeTargetPct').addEventListener('input', () => syncChargePlanner('number'));
+    el('chargeTargetPct').addEventListener('change', () => syncChargePlanner('number'));
+
+    document.querySelectorAll('[data-view-target]').forEach((button) => {
+      button.addEventListener('click', () => setView(button.dataset.viewTarget));
+    });
 
     el('refreshAll').addEventListener('click', refreshAll);
     el('togglePoll').addEventListener('click', () => {
@@ -2132,27 +3263,6 @@
       })
     );
 
-    el('completeGuidedBtn').addEventListener('click', () =>
-      runAction('Guided charging session settled', async () => {
-        const payload = await callApi('POST', '/api/ev/user/flow/complete', {
-          transactionId: el('txId').value,
-          totalKwh: Number(el('userCompleteKwh').value || 0)
-        }, {
-          timeoutMs: 45000
-        });
-        if (payload.transactionId) {
-          el('txId').value = payload.transactionId;
-        }
-        if (payload.settlement) {
-          state.lastSettlement = payload.settlement;
-          updateSettlementSummary(payload.settlement);
-        }
-        state.paymentWindowVisible = true;
-        state.completedSessions += 1;
-        return payload;
-      })
-    );
-
     el('refreshFlowBtn').addEventListener('click', () =>
       runAction('User flow status refreshed', async () => {
         const payload = await callApi('GET', '/api/ev/user/flow/status', { refreshTrust: true });
@@ -2187,6 +3297,9 @@
 
     async function initializeDashboard() {
       applyMode();
+      applySidebarState();
+      applyView();
+      syncChargePlanner();
       await resetUserFlowOnPageLoad();
       await refreshAll();
       setupPolling();
