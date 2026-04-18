@@ -38,6 +38,10 @@ public class EvSimulationScenarios {
         return currentScenarioName;
     }
 
+    public String getCurrentTransactionId() {
+        return currentTransactionId;
+    }
+
     public boolean stopCurrentScenario() {
         if (!chargingActive) {
             return false;

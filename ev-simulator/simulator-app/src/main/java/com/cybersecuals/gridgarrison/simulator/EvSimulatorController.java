@@ -26,8 +26,9 @@ public class EvSimulatorController {
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> status() {
         Map<String, Object> body = new LinkedHashMap<>();
+        String resolvedActiveTransactionId = getCurrentActiveTransactionId();
         body.put("connected", client.isConnected());
-        body.put("activeTransactionId", activeTransactionId.get());
+        body.put("activeTransactionId", resolvedActiveTransactionId);
         body.put("activeProfile", telemetryProfiles.getActiveProfile());
         return ResponseEntity.ok(body);
     }
@@ -189,11 +190,25 @@ public class EvSimulatorController {
             return transactionId;
         }
 
-        String current = activeTransactionId.get();
+        String current = getCurrentActiveTransactionId();
         if (current != null && !current.isBlank()) {
             return current;
         }
 
         throw new IllegalArgumentException("No active transaction. Provide transactionId or start one first.");
+    }
+
+    private String getCurrentActiveTransactionId() {
+        String manualTransactionId = activeTransactionId.get();
+        if (manualTransactionId != null && !manualTransactionId.isBlank()) {
+            return manualTransactionId;
+        }
+
+        String scenarioTransactionId = scenarios.getCurrentTransactionId();
+        if (scenarioTransactionId != null && !scenarioTransactionId.isBlank()) {
+            return scenarioTransactionId;
+        }
+
+        return null;
     }
 }

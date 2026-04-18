@@ -29,6 +29,18 @@ Default run (simulator API on 8080):
 mvn spring-boot:run
 ```
 
+Run in explicit non-TLS mode (matches backend `dev-ws`):
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=dev-ws
+```
+
+Run in explicit mTLS mode (matches backend `demo-mtls`):
+
+```bash
+mvn spring-boot:run -Dspring-boot.run.profiles=demo-mtls
+```
+
 Run on 8082 (useful if 8080 is busy on Windows):
 
 ```bash
@@ -76,6 +88,32 @@ ev:
 
 For `wss://` targets, configure `ev.simulator.tls.enabled=true` and set keystore/truststore fields under `ev.simulator.tls`.
 
+## Verified local mTLS checks
+
+Use matching profiles to avoid `ws://` vs `wss://` mismatch:
+
+1) Backend terminal:
+
+```powershell
+Set-Location C:/Users/jujhar/Videos/GGHackathon
+mvn spring-boot:run -Dspring-boot.run.profiles=demo-mtls
+```
+
+2) Simulator terminal (positive CN match expected to connect):
+
+```powershell
+Set-Location C:/Users/jujhar/Videos/GGHackathon/ev-simulator/simulator-app
+mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls -Dspring-boot.run.arguments=--server.port=8082 --ev.simulator.station-id=CS-101-EV"
+```
+
+3) Negative check with mismatched station ID (expected handshake rejection):
+
+```powershell
+mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls -Dspring-boot.run.arguments=--server.port=8090 --ev.simulator.station-id=CS-999-EV"
+```
+
+Expected negative outcome: handshake fails (`Response code was not 101`) and no upgrade is established for the mismatched station ID.
+
 ## REST API
 
 Base URL: `http://localhost:8080/api/ev` (or 8082 if overridden)
@@ -92,6 +130,26 @@ Base URL: `http://localhost:8080/api/ev` (or 8082 if overridden)
 - `GET /scenario/status`
 - `POST /scenario/run?name=normalCharging|firmwareTamper|reconnectLoop`
 - `POST /scenario/stop`
+
+## Multi-EV demo orchestration (Day 3)
+
+Use the helper scripts under `ev-simulator/scripts` to run multiple simulator instances in parallel.
+
+Launch 3 EV simulators (ports 8080-8082):
+
+```powershell
+cd c:\Users\jujhar\Videos\GGHackathon\ev-simulator\scripts
+.\launch-multi-ev.ps1 -Count 3 -BasePort 8080 -StationPrefix CS-10
+```
+
+This starts stations like `CS-101-EV`, `CS-102-EV`, `CS-103-EV` and stores PID/log info in `scripts/.run/multi-ev-pids.json`.
+
+Stop all launched simulators:
+
+```powershell
+cd c:\Users\jujhar\Videos\GGHackathon\ev-simulator\scripts
+.\stop-multi-ev.ps1
+```
 
 PowerShell examples:
 

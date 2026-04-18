@@ -58,3 +58,27 @@ ev:
       trust-store-path: classpath:certs/ca-trust.p12
       trust-store-password: changeit
       trust-store-type: PKCS12
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev-ws
+
+ev:
+  simulator:
+    gateway-uri: ws://localhost:8443/ocpp/{stationId}
+    tls:
+      enabled: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: demo-mtls
+
+ev:
+  simulator:
+    gateway-uri: wss://localhost:8443/ocpp/{stationId}
+    tls:
+      enabled: true

@@ -24,6 +24,9 @@ class MtlsSecurityConfig {
     @Value("${GG_SSL_ENABLED:false}")
     private boolean sslEnabled;
 
+    @Value("${gridgarrison.security.visualizer.public:true}")
+    private boolean visualizerPublic;
+
     @Bean
     @SuppressWarnings("unused")
     SecurityFilterChain ocppSecurityFilterChain(HttpSecurity http) throws Exception {
@@ -35,13 +38,25 @@ class MtlsSecurityConfig {
                     auth.requestMatchers("/ocpp/**").permitAll();
                 }
 
-                auth.requestMatchers(
-                        "/actuator/health",
-                        "/visualizer",
-                        "/visualizer.html",
-                        "/visualizer/**"
-                    ).permitAll()
-                    .anyRequest().denyAll();
+                auth.requestMatchers("/actuator/health").permitAll();
+
+                if (visualizerPublic) {
+                    auth.requestMatchers(
+                            "/visualizer", "/visualizer.html", "/visualizer/**",
+                            "/panel", "/panel.html",
+                            "/ev-control-panel", "/ev-control-panel.html",
+                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
+                        ).permitAll();
+                } else {
+                    auth.requestMatchers(
+                            "/visualizer", "/visualizer.html", "/visualizer/**",
+                            "/panel", "/panel.html",
+                            "/ev-control-panel", "/ev-control-panel.html",
+                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
+                        ).authenticated();
+                }
+
+                auth.anyRequest().denyAll();
             })
             // x509 extracts the CN from the client cert as the principal
             .x509(x509 -> x509
@@ -52,10 +67,10 @@ class MtlsSecurityConfig {
                     .roles("STATION")
                     .build())
             )
-            // x509 extracts the CN from the client cert as the principal
             // Disable CSRF — stateless WebSocket sessions
             .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**", "/trust/**"));
 
+<<<<<<< HEAD
         http.authorizeHttpRequests(auth -> {
             auth.requestMatchers("/ocpp/**").authenticated();
             auth.requestMatchers("/actuator/health").permitAll();
@@ -70,6 +85,8 @@ class MtlsSecurityConfig {
             auth.anyRequest().denyAll();
         });
 
+=======
+>>>>>>> ad047f6 (wired simulator)
         return http.build();
     }
 }

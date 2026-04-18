@@ -1,7 +1,10 @@
+<<<<<<< HEAD
 scripts/local-env.ps1
 *.class
 target/
 build/
+=======
+>>>>>>> ad047f6 (wired simulator)
 # Maven
 target/
 pom.xml.tag

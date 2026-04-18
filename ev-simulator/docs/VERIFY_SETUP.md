@@ -31,7 +31,7 @@ Expected: both commands end with `BUILD SUCCESS`.
 
 ```powershell
 cd c:\Users\jujhar\Videos\GGHackathon
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=dev-ws
 ```
 
 Expected logs include:
@@ -42,7 +42,7 @@ Expected logs include:
 
 ```powershell
 cd c:\Users\jujhar\Videos\GGHackathon\ev-simulator\simulator-app
-mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8082"
+mvn spring-boot:run "-Dspring-boot.run.profiles=dev-ws -Dspring-boot.run.arguments=--server.port=8082"
 ```
 
 Expected logs include:
@@ -69,18 +69,35 @@ Generated local dev cert artifacts:
 - Backend: `src/main/resources/certs/gridgarrison-server.p12`, `src/main/resources/certs/gridgarrison-ca-trust.p12`
 - Simulator: `ev-simulator/simulator-app/src/main/resources/certs/client.p12`, `ev-simulator/simulator-app/src/main/resources/certs/ca-trust.p12`
 
-Enable mTLS at runtime:
+Enable mTLS at runtime (deterministic local flow):
 
 ```powershell
 # backend
-$env:GG_SSL_ENABLED='true'; $env:GG_CLIENT_AUTH='need'; mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=demo-mtls
 
-# simulator (separate terminal)
-mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8080 --ev.simulator.gateway-uri=wss://localhost:8443/ocpp/{stationId} --ev.simulator.tls.enabled=true"
+# simulator terminal
+mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls -Dspring-boot.run.arguments=--server.port=8082 --ev.simulator.station-id=CS-101-EV"
 ```
+
+### Identity-mapping checks (CN to stationId)
+
+Positive case (should connect):
+- Keep station ID `CS-101-EV` (matches current client cert CN).
+- Expected backend logs include `Station connected` and `BootNotification` for `CS-101-EV`.
+
+Negative case (should be rejected during handshake):
+
+```powershell
+mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls -Dspring-boot.run.arguments=--server.port=8090 --ev.simulator.station-id=CS-999-EV"
+```
+
+Expected:
+- simulator shows handshake failure (`Response code was not 101`).
+- no WebSocket upgrade for `CS-999-EV`.
 
 ## Troubleshooting
 
 - `keytool not recognized`: ensure Java 17 `bin` is on PATH.
 - Port conflict on 8080: run simulator on 8082.
 - Backend run shows exit code `1` in one terminal while app still works elsewhere: check active listener process and endpoint probes instead of relying only on terminal status.
+- If `wss://` fails with trust errors, verify `JAVA_TOOL_OPTIONS` truststore path points to `ev-simulator/simulator-app/src/main/resources/certs/ca-trust.p12`.

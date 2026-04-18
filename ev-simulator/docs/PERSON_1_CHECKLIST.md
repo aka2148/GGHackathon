@@ -16,7 +16,7 @@
 ## Remaining checklist
 
 - [ ] Replace local self-signed certs with team-managed/prod-safe cert flow.
-- [ ] Add optional multi-EV simulator orchestration for Day 3 demo stress path.
+- [x] Add optional multi-EV simulator orchestration for Day 3 demo stress path.
 
 ## Fast run commands
 
@@ -48,6 +48,16 @@ mvn spring-boot:run "-Dspring-boot.run.arguments=--server.port=8082"
 Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/run?name=reconnectLoop" -Method Post
 Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/stop" -Method Post
 Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/status" -Method Get
+```
+
+### Multi-EV (Day 3 demo stress path)
+
+```powershell
+cd c:\Users\jujhar\Videos\GGHackathon\ev-simulator\scripts
+.\launch-multi-ev.ps1 -Count 3 -BasePort 8080 -StationPrefix CS-10
+
+# when done
+.\stop-multi-ev.ps1
 ```
 
 ### Optional mTLS run

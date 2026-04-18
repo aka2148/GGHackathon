@@ -120,6 +120,7 @@ public class FirmwareRegistryContract extends Contract {
             )
         );
 
+<<<<<<< HEAD
         return new RemoteCall<>(() -> {
             List<Type> values = executeCallMultipleValueReturn(function);
             return new SignedGoldenRecord(
@@ -128,6 +129,20 @@ public class FirmwareRegistryContract extends Contract {
                 values.get(2).getValue().toString(),
                 (BigInteger) values.get(3).getValue()
             );
+=======
+        return new RemoteCall<>(new Callable<>() {
+            @Override
+            @SuppressWarnings("rawtypes")
+            public SignedGoldenRecord call() throws Exception {
+                List<Type> values = executeCallMultipleValueReturn(function);
+                return new SignedGoldenRecord(
+                    values.get(0).getValue().toString(),
+                    values.get(1).getValue().toString(),
+                    values.get(2).getValue().toString(),
+                    (BigInteger) values.get(3).getValue()
+                );
+            }
+>>>>>>> ad047f6 (wired simulator)
         });
     }
 
