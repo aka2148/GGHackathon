@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 
 @Service
 class EscrowLifecycleListener {
@@ -27,6 +28,8 @@ class EscrowLifecycleListener {
     private final EscrowService escrowService;
     private final EscrowIntentStore escrowIntentStore;
     private final ConcurrentMap<String, CompletableFuture<EscrowSessionBinding>> stationEscrows =
+        new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, CompletableFuture<Void>> stationTransitionQueue =
         new ConcurrentHashMap<>();
 
     @Value("${gridgarrison.escrow.default-target-soc:80}")
@@ -106,19 +109,32 @@ class EscrowLifecycleListener {
             return;
         }
 
-        ensureEscrow(event.stationId(), goldenHash)
-            .thenCompose(binding -> escrowService.authorizeSession(binding.escrowAddress(), reportedHash)
-                .thenApply(txHash -> {
-                    binding.markTransition("AUTHORIZED", txHash);
-                    return txHash;
-                }))
-            .whenComplete((txHash, error) -> {
-                if (error != null) {
-                    log.warn("[Escrow] authorizeSession failed stationId={}", event.stationId(), error);
-                    return;
-                }
-                log.info("[Escrow] station authorized stationId={} txHash={}", event.stationId(), txHash);
-            });
+        enqueueStationTransition(event.stationId(), () ->
+            ensureEscrow(event.stationId(), goldenHash)
+                .thenCompose(binding -> resolveLifecycleForDispatch(binding)
+                    .thenCompose(lifecycle -> {
+                        if ("FUNDED".equals(lifecycle)) {
+                            return escrowService.authorizeSession(binding.escrowAddress(), reportedHash)
+                                .thenApply(txHash -> {
+                                    binding.markTransition("AUTHORIZED", txHash);
+                                    return txHash;
+                                });
+                        }
+
+                        if ("AUTHORIZED".equals(lifecycle)
+                            || "CHARGING".equals(lifecycle)
+                            || "COMPLETED".equals(lifecycle)
+                            || "RELEASED".equals(lifecycle)
+                            || "REFUNDED".equals(lifecycle)) {
+                            log.debug("[Escrow] ignoring authorize transition stationId={} escrow={} lifecycle={}",
+                                binding.stationId, binding.escrowAddress(), lifecycle);
+                            return CompletableFuture.completedFuture(null);
+                        }
+
+                        log.warn("[Escrow] skipping authorize transition stationId={} escrow={} because lifecycle={} (expected FUNDED)",
+                            binding.stationId, binding.escrowAddress(), lifecycle);
+                        return CompletableFuture.completedFuture(null);
+                    })), "VERIFY");
     }
 
     @EventListener
@@ -132,19 +148,22 @@ class EscrowLifecycleListener {
             return;
         }
 
-        ensureEscrow(event.stationId(), goldenHash)
-            .thenCompose(binding -> escrowService.refundSession(binding.escrowAddress(), "FIRMWARE_TAMPERED")
-                .thenApply(txHash -> {
-                    binding.markTransition("REFUNDED", txHash);
-                    return txHash;
-                }))
-            .whenComplete((txHash, error) -> {
-                if (error != null) {
-                    log.warn("[Escrow] refundSession failed stationId={}", event.stationId(), error);
-                    return;
-                }
-                log.info("[Escrow] tampered refund issued stationId={} txHash={}", event.stationId(), txHash);
-            });
+        enqueueStationTransition(event.stationId(), () ->
+            ensureEscrow(event.stationId(), goldenHash)
+                .thenCompose(binding -> resolveLifecycleForDispatch(binding)
+                    .thenCompose(lifecycle -> {
+                        if (!isRefundableEscrowLifecycle(lifecycle)) {
+                            log.debug("[Escrow] ignoring tampered refund transition stationId={} escrow={} lifecycle={}",
+                                binding.stationId, binding.escrowAddress(), lifecycle);
+                            return CompletableFuture.completedFuture(null);
+                        }
+
+                        return escrowService.refundSession(binding.escrowAddress(), "FIRMWARE_TAMPERED")
+                            .thenApply(txHash -> {
+                                binding.markTransition("REFUNDED", txHash);
+                                return txHash;
+                            });
+                    })), "TAMPER_REFUND");
     }
 
     @EventListener
@@ -153,7 +172,9 @@ class EscrowLifecycleListener {
             return;
         }
 
-        CompletableFuture<EscrowSessionBinding> bindingFuture = stationEscrows.get(event.stationId());
+        String stationId = event.stationId();
+
+        CompletableFuture<EscrowSessionBinding> bindingFuture = stationEscrows.get(stationId);
         if (bindingFuture == null) {
             return;
         }
@@ -162,19 +183,35 @@ class EscrowLifecycleListener {
         String state = extractState(event.rawPayload());
         Integer soc = extractSoc(event.rawPayload());
 
-        bindingFuture
-            .thenCompose(binding -> dispatchTransactionState(binding, state, sessionId, soc))
-            .whenComplete((txHash, error) -> {
-                if (error != null) {
-                    log.warn("[Escrow] transaction transition failed stationId={} state={}",
-                        event.stationId(), state, error);
-                    return;
-                }
-                if (txHash != null && !txHash.isBlank()) {
-                    log.info("[Escrow] transaction transition stationId={} state={} txHash={}",
-                        event.stationId(), state, txHash);
-                }
-            });
+        enqueueStationTransition(stationId, () ->
+            bindingFuture.thenCompose(binding -> dispatchTransactionState(binding, state, sessionId, soc)), state);
+    }
+
+    private void enqueueStationTransition(String stationId,
+                                          Supplier<CompletableFuture<String>> transitionSupplier,
+                                          String requestedState) {
+        stationTransitionQueue.compute(stationId, (id, tail) -> {
+            CompletableFuture<Void> previous = tail == null ? CompletableFuture.completedFuture(null) : tail;
+            CompletableFuture<Void> chained = previous
+                .exceptionally(error -> null)
+                .thenCompose(ignored -> transitionSupplier.get()
+                    .handle((txHash, error) -> {
+                        if (error != null) {
+                            log.warn("[Escrow] transaction transition failed stationId={} state={}",
+                                stationId, requestedState, error);
+                            return null;
+                        }
+
+                        if (txHash != null && !txHash.isBlank()) {
+                            log.info("[Escrow] transaction transition stationId={} state={} txHash={}",
+                                stationId, requestedState, txHash);
+                        }
+                        return null;
+                    }));
+
+            chained.whenComplete((ignored, error) -> stationTransitionQueue.remove(id, chained));
+            return chained;
+        });
     }
 
     private CompletableFuture<String> dispatchTransactionState(EscrowSessionBinding binding,
@@ -192,43 +229,171 @@ class EscrowLifecycleListener {
             case "CANCELLED" -> "CANCEL";
             default -> state.trim().toUpperCase(Locale.ROOT);
         };
-        return switch (normalizedState) {
-            case "START" -> {
-                binding.setSessionId(sessionId);
-                yield escrowService.startCharging(binding.escrowAddress(), sessionId)
-                    .thenApply(txHash -> {
-                        binding.markTransition("CHARGING", txHash);
-                        return txHash;
-                    });
+        return resolveLifecycleForDispatch(binding)
+            .thenCompose(lifecycle -> {
+                log.debug("[Escrow] transition request stationId={} escrow={} eventState={} lifecycle={} sessionId={} soc={}",
+                    binding.stationId, binding.escrowAddress(), normalizedState, lifecycle, sessionId, soc);
+
+                return switch (normalizedState) {
+                    case "START" -> {
+                        if (isTerminalEscrowLifecycle(lifecycle) || "CHARGING".equals(lifecycle)) {
+                            log.debug("[Escrow] ignoring START stationId={} escrow={} lifecycle={}",
+                                binding.stationId, binding.escrowAddress(), lifecycle);
+                            yield CompletableFuture.completedFuture(null);
+                        }
+                        if (!"AUTHORIZED".equals(lifecycle)) {
+                            log.warn("[Escrow] skipping START stationId={} escrow={} because lifecycle={} (expected AUTHORIZED)",
+                                binding.stationId, binding.escrowAddress(), lifecycle);
+                            yield CompletableFuture.completedFuture(null);
+                        }
+
+                        binding.setSessionId(sessionId);
+                        yield escrowService.startCharging(binding.escrowAddress(), sessionId)
+                            .thenApply(txHash -> {
+                                binding.markTransition("CHARGING", txHash);
+                                return txHash;
+                            });
+                    }
+                    case "UPDATE" -> {
+                        if (soc == null) {
+                            yield CompletableFuture.completedFuture(null);
+                        }
+
+                        if (!"CHARGING".equals(lifecycle)) {
+                            log.debug("[Escrow] ignoring UPDATE stationId={} escrow={} lifecycle={} soc={}",
+                                binding.stationId, binding.escrowAddress(), lifecycle, soc);
+                            yield CompletableFuture.completedFuture(null);
+                        }
+
+                        yield escrowService.updateSoc(binding.escrowAddress(), soc)
+                            .thenApply(txHash -> {
+                                binding.markTransition("CHARGING", txHash);
+                                return txHash;
+                            });
+                    }
+                    case "END", "STOP", "COMPLETED", "FINISHING" -> {
+                        if ("RELEASED".equals(lifecycle) || "REFUNDED".equals(lifecycle)) {
+                            log.debug("[Escrow] ignoring END-like event stationId={} escrow={} lifecycle={}",
+                                binding.stationId, binding.escrowAddress(), lifecycle);
+                            yield CompletableFuture.completedFuture(null);
+                        }
+
+                        if ("COMPLETED".equals(lifecycle)) {
+                            yield escrowService.releaseFunds(binding.escrowAddress())
+                                .thenApply(releaseTx -> {
+                                    binding.markTransition("RELEASED", releaseTx);
+                                    return releaseTx;
+                                });
+                        }
+
+                        if (!"CHARGING".equals(lifecycle)) {
+                            log.warn("[Escrow] skipping END-like event stationId={} escrow={} because lifecycle={} (expected CHARGING/COMPLETED)",
+                                binding.stationId, binding.escrowAddress(), lifecycle);
+                            yield CompletableFuture.completedFuture(null);
+                        }
+
+                        yield escrowService
+                            .completeSession(binding.escrowAddress())
+                            .thenCompose(completeTx -> {
+                                binding.markTransition("COMPLETED", completeTx);
+                                return escrowService.releaseFunds(binding.escrowAddress())
+                                    .thenApply(releaseTx -> {
+                                        binding.markTransition("RELEASED", releaseTx);
+                                        return releaseTx;
+                                    });
+                            });
+                    }
+                    case "CANCEL", "FAULTED", "ERROR" -> {
+                        if (!isRefundableEscrowLifecycle(lifecycle)) {
+                            log.debug("[Escrow] ignoring refund transition stationId={} escrow={} lifecycle={}",
+                                binding.stationId, binding.escrowAddress(), lifecycle);
+                            yield CompletableFuture.completedFuture(null);
+                        }
+
+                        yield escrowService
+                            .refundSession(binding.escrowAddress(), "SESSION_ABORTED_" + normalizedState)
+                            .thenApply(txHash -> {
+                                binding.markTransition("REFUNDED", txHash);
+                                return txHash;
+                            });
+                    }
+                    default -> CompletableFuture.completedFuture(null);
+                };
+            });
+    }
+
+    private CompletableFuture<String> resolveLifecycleForDispatch(EscrowSessionBinding binding) {
+        String localLifecycle = normalizeEscrowLifecycle(binding.lifecycleState);
+        if (binding.escrowAddress() == null || binding.escrowAddress().isBlank()) {
+            return CompletableFuture.completedFuture(localLifecycle);
+        }
+
+        CompletableFuture<BigInteger> stateFuture = escrowService.getSessionState(binding.escrowAddress());
+        if (stateFuture == null) {
+            return CompletableFuture.completedFuture(localLifecycle);
+        }
+
+        return stateFuture.handle((stateValue, error) -> {
+            if (error != null) {
+                log.debug("[Escrow] on-chain state lookup failed for escrow={} stationId={} using cached lifecycle={} reason={}",
+                    binding.escrowAddress(),
+                    binding.stationId,
+                    localLifecycle,
+                    error.getMessage());
+                return localLifecycle;
             }
-            case "UPDATE" -> {
-                if (soc == null) {
-                    yield CompletableFuture.completedFuture(null);
+
+            String chainLifecycle = mapLifecycleFromStateValue(stateValue);
+            if (!"UNKNOWN".equals(chainLifecycle)) {
+                if (!chainLifecycle.equals(localLifecycle)) {
+                    log.debug("[Escrow] lifecycle synchronized from chain stationId={} escrow={} cached={} chain={}",
+                        binding.stationId,
+                        binding.escrowAddress(),
+                        localLifecycle,
+                        chainLifecycle);
                 }
-                yield escrowService.updateSoc(binding.escrowAddress(), soc)
-                    .thenApply(txHash -> {
-                        binding.markTransition("CHARGING", txHash);
-                        return txHash;
-                    });
+                binding.markTransition(chainLifecycle, null);
+                return chainLifecycle;
             }
-            case "END", "STOP", "COMPLETED", "FINISHING" -> escrowService
-                .completeSession(binding.escrowAddress())
-                .thenCompose(completeTx -> {
-                    binding.markTransition("COMPLETED", completeTx);
-                    return escrowService.releaseFunds(binding.escrowAddress())
-                        .thenApply(releaseTx -> {
-                            binding.markTransition("RELEASED", releaseTx);
-                            return releaseTx;
-                        });
-                });
-            case "CANCEL", "FAULTED", "ERROR" -> escrowService
-                .refundSession(binding.escrowAddress(), "SESSION_ABORTED_" + normalizedState)
-                .thenApply(txHash -> {
-                    binding.markTransition("REFUNDED", txHash);
-                    return txHash;
-                });
-            default -> CompletableFuture.completedFuture(null);
+
+            return localLifecycle;
+        });
+    }
+
+    private String mapLifecycleFromStateValue(BigInteger stateValue) {
+        if (stateValue == null) {
+            return "UNKNOWN";
+        }
+
+        return switch (stateValue.intValue()) {
+            case 0 -> "CREATED";
+            case 1 -> "FUNDED";
+            case 2 -> "AUTHORIZED";
+            case 3 -> "CHARGING";
+            case 4 -> "COMPLETED";
+            case 5 -> "RELEASED";
+            case 6 -> "REFUNDED";
+            default -> "UNKNOWN";
         };
+    }
+
+    private String normalizeEscrowLifecycle(String lifecycleState) {
+        if (lifecycleState == null || lifecycleState.isBlank()) {
+            return "UNKNOWN";
+        }
+        return lifecycleState.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private boolean isTerminalEscrowLifecycle(String lifecycleState) {
+        return "RELEASED".equals(lifecycleState)
+            || "REFUNDED".equals(lifecycleState)
+            || "FAILED".equals(lifecycleState);
+    }
+
+    private boolean isRefundableEscrowLifecycle(String lifecycleState) {
+        return "FUNDED".equals(lifecycleState)
+            || "AUTHORIZED".equals(lifecycleState)
+            || "CHARGING".equals(lifecycleState);
     }
 
     private CompletableFuture<EscrowSessionBinding> ensureEscrow(String stationId, String goldenHash) {

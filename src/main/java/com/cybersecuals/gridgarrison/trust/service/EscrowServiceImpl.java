@@ -288,6 +288,9 @@ class EscrowServiceImpl implements EscrowService {
                 if (normalized.contains("underpriced")
                     || normalized.contains("can't be replaced")
                     || normalized.contains("nonce too low")
+                    || normalized.contains("correct nonce")
+                    || normalized.contains("account has nonce")
+                    || normalized.contains("tx has nonce")
                     || normalized.contains("already known")) {
                     return true;
                 }

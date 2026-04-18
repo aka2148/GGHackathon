@@ -125,4 +125,91 @@ class EscrowLifecycleListenerTest {
 
         verify(escrowService, timeout(500)).startCharging(eq("0xescrow"), eq("SESSION-42"));
     }
+
+    @Test
+    void duplicateEndEventTriggersSingleCompletionAndRelease() {
+        when(escrowService.deployEscrow(anyString(), anyString(), anyString(), anyInt(), anyLong()))
+            .thenReturn(CompletableFuture.completedFuture("0xescrow"));
+        when(escrowService.deposit(eq("0xescrow"), eq(BigInteger.valueOf(1_000_000L))))
+            .thenReturn(CompletableFuture.completedFuture("0xdeposit"));
+        when(escrowService.authorizeSession(eq("0xescrow"), eq("0xlive")))
+            .thenReturn(CompletableFuture.completedFuture("0xauth"));
+        when(escrowService.startCharging(eq("0xescrow"), eq("SESSION-42")))
+            .thenReturn(CompletableFuture.completedFuture("0xstart"));
+        when(escrowService.completeSession(eq("0xescrow")))
+            .thenReturn(CompletableFuture.completedFuture("0xcomplete"));
+        when(escrowService.releaseFunds(eq("0xescrow")))
+            .thenReturn(CompletableFuture.completedFuture("0xrelease"));
+
+        listener.onGoldenHashVerified(new GoldenHashVerifiedEvent(
+            "CS-101",
+            "{}",
+            "0xlive",
+            "0xgold",
+            null
+        ));
+
+        listener.onTransactionEvent(new TransactionEvent(
+            "CS-101",
+            "{\"sessionId\":\"SESSION-42\",\"eventType\":\"START\"}"
+        ));
+
+        listener.onTransactionEvent(new TransactionEvent(
+            "CS-101",
+            "{\"sessionId\":\"SESSION-42\",\"eventType\":\"END\"}"
+        ));
+
+        listener.onTransactionEvent(new TransactionEvent(
+            "CS-101",
+            "{\"sessionId\":\"SESSION-42\",\"eventType\":\"ENDED\"}"
+        ));
+
+        verify(escrowService, timeout(800).times(1)).completeSession(eq("0xescrow"));
+        verify(escrowService, timeout(800).times(1)).releaseFunds(eq("0xescrow"));
+    }
+
+    @Test
+    void startEventSkippedWhenChainStateAlreadyCharging() {
+        when(escrowService.deployEscrow(anyString(), anyString(), anyString(), anyInt(), anyLong()))
+            .thenReturn(CompletableFuture.completedFuture("0xescrow"));
+        when(escrowService.deposit(eq("0xescrow"), eq(BigInteger.valueOf(1_000_000L))))
+            .thenReturn(CompletableFuture.completedFuture("0xdeposit"));
+        when(escrowService.getSessionState(eq("0xescrow")))
+            .thenReturn(CompletableFuture.completedFuture(BigInteger.valueOf(3)));
+
+        listener.onGoldenHashVerified(new GoldenHashVerifiedEvent(
+            "CS-101",
+            "{}",
+            "0xlive",
+            "0xgold",
+            null
+        ));
+
+        listener.onTransactionEvent(new TransactionEvent(
+            "CS-101",
+            "{\"sessionId\":\"SESSION-42\",\"eventType\":\"START\"}"
+        ));
+
+        verify(escrowService, timeout(500).times(0)).startCharging(eq("0xescrow"), eq("SESSION-42"));
+    }
+
+    @Test
+    void verifiedEventSkipsAuthorizeWhenChainAlreadyCharging() {
+        when(escrowService.deployEscrow(anyString(), anyString(), anyString(), anyInt(), anyLong()))
+            .thenReturn(CompletableFuture.completedFuture("0xescrow"));
+        when(escrowService.deposit(eq("0xescrow"), eq(BigInteger.valueOf(1_000_000L))))
+            .thenReturn(CompletableFuture.completedFuture("0xdeposit"));
+        when(escrowService.getSessionState(eq("0xescrow")))
+            .thenReturn(CompletableFuture.completedFuture(BigInteger.valueOf(3)));
+
+        listener.onGoldenHashVerified(new GoldenHashVerifiedEvent(
+            "CS-101",
+            "{}",
+            "0xlive",
+            "0xgold",
+            null
+        ));
+
+        verify(escrowService, timeout(500).times(0)).authorizeSession(eq("0xescrow"), eq("0xlive"));
+    }
 }
