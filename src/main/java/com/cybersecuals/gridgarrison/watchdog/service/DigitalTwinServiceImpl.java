@@ -73,11 +73,20 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
     private static final double SOC_MAX_JUMP_PCT      = 15.0;
     private static final double SOC_KWH_PER_PCT       = 0.5;
 
+    // Ideal-vs-actual drift checks
+    private static final double TWIN_DRIFT_MIN_ENERGY_KWH = 0.2;
+
     // Baseline EMA smoothing
     private static final double EMA_ALPHA             = 0.15;
 
     @Value("${gridgarrison.watchdog.heartbeat-timeout-ms:180000}")
     private long heartbeatTimeoutMs;
+
+    @Value("${gridgarrison.watchdog.twin-drift-warn-pct:15.0}")
+    private double twinDriftWarnPct;
+
+    @Value("${gridgarrison.watchdog.twin-drift-high-pct:30.0}")
+    private double twinDriftHighPct;
 
     // ── Dependencies ──────────────────────────────────────────────────────────
 
@@ -117,6 +126,12 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
 
     @Override
     public List<AnomalyReport> ingestTelemetry(TelemetrySample sample) {
+        return ingestTelemetry(sample, null);
+    }
+
+    @Override
+    public List<AnomalyReport> ingestTelemetry(TelemetrySample sample,
+                                               DigitalTwinService.TelemetryExpectation expectation) {
         MutableTwin twin = twins.computeIfAbsent(
             sample.getStationId(), id -> new MutableTwin(id, Instant.now()));
 
@@ -238,12 +253,114 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
             }
         }
 
+        // Ideal-vs-actual drift against user-session simulation baseline.
+        detectTwinDrift(sample, expectation, flagged);
+
         // ── Publish events for everything that fired ──────────────────────────
         if (!flagged.isEmpty()) {
             publishAndRecord(twin, sample.getSessionId(), flagged);
         }
 
         return Collections.unmodifiableList(flagged);
+    }
+
+    private void detectTwinDrift(TelemetrySample sample,
+                                 DigitalTwinService.TelemetryExpectation expectation,
+                                 List<AnomalyReport> flagged) {
+        if (expectation == null) {
+            return;
+        }
+
+        double warnThreshold = clampPercent(expectation.driftThresholdPct(), twinDriftWarnPct);
+        double highThreshold = Math.max(warnThreshold, twinDriftHighPct);
+
+        Double expectedEnergy = sanitizeExpected(expectation.expectedEnergyDeliveredKwh());
+        if (sample.getEnergyDeliveredKwh() != null
+            && expectedEnergy != null
+            && expectedEnergy >= TWIN_DRIFT_MIN_ENERGY_KWH) {
+            double observedEnergy = Math.max(0.0d, sample.getEnergyDeliveredKwh());
+            double driftPct = percentDelta(observedEnergy, expectedEnergy);
+            if (driftPct >= warnThreshold) {
+                flagged.add(build(
+                    sample.getStationId(),
+                    AnomalyReport.AnomalyType.TWIN_DRIFT_ENERGY,
+                    String.format(
+                        "Energy drift %.1f%% at elapsed %.0f%% (observed %.3f kWh vs ideal %.3f kWh)",
+                        driftPct,
+                        safeElapsedPct(expectation.elapsedRatio()),
+                        observedEnergy,
+                        expectedEnergy
+                    ),
+                    observedEnergy,
+                    expectedEnergy
+                ));
+            }
+        }
+
+        Double expectedPower = sanitizeExpected(expectation.expectedPowerKw());
+        if (sample.getPowerKw() != null
+            && expectedPower != null
+            && expectedPower > 1.0d) {
+            double observedPower = Math.max(0.0d, sample.getPowerKw());
+            double driftPct = percentDelta(observedPower, expectedPower);
+            if (driftPct >= warnThreshold) {
+                flagged.add(build(
+                    sample.getStationId(),
+                    AnomalyReport.AnomalyType.TWIN_DRIFT_POWER,
+                    String.format(
+                        "Power drift %.1f%% at elapsed %.0f%% (observed %.1f kW vs ideal %.1f kW)",
+                        driftPct,
+                        safeElapsedPct(expectation.elapsedRatio()),
+                        observedPower,
+                        expectedPower
+                    ),
+                    observedPower,
+                    expectedPower
+                ));
+            }
+        }
+
+        // Force escalation path for severe drift so the refund path is deterministic in demo.
+        boolean severeTwinDrift = flagged.stream().anyMatch(report ->
+            isTwinDriftType(report.getType())
+                && percentDelta(report.getObservedValue(), report.getExpectedValue()) >= highThreshold
+        );
+        if (!severeTwinDrift) {
+            return;
+        }
+
+        boolean hasEnergy = flagged.stream().anyMatch(report ->
+            report.getType() == AnomalyReport.AnomalyType.TWIN_DRIFT_ENERGY
+        );
+        boolean hasPower = flagged.stream().anyMatch(report ->
+            report.getType() == AnomalyReport.AnomalyType.TWIN_DRIFT_POWER
+        );
+
+        if (hasEnergy && !hasPower && expectedPower != null && sample.getPowerKw() != null) {
+            flagged.add(build(
+                sample.getStationId(),
+                AnomalyReport.AnomalyType.TWIN_DRIFT_POWER,
+                String.format(
+                    "Severe drift escalation: power snapshot %.1f kW vs ideal %.1f kW",
+                    sample.getPowerKw(),
+                    expectedPower
+                ),
+                Math.max(0.0d, sample.getPowerKw()),
+                expectedPower
+            ));
+        } else if (hasPower && !hasEnergy && expectedEnergy != null && sample.getEnergyDeliveredKwh() != null) {
+            flagged.add(build(
+                sample.getStationId(),
+                AnomalyReport.AnomalyType.TWIN_DRIFT_ENERGY,
+                String.format(
+                    "Severe drift escalation: energy snapshot %.3f kWh vs ideal %.3f kWh",
+                    sample.getEnergyDeliveredKwh(),
+                    expectedEnergy
+                ),
+                Math.max(0.0d, sample.getEnergyDeliveredKwh()),
+                expectedEnergy
+            ));
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -304,6 +421,11 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
     }
 
     @Override
+    public Optional<StationTwinDiagnostics> getDiagnostics(String stationId) {
+        return Optional.ofNullable(twins.get(stationId)).map(MutableTwin::toDiagnostics);
+    }
+
+    @Override
     public void quarantineStation(String stationId, String reason) {
         MutableTwin twin = twins.get(stationId);
         if (twin == null) {
@@ -330,14 +452,25 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
         if (twin == null) return;
         twin.status       = StationTwin.TwinStatus.HEALTHY;
         twin.anomalyCount = 0;
+        twin.powerAnomalyCount = 0;
+        twin.temperatureAnomalyCount = 0;
+        twin.socAnomalyCount = 0;
+        twin.firmwareMismatchCount = 0;
+        twin.stationHashChanged = false;
+        twin.powerSurgeDetected = false;
+        twin.lastSeverity = null;
+        twin.lastAnomalyTypes = List.of();
+        twin.lastAnomalyAt = null;
         log.info("[Watchdog] Quarantine cleared — stationId={}", stationId);
     }
 
     /** Store the golden hash from the trust module for mid-session comparison. */
+    @Override
     public void setGoldenHash(String stationId, String goldenHash) {
         MutableTwin twin = twins.computeIfAbsent(
             stationId, id -> new MutableTwin(id, Instant.now()));
         twin.goldenHash = goldenHash;
+        twin.stationHashChanged = false;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -372,10 +505,15 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
         // Count distinct categories that fired
         Set<String> categories = new HashSet<>();
         boolean hasFirmware = false;
+        boolean hasSevereTwinDrift = false;
         for (AnomalyReport r : flagged) {
             categories.add(category(r.getType()));
             if (r.getType() == AnomalyReport.AnomalyType.FIRMWARE_MISMATCH) {
                 hasFirmware = true;
+            }
+            if (isTwinDriftType(r.getType())
+                && percentDelta(r.getObservedValue(), r.getExpectedValue()) >= twinDriftHighPct) {
+                hasSevereTwinDrift = true;
             }
         }
 
@@ -385,7 +523,7 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
         AnomalyEvent.Severity severity;
         if (hasFirmware || catCount >= 3) {
             severity = AnomalyEvent.Severity.CRITICAL;   // triggers refund + quarantine
-        } else if (catCount >= 2) {
+        } else if (hasSevereTwinDrift || catCount >= 2) {
             severity = AnomalyEvent.Severity.HIGH;        // triggers refund
         } else {
             AnomalyReport first = flagged.get(0);
@@ -396,6 +534,14 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
 
         // Update twin state
         twin.anomalyCount += flagged.size();
+        updateAnomalyCounters(twin, flagged);
+        twin.lastSeverity = severity;
+        twin.lastAnomalyTypes = flagged.stream()
+            .map(r -> r.getType().name())
+            .distinct()
+            .toList();
+        twin.lastAnomalyAt = Instant.now();
+
         if (severity == AnomalyEvent.Severity.CRITICAL) {
             twin.status = StationTwin.TwinStatus.QUARANTINED;
         } else if (severity == AnomalyEvent.Severity.HIGH
@@ -426,6 +572,27 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
         ));
     }
 
+    private void updateAnomalyCounters(MutableTwin twin, List<AnomalyReport> flagged) {
+        for (AnomalyReport report : flagged) {
+            switch (report.getType()) {
+                case POWER_SPIKE_ABSOLUTE, POWER_SPIKE_RATE, POWER_TWIN_MISMATCH -> {
+                    twin.powerAnomalyCount++;
+                    twin.powerSurgeDetected = true;
+                }
+                case TEMPERATURE_SPIKE, TEMPERATURE_RATE -> twin.temperatureAnomalyCount++;
+                case SOC_SPOOF, SOC_RATE_MISMATCH -> twin.socAnomalyCount++;
+                case TWIN_DRIFT_ENERGY, TWIN_DRIFT_POWER -> twin.powerAnomalyCount++;
+                case FIRMWARE_MISMATCH -> {
+                    twin.firmwareMismatchCount++;
+                    twin.stationHashChanged = true;
+                }
+                default -> {
+                    // Session-level anomaly types are represented by total anomaly count.
+                }
+            }
+        }
+    }
+
     // ═════════════════════════════════════════════════════════════════════════
     // Private helpers
     // ═════════════════════════════════════════════════════════════════════════
@@ -453,6 +620,8 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
                  POWER_SPIKE_RATE, POWER_TWIN_MISMATCH -> "POWER";
             case TEMPERATURE_SPIKE, TEMPERATURE_RATE   -> "THERMAL";
             case SOC_SPOOF, SOC_RATE_MISMATCH           -> "SOC";
+            case TWIN_DRIFT_ENERGY                      -> "TWIN_ENERGY";
+            case TWIN_DRIFT_POWER                       -> "TWIN_POWER";
             case FIRMWARE_MISMATCH                      -> "IDENTITY";
             default                                      -> "OTHER";
         };
@@ -461,9 +630,41 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
     private boolean isHardThreshold(AnomalyReport.AnomalyType type) {
         return switch (type) {
             case POWER_SPIKE_ABSOLUTE, TEMPERATURE_SPIKE,
-                 SOC_SPOOF, FIRMWARE_MISMATCH -> true;
+                 SOC_SPOOF, FIRMWARE_MISMATCH,
+                 TWIN_DRIFT_ENERGY, TWIN_DRIFT_POWER -> true;
             default -> false;
         };
+    }
+
+    private boolean isTwinDriftType(AnomalyReport.AnomalyType type) {
+        return type == AnomalyReport.AnomalyType.TWIN_DRIFT_ENERGY
+            || type == AnomalyReport.AnomalyType.TWIN_DRIFT_POWER;
+    }
+
+    private double percentDelta(double observed, double expected) {
+        double base = Math.max(0.001d, Math.abs(expected));
+        return Math.abs(observed - expected) * 100.0d / base;
+    }
+
+    private double clampPercent(Double value, double fallback) {
+        if (value == null || !Double.isFinite(value) || value <= 0.0d) {
+            return fallback;
+        }
+        return Math.min(500.0d, Math.max(1.0d, value));
+    }
+
+    private Double sanitizeExpected(Double value) {
+        if (value == null || !Double.isFinite(value) || value < 0.0d) {
+            return null;
+        }
+        return value;
+    }
+
+    private double safeElapsedPct(Double elapsedRatio) {
+        if (elapsedRatio == null || !Double.isFinite(elapsedRatio)) {
+            return 0.0d;
+        }
+        return Math.min(100.0d, Math.max(0.0d, elapsedRatio * 100.0d));
     }
 
     private String normalise(String hash) {
@@ -491,6 +692,10 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
 
         // Counters
         int     anomalyCount = 0;
+        int     powerAnomalyCount = 0;
+        int     temperatureAnomalyCount = 0;
+        int     socAnomalyCount = 0;
+        int     firmwareMismatchCount = 0;
         StationTwin.TwinStatus status = StationTwin.TwinStatus.HEALTHY;
 
         // Learned baselines (EMA)
@@ -504,6 +709,12 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
 
         // Trust state
         String  goldenHash     = null;
+        boolean stationHashChanged = false;
+        boolean powerSurgeDetected = false;
+
+        AnomalyEvent.Severity lastSeverity = null;
+        List<String> lastAnomalyTypes = List.of();
+        Instant lastAnomalyAt = null;
 
         MutableTwin(String stationId, Instant registeredAt) {
             this.stationId     = stationId;
@@ -543,6 +754,29 @@ class DigitalTwinServiceImpl implements DigitalTwinService {
                 .totalAnomaliesRaised(anomalyCount)
                 .status(status)
                 .build();
+        }
+
+        StationTwinDiagnostics toDiagnostics() {
+            return new StationTwinDiagnostics(
+                stationId,
+                status,
+                lastHeartbeat,
+                anomalyCount,
+                anomalyCount,
+                powerAnomalyCount,
+                temperatureAnomalyCount,
+                socAnomalyCount,
+                firmwareMismatchCount,
+                stationHashChanged,
+                powerSurgeDetected,
+                lastSeverity == null ? "NONE" : lastSeverity.name(),
+                lastAnomalyTypes,
+                lastAnomalyAt,
+                lastPowerKw <= 0.0d ? null : lastPowerKw,
+                lastTempC <= 0.0d ? null : lastTempC,
+                lastSocPercent <= 0.0d ? null : lastSocPercent,
+                goldenHash
+            );
         }
     }
 }

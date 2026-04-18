@@ -610,7 +610,7 @@ public class EvTrustVerificationClient {
     private String normalizeBaseUrl() {
         String configured = verificationProperties.getBackendBaseUrl();
         if (configured == null || configured.isBlank()) {
-            return "https://localhost:8443";
+            return "http://localhost:8443";
         }
         return configured.endsWith("/") ? configured.substring(0, configured.length() - 1) : configured;
     }

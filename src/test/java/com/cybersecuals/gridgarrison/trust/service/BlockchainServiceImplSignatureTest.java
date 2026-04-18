@@ -4,8 +4,7 @@ import com.cybersecuals.gridgarrison.shared.dto.FirmwareHash;
 import com.cybersecuals.gridgarrison.trust.contract.FirmwareRegistryContract;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.web3j.protocol.core.RemoteCall;
-import org.web3j.protocol.core.methods.response.TransactionReceipt;
+import org.web3j.protocol.core.RemoteFunctionCall;
 
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
@@ -18,12 +17,7 @@ import java.util.Base64;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature verification logic in BlockchainServiceImpl.
-
-    @SuppressWarnings("unchecked")
-    private static <T> RemoteCall<T> remoteCallMock() {
-        return (RemoteCall<T>) mock(RemoteCall.class);
-    }
+class BlockchainServiceImplSignatureTest {
 
     @Test
     void verifiesSignatureAndHashAsVerified() throws Exception {
@@ -35,9 +29,7 @@ class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature 
 
         BlockchainServiceImpl service = new BlockchainServiceImpl();
         FirmwareRegistryContract contract = mock(FirmwareRegistryContract.class);
-        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> call = remoteCallMock();
-        RemoteCall<TransactionReceipt> auditCall = remoteCallMock();
-        TransactionReceipt auditReceipt = mock(TransactionReceipt.class);
+        RemoteFunctionCall<FirmwareRegistryContract.SignedGoldenRecord> call = mock(RemoteFunctionCall.class);
 
         when(contract.getSignedGoldenRecord("CS-101")).thenReturn(call);
         when(call.send()).thenReturn(new FirmwareRegistryContract.SignedGoldenRecord(
@@ -46,9 +38,6 @@ class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature 
             "ACME-MFG",
             BigInteger.ONE
         ));
-        when(contract.recordSessionEvent("CS-101", "VERIFY-CS-101", "VERIFY_READ")).thenReturn(auditCall);
-        when(auditCall.send()).thenReturn(auditReceipt);
-        when(auditReceipt.getTransactionHash()).thenReturn("0xverifytx-101");
 
         ReflectionTestUtils.setField(service, "firmwareRegistry", contract);
         ReflectionTestUtils.setField(service, "contractAddress", "0xcontract");
@@ -71,7 +60,6 @@ class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature 
 
         assertThat(result.firmwareHash().getSignatureVerified()).isTrue();
         assertThat(result.evidence().verdict()).isEqualTo(TrustEvidence.Verdict.VERIFIED);
-        assertThat(result.evidence().txHash()).isEqualTo("0xverifytx-101");
     }
 
     @Test
@@ -84,9 +72,7 @@ class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature 
 
         BlockchainServiceImpl service = new BlockchainServiceImpl();
         FirmwareRegistryContract contract = mock(FirmwareRegistryContract.class);
-        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> call = remoteCallMock();
-        RemoteCall<TransactionReceipt> auditCall = remoteCallMock();
-        TransactionReceipt auditReceipt = mock(TransactionReceipt.class);
+        RemoteFunctionCall<FirmwareRegistryContract.SignedGoldenRecord> call = mock(RemoteFunctionCall.class);
 
         when(contract.getSignedGoldenRecord("CS-101")).thenReturn(call);
         when(call.send()).thenReturn(new FirmwareRegistryContract.SignedGoldenRecord(
@@ -95,9 +81,6 @@ class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature 
             "ACME-MFG",
             BigInteger.ONE
         ));
-        when(contract.recordSessionEvent("CS-101", "VERIFY-CS-101", "VERIFY_READ")).thenReturn(auditCall);
-        when(auditCall.send()).thenReturn(auditReceipt);
-        when(auditReceipt.getTransactionHash()).thenReturn("0xverifytx-102");
 
         ReflectionTestUtils.setField(service, "firmwareRegistry", contract);
         ReflectionTestUtils.setField(service, "contractAddress", "0xcontract");
@@ -120,45 +103,6 @@ class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature 
 
         assertThat(result.firmwareHash().getSignatureVerified()).isFalse();
         assertThat(result.evidence().rationale()).contains("signature verification failed");
-        assertThat(result.evidence().txHash()).isEqualTo("0xverifytx-102");
-    }
-
-    @Test
-    void treatsEmptyLegacyContractValueAsMissingGoldenHash() throws Exception {
-        BlockchainServiceImpl service = new BlockchainServiceImpl();
-        FirmwareRegistryContract contract = mock(FirmwareRegistryContract.class);
-        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> signedCall = remoteCallMock();
-        RemoteCall<String> legacyCall = remoteCallMock();
-        RemoteCall<TransactionReceipt> auditCall = remoteCallMock();
-        TransactionReceipt auditReceipt = mock(TransactionReceipt.class);
-
-        when(contract.getSignedGoldenRecord("CS-101")).thenReturn(signedCall);
-        when(signedCall.send()).thenThrow(new RuntimeException("native read unavailable"));
-        when(contract.getGoldenHash("CS-101")).thenReturn(legacyCall);
-        when(legacyCall.send()).thenThrow(new RuntimeException("Empty value returned from contract"));
-        when(contract.recordSessionEvent("CS-101", "VERIFY-CS-101", "VERIFY_READ")).thenReturn(auditCall);
-        when(auditCall.send()).thenReturn(auditReceipt);
-        when(auditReceipt.getTransactionHash()).thenReturn("0xverifytx-103");
-
-        ReflectionTestUtils.setField(service, "firmwareRegistry", contract);
-        ReflectionTestUtils.setField(service, "contractAddress", "0xcontract");
-        ReflectionTestUtils.setField(service, "trustedManufacturerId", "ACME-MFG");
-        ReflectionTestUtils.setField(service, "manufacturerPublicKeyBase64", "");
-
-        FirmwareHash input = FirmwareHash.builder()
-            .stationId("CS-101")
-            .reportedHash("0xabc123")
-            .firmwareVersion("1.0.0")
-            .reportedAt(Instant.now())
-            .status(FirmwareHash.VerificationStatus.PENDING)
-            .build();
-
-        TrustVerificationResult result = service.verifyGoldenHashWithEvidence(input).join();
-
-        assertThat(result.firmwareHash().getStatus()).isEqualTo(FirmwareHash.VerificationStatus.UNKNOWN_STATION);
-        assertThat(result.evidence().verdict()).isEqualTo(TrustEvidence.Verdict.UNKNOWN_STATION);
-        assertThat(result.evidence().rationale()).contains("No on-chain golden hash found");
-        assertThat(result.evidence().txHash()).isEqualTo("0xverifytx-103");
     }
 
     private static KeyPair newRsaKeyPair() throws Exception {

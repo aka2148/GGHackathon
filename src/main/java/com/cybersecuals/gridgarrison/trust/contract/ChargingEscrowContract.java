@@ -1,7 +1,7 @@
 package com.cybersecuals.gridgarrison.trust.contract;
 
-import org.web3j.abi.TypeReference;
 import org.web3j.abi.FunctionEncoder;
+import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Utf8String;
@@ -11,6 +11,7 @@ import org.web3j.abi.datatypes.generated.Uint256;
 import org.web3j.crypto.Credentials;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.RemoteCall;
+import org.web3j.protocol.core.RemoteFunctionCall;
 import org.web3j.protocol.core.methods.response.TransactionReceipt;
 import org.web3j.tx.Contract;
 import org.web3j.tx.TransactionManager;
@@ -23,15 +24,25 @@ import java.util.Arrays;
 import java.util.Collections;
 
 /**
- * Web3j wrapper for the ChargingEscrow contract.
+ * Lightweight Web3j wrapper for ChargingEscrow.
  *
- * The deploy binary is loaded from src/main/resources/solidity/ChargingEscrow.bin,
- * which is generated from the truffle artifact at build/contracts/ChargingEscrow.json.
+ * Bytecode is loaded from src/main/resources/solidity/ChargingEscrow.bin.
  */
 @SuppressWarnings("rawtypes")
 public class ChargingEscrowContract extends Contract {
 
     public static final String BINARY = loadBinaryFromResources();
+
+    public static final String FUNC_DEPOSIT = "deposit";
+    public static final String FUNC_VERIFYSTATION = "verifyStation";
+    public static final String FUNC_STARTCHARGING = "startCharging";
+    public static final String FUNC_UPDATESOC = "updateSoc";
+    public static final String FUNC_COMPLETESESSION = "completeSession";
+    public static final String FUNC_RELEASEFUNDS = "releaseFunds";
+    public static final String FUNC_REFUND = "refund";
+    public static final String FUNC_CANCEL = "cancel";
+    public static final String FUNC_GETSTATE = "getState";
+    public static final String FUNC_GETBALANCE = "getBalance";
 
     protected ChargingEscrowContract(String contractAddress,
                                      Web3j web3j,
@@ -47,17 +58,15 @@ public class ChargingEscrowContract extends Contract {
         super(BINARY, contractAddress, web3j, transactionManager, gasProvider);
     }
 
-    public static RemoteCall<ChargingEscrowContract> deploy(
-        Web3j web3j,
-        Credentials credentials,
-        ContractGasProvider gasProvider,
-        String operator,
-        String charger,
-        String stationId,
-        byte[] goldenHash,
-        BigInteger targetSoc,
-        BigInteger timeoutSeconds
-    ) {
+    public static RemoteCall<ChargingEscrowContract> deploy(Web3j web3j,
+                                                             Credentials credentials,
+                                                             ContractGasProvider gasProvider,
+                                                             String operator,
+                                                             String charger,
+                                                             String stationId,
+                                                             byte[] goldenHash,
+                                                             BigInteger targetSoc,
+                                                             BigInteger timeoutSeconds) {
         String encodedConstructor = FunctionEncoder.encodeConstructor(Arrays.asList(
             new Address(operator),
             new Address(charger),
@@ -77,17 +86,15 @@ public class ChargingEscrowContract extends Contract {
         );
     }
 
-    public static RemoteCall<ChargingEscrowContract> deploy(
-        Web3j web3j,
-        TransactionManager transactionManager,
-        ContractGasProvider gasProvider,
-        String operator,
-        String charger,
-        String stationId,
-        byte[] goldenHash,
-        BigInteger targetSoc,
-        BigInteger timeoutSeconds
-    ) {
+    public static RemoteCall<ChargingEscrowContract> deploy(Web3j web3j,
+                                                             TransactionManager transactionManager,
+                                                             ContractGasProvider gasProvider,
+                                                             String operator,
+                                                             String charger,
+                                                             String stationId,
+                                                             byte[] goldenHash,
+                                                             BigInteger targetSoc,
+                                                             BigInteger timeoutSeconds) {
         String encodedConstructor = FunctionEncoder.encodeConstructor(Arrays.asList(
             new Address(operator),
             new Address(charger),
@@ -121,93 +128,73 @@ public class ChargingEscrowContract extends Contract {
         return new ChargingEscrowContract(address, web3j, transactionManager, gasProvider);
     }
 
-    public RemoteCall<TransactionReceipt> deposit(BigInteger weiAmount) {
-        final Function function = new Function(
-            "deposit",
+    public RemoteFunctionCall<TransactionReceipt> deposit(BigInteger weiAmount) {
+        final Function function = new Function(FUNC_DEPOSIT,
             Collections.emptyList(),
-            Collections.emptyList()
-        );
+            Collections.emptyList());
         return executeRemoteCallTransaction(function, weiAmount);
     }
 
-    public RemoteCall<TransactionReceipt> verifyStation(byte[] liveHash) {
-        final Function function = new Function(
-            "verifyStation",
+    public RemoteFunctionCall<TransactionReceipt> verifyStation(byte[] liveHash) {
+        final Function function = new Function(FUNC_VERIFYSTATION,
             Arrays.asList(new Bytes32(normalizeBytes32(liveHash))),
-            Collections.emptyList()
-        );
+            Collections.emptyList());
         return executeRemoteCallTransaction(function);
     }
 
-    public RemoteCall<TransactionReceipt> startCharging(String sessionId) {
-        final Function function = new Function(
-            "startCharging",
+    public RemoteFunctionCall<TransactionReceipt> startCharging(String sessionId) {
+        final Function function = new Function(FUNC_STARTCHARGING,
             Arrays.asList(new Utf8String(sessionId)),
-            Collections.emptyList()
-        );
+            Collections.emptyList());
         return executeRemoteCallTransaction(function);
     }
 
-    public RemoteCall<TransactionReceipt> updateSoc(BigInteger soc) {
-        final Function function = new Function(
-            "updateSoc",
+    public RemoteFunctionCall<TransactionReceipt> updateSoc(BigInteger soc) {
+        final Function function = new Function(FUNC_UPDATESOC,
             Arrays.asList(new Uint8(soc)),
-            Collections.emptyList()
-        );
+            Collections.emptyList());
         return executeRemoteCallTransaction(function);
     }
 
-    public RemoteCall<TransactionReceipt> completeSession() {
-        final Function function = new Function(
-            "completeSession",
+    public RemoteFunctionCall<TransactionReceipt> completeSession() {
+        final Function function = new Function(FUNC_COMPLETESESSION,
             Collections.emptyList(),
-            Collections.emptyList()
-        );
+            Collections.emptyList());
         return executeRemoteCallTransaction(function);
     }
 
-    public RemoteCall<TransactionReceipt> releaseFunds() {
-        final Function function = new Function(
-            "releaseFunds",
+    public RemoteFunctionCall<TransactionReceipt> releaseFunds() {
+        final Function function = new Function(FUNC_RELEASEFUNDS,
             Collections.emptyList(),
-            Collections.emptyList()
-        );
+            Collections.emptyList());
         return executeRemoteCallTransaction(function);
     }
 
-    public RemoteCall<TransactionReceipt> refund(String reason) {
-        final Function function = new Function(
-            "refund",
+    public RemoteFunctionCall<TransactionReceipt> refund(String reason) {
+        final Function function = new Function(FUNC_REFUND,
             Arrays.asList(new Utf8String(reason)),
-            Collections.emptyList()
-        );
+            Collections.emptyList());
         return executeRemoteCallTransaction(function);
     }
 
-    public RemoteCall<TransactionReceipt> cancel(String reason) {
-        final Function function = new Function(
-            "cancel",
+    public RemoteFunctionCall<TransactionReceipt> cancel(String reason) {
+        final Function function = new Function(FUNC_CANCEL,
             Arrays.asList(new Utf8String(reason)),
-            Collections.emptyList()
-        );
+            Collections.emptyList());
         return executeRemoteCallTransaction(function);
     }
 
-    public RemoteCall<BigInteger> getState() {
-        final Function function = new Function(
-            "getState",
+    public RemoteFunctionCall<BigInteger> getState() {
+        final Function function = new Function(FUNC_GETSTATE,
             Collections.emptyList(),
-            Collections.singletonList(new TypeReference<Uint8>() { })
-        );
+            Collections.singletonList(new TypeReference<Uint8>() { }));
         return executeRemoteCallSingleValueReturn(function, BigInteger.class);
     }
 
-    public RemoteCall<BigInteger> getBalance() {
-        final Function function = new Function(
-            "getBalance",
+    public RemoteFunctionCall<BigInteger> getBalance() {
+        final Function function = new Function(FUNC_GETBALANCE,
             Collections.emptyList(),
-            Collections.singletonList(new TypeReference<Uint256>() { })
-        );
+            Collections.singletonList(new TypeReference<Uint256>() { }));
         return executeRemoteCallSingleValueReturn(function, BigInteger.class);
     }
 
@@ -218,13 +205,7 @@ public class ChargingEscrowContract extends Contract {
         }
 
         int bytesToCopy = Math.min(value.length, 32);
-        System.arraycopy(
-            value,
-            value.length - bytesToCopy,
-            normalized,
-            32 - bytesToCopy,
-            bytesToCopy
-        );
+        System.arraycopy(value, value.length - bytesToCopy, normalized, 32 - bytesToCopy, bytesToCopy);
         return normalized;
     }
 
@@ -246,57 +227,4 @@ public class ChargingEscrowContract extends Contract {
             throw new ExceptionInInitializerError("Failed to load ChargingEscrow bytecode: " + ex.getMessage());
         }
     }
-
-    public RemoteFunctionCall<TransactionReceipt> cancel(String reason) {
-        final Function function = new Function(FUNC_CANCEL,
-                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(reason)),
-                Collections.<TypeReference<?>>emptyList());
-        return executeRemoteCallTransaction(function);
-    }
-
-    public RemoteFunctionCall<BigInteger> getState() {
-        final Function function = new Function(FUNC_GETSTATE,
-                Arrays.<Type>asList(),
-                Arrays.<TypeReference<?>>asList(new TypeReference<Uint8>() {}));
-        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
-    }
-
-    public RemoteFunctionCall<BigInteger> getBalance() {
-        final Function function = new Function(FUNC_GETBALANCE,
-                Arrays.<Type>asList(),
-                Arrays.<TypeReference<?>>asList(new TypeReference<Uint256>() {}));
-        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
-    }
-
-    public RemoteFunctionCall<BigInteger> amount() {
-        final Function function = new Function(FUNC_AMOUNT,
-                Arrays.<Type>asList(),
-                Arrays.<TypeReference<?>>asList(new TypeReference<Uint256>() {}));
-        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
-    }
-
-    public RemoteFunctionCall<BigInteger> currentSoc() {
-        final Function function = new Function(FUNC_CURRENTSOC,
-                Arrays.<Type>asList(),
-                Arrays.<TypeReference<?>>asList(new TypeReference<Uint8>() {}));
-        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
-    }
-
-    private static String getDeploymentBinary() {
-        return librariesLinkedBinary != null ? librariesLinkedBinary : BINARY;
-    }
-
-    protected String getStaticDeployedAddress(String networkId) { return _addresses.get(networkId); }
-    public static String getPreviouslyDeployedAddress(String networkId) { return _addresses.get(networkId); }
-
-    // ── Event response classes ────────────────────────────────────────────────
-    public static class DepositedEventResponse extends BaseEventResponse { public String buyer; public BigInteger amount; }
-    public static class StationVerifiedEventResponse extends BaseEventResponse { public String stationId; public byte[] liveHash; }
-    public static class VerificationFailedEventResponse extends BaseEventResponse { public String stationId; public byte[] liveHash; public byte[] goldenHash; }
-    public static class ChargingStartedEventResponse extends BaseEventResponse { public String sessionId; public BigInteger targetSoc; }
-    public static class SocUpdatedEventResponse extends BaseEventResponse { public BigInteger previousSoc; public BigInteger currentSoc; }
-    public static class SessionCompletedEventResponse extends BaseEventResponse { public String sessionId; public BigInteger finalSoc; }
-    public static class FundsReleasedEventResponse extends BaseEventResponse { public String charger; public BigInteger amount; }
-    public static class RefundedEventResponse extends BaseEventResponse { public String buyer; public BigInteger amount; public String reason; }
-    public static class CancelledEventResponse extends BaseEventResponse { public String reason; }
 }

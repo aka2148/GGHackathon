@@ -20,10 +20,10 @@ public class EscrowAnomalyListener {
 
     private final Map<String, String> escrowRegistry = new ConcurrentHashMap<>();
 
-    // ✅ REGISTER ESCROW (CRITICAL FOR REFUND TO WORK)
+    // âœ… REGISTER ESCROW (CRITICAL FOR REFUND TO WORK)
     public void registerEscrow(String stationId, String escrowAddress) {
         escrowRegistry.put(stationId, escrowAddress);
-        log.info("✅ Escrow registered: stationId={} escrow={}", stationId, escrowAddress);
+        log.info("âœ… Escrow registered: stationId={} escrow={}", stationId, escrowAddress);
     }
 
     public void deregisterEscrow(String stationId) {
@@ -33,26 +33,37 @@ public class EscrowAnomalyListener {
     @EventListener
     public void onAnomaly(AnomalyEvent event) {
 
-        log.warn("🚨 Anomaly received: stationId={} severity={}",
+        log.warn("ðŸš¨ Anomaly received: stationId={} severity={}",
                 event.stationId(), event.severity());
 
         switch (event.severity()) {
 
-            case LOW -> log.info("LOW → ignore");
+            case LOW -> log.info("LOW â†’ ignore");
 
-            case MEDIUM -> log.warn("MEDIUM → warning only");
+            case MEDIUM -> {
+                log.warn("MEDIUM anomaly: triggering escrow refund");
+                triggerRefund(event.stationId(), "MEDIUM anomaly");
+            }
 
             case HIGH -> {
-                log.error("🔥 HIGH → TRIGGER REFUND");
+                log.error("ðŸ”¥ HIGH â†’ TRIGGER REFUND");
                 triggerRefund(event.stationId(), "HIGH anomaly");
             }
 
             case CRITICAL -> {
-                log.error("💀 CRITICAL → REFUND + QUARANTINE");
+                log.error("ðŸ’€ CRITICAL â†’ REFUND + QUARANTINE");
                 triggerRefund(event.stationId(), "CRITICAL anomaly");
-                digitalTwinService.quarantineStation(event.stationId(), "CRITICAL anomaly");
+                if (shouldQuarantine(event.stationId())) {
+                    digitalTwinService.quarantineStation(event.stationId(), "CRITICAL anomaly");
+                }
             }
         }
+    }
+
+    private boolean shouldQuarantine(String stationId) {
+        return digitalTwinService.getTwin(stationId)
+            .map(twin -> twin.getStatus() != com.cybersecuals.gridgarrison.watchdog.service.StationTwin.TwinStatus.QUARANTINED)
+            .orElse(true);
     }
 
     private void triggerRefund(String stationId, String reason) {
@@ -60,18 +71,18 @@ public class EscrowAnomalyListener {
         String escrowAddress = escrowRegistry.get(stationId);
 
         if (escrowAddress == null) {
-            log.error("❌ NO ESCROW FOUND → stationId={} (THIS IS WHY GANACHE SHOWS NOTHING)", stationId);
+            log.error("âŒ NO ESCROW FOUND â†’ stationId={} (THIS IS WHY GANACHE SHOWS NOTHING)", stationId);
             return;
         }
 
-        log.error("🚨 CALLING REFUND → escrow={}", escrowAddress);
+        log.error("ðŸš¨ CALLING REFUND â†’ escrow={}", escrowAddress);
 
         escrowService.refundSession(escrowAddress, reason)
                 .whenComplete((txHash, err) -> {
                     if (err != null) {
-                        log.error("❌ REFUND FAILED", err);
+                        log.error("âŒ REFUND FAILED", err);
                     } else {
-                        log.error("✅ REFUND SUCCESS → txHash={}", txHash);
+                        log.error("âœ… REFUND SUCCESS â†’ txHash={}", txHash);
                         deregisterEscrow(stationId);
                     }
                 });

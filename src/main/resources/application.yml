@@ -65,6 +65,8 @@ gridgarrison:
   security:
     visualizer:
       public: ${GG_VISUALIZER_PUBLIC:true}
+    ocpp:
+      station-cn-aliases: ${GG_OCPP_STATION_CN_ALIASES:CS-101=EV-Simulator-001}
 
   blockchain:
     rpc-url:          ${GG_RPC_URL:${WEB3J_CLIENT_ADDRESS:http://127.0.0.1:7545}}

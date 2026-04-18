@@ -205,6 +205,20 @@ public class EvSimulatorController {
         return ResponseEntity.ok(body);
     }
 
+    @PostMapping("/dev/set-battery")
+    public ResponseEntity<Map<String, Object>> setBattery(@RequestParam int batteryPct) {
+        int safePct = Math.max(0, Math.min(100, batteryPct));
+        userJourneyState.setBatteryPct(safePct);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", true);
+        body.put("stationId", client.getStationId());
+        body.put("batteryPct", safePct);
+        body.put("userJourney", userJourneyState.snapshot());
+        body.put("digitalTwin", digitalTwinRuntimeState.snapshot());
+        return ResponseEntity.ok(body);
+    }
+
     @PostMapping("/dev/digital-twin/sample")
     public ResponseEntity<Map<String, Object>> sendDigitalTwinSample(
         @RequestParam(required = false) String transactionId,
@@ -966,7 +980,7 @@ public class EvSimulatorController {
         double idealPowerKw = round3(Math.max(0.0d, digitalTwinRuntimeState.controls().powerKw()));
         int startBatteryPct = userJourneyState.snapshot().batteryPct();
         int targetSocPct = intent == null
-            ? Math.min(100, startBatteryPct + 30)
+            ? 100
             : Math.max(startBatteryPct, Math.min(100, intent.targetSoc()));
 
         Instant startedAt = Instant.now();

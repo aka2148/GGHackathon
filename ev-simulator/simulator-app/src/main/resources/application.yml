@@ -79,7 +79,7 @@ ev:
 
     verify:
       enabled: true
-      backend-base-url: https://localhost:8443
+      backend-base-url: http://localhost:8443
       component-hash-path: /visualizer/api/generate-hash
       latest-verdict-path: /trust/api/latest-verdict
       escrow-intent-path: /trust/api/escrow/intent

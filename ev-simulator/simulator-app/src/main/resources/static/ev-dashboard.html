@@ -2523,7 +2523,7 @@
 
             </div>
 
-            <div class="panel span-8 dev-only">
+            <div class="panel span-8 dev-only hidden" id="quickDemoControlsPanel" style="display:none;">
               <h3 id="quickControlsTitle">Quick Demo Controls</h3>
               <p class="hint" id="quickControlsHint" style="margin-top:6px;">Use these in order for a simple judge demo.</p>
 
@@ -2558,26 +2558,7 @@
               </div>
             </div>
 
-            <div class="panel span-4 dev-only">
-              <h3>Digital Twin Monitor</h3>
-              <p class="hint" style="margin-top:6px;">BIOS-style watchdog readings for live anomaly storytelling.</p>
-              <div class="twin-bios-grid">
-                <div class="twin-line"><span>Twin status</span><strong id="dtTwinStatus" class="bios-value bios-ok">HEALTHY</strong></div>
-                <div class="twin-line"><span>Last severity</span><strong id="dtLastSeverity" class="bios-value bios-ok">NONE</strong></div>
-                <div class="twin-line"><span>Total anomalies</span><strong id="dtTotalAnomalies" class="bios-value">0</strong></div>
-                <div class="twin-line"><span>Power anomalies</span><strong id="dtPowerAnomalies" class="bios-value">0</strong></div>
-                <div class="twin-line"><span>Temp anomalies</span><strong id="dtTempAnomalies" class="bios-value">0</strong></div>
-                <div class="twin-line"><span>SoC anomalies</span><strong id="dtSocAnomalies" class="bios-value">0</strong></div>
-                <div class="twin-line"><span>Hash mismatches</span><strong id="dtFirmwareAnomalies" class="bios-value">0</strong></div>
-                <div class="twin-line"><span>Power surge</span><strong id="dtPowerSurge" class="bios-value bios-ok">NO</strong></div>
-                <div class="twin-line"><span>Hash changed</span><strong id="dtHashChanged" class="bios-value bios-ok">NO</strong></div>
-                <div class="twin-line"><span>Last power (kW)</span><strong id="dtLastPower" class="bios-value">-</strong></div>
-                <div class="twin-line"><span>Last temp (C)</span><strong id="dtLastTemp" class="bios-value">-</strong></div>
-                <div class="twin-line"><span>Last SoC (%)</span><strong id="dtLastSoc" class="bios-value">-</strong></div>
-              </div>
-            </div>
-
-            <div class="panel span-4 dev-only">
+            <div class="panel span-8 dev-only">
   <h3>Real-Time Twin Controls</h3>
   <p class="hint" style="margin-top:6px;">
     Tune charge behavior and push live telemetry while charging.
@@ -2599,6 +2580,11 @@
       <input id="dtConnectorTemp" type="number" min="-20" max="140" step="0.5" value="31" />
     </div>
 
+    <div class="col-6">
+      <label>Manual battery %</label>
+      <input id="manualBatteryPct" type="number" min="0" max="100" step="1" value="50" />
+    </div>
+
     <!-- Buttons row (Apply + Reset side by side) -->
     <div class="col-12" style="display:flex; gap:10px;">
       <button id="dtApplyControlsBtn" class="primary" style="flex:1;">
@@ -2617,12 +2603,36 @@
     <div class="col-6">
       <button id="dtRefreshStatusBtn" class="primary">Refresh Twin Status</button>
     </div>
+    <div class="col-6">
+      <button id="setBatteryBtn" class="primary">Set Battery %</button>
+    </div>
   </div>
 
   <div id="dtControlSummary" class="twin-summary">
     Multiplier x1.00 | Power 46.0 kW | Temp 31.0 C
   </div>
 </div>
+
+            <div class="panel span-4 dev-only">
+              <h3>Digital Twin Monitor</h3>
+              <p class="hint" style="margin-top:6px;">BIOS-style watchdog readings for live anomaly storytelling.</p>
+              <div class="twin-bios-grid">
+                <div class="twin-line"><span>Twin status</span><strong id="dtTwinStatus" class="bios-value bios-ok">HEALTHY</strong></div>
+                <div class="twin-line"><span>Last severity</span><strong id="dtLastSeverity" class="bios-value bios-ok">NONE</strong></div>
+                <div class="twin-line"><span>Total anomalies</span><strong id="dtTotalAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>Power anomalies</span><strong id="dtPowerAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>Temp anomalies</span><strong id="dtTempAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>SoC anomalies</span><strong id="dtSocAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>Hash mismatches</span><strong id="dtFirmwareAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>Power surge</span><strong id="dtPowerSurge" class="bios-value bios-ok">NO</strong></div>
+                <div class="twin-line"><span>Hash changed</span><strong id="dtHashChanged" class="bios-value bios-ok">NO</strong></div>
+                <div class="twin-line"><span>Last power (kW)</span><strong id="dtLastPower" class="bios-value">-</strong></div>
+                <div class="twin-line"><span>Last temp (C)</span><strong id="dtLastTemp" class="bios-value">-</strong></div>
+                <div class="twin-line"><span>Last SoC (%)</span><strong id="dtLastSoc" class="bios-value">-</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="dashboard-view hidden" data-view="trust">
           <div class="grid">
             <div class="panel span-12">
@@ -3054,14 +3064,9 @@
       toggleClassBySelector('.dev-only', !userMode);
       toggleClassBySelector('.user-only', userMode);
 
-      el('quickControlsTitle').textContent = userMode ? 'Connection Controls' : 'Quick Demo Controls';
-      el('quickControlsHint').textContent = userMode
-        ? 'Use the charging setup to confirm your plan and start guided charging.'
-        : 'Use these in order for a simple judge demo.';
-
-      el('requestHashVerifyBtn').textContent = userMode
-        ? 'Verify Charging'
-        : 'Request Hash + Verify On Backend';
+      el('requestHashVerifyBtn').textContent = el('requestHashVerifyBtn').dataset.verified === 'true'
+        ? 'Verified'
+        : (userMode ? 'Verify Charging' : 'Request Hash + Verify On Backend');
 
       el('rightPanelTitle').textContent = userMode ? 'Trust Verification' : 'Scenario Runner';
       el('rightPanelHint').textContent = userMode
@@ -3222,6 +3227,7 @@
         if (el('dtRateMultiplier')) el('dtRateMultiplier').value = Number(controls.rateMultiplier ?? 1).toFixed(2);
         if (el('dtPowerKw')) el('dtPowerKw').value = controls.powerKw ?? 0;
         if (el('dtConnectorTemp')) el('dtConnectorTemp').value = controls.connectorTempC ?? 0;
+        if (el('manualBatteryPct')) el('manualBatteryPct').value = Number(state.batteryPct ?? 50);
       }
 
       if (metrics) {
@@ -3915,6 +3921,7 @@
       runAction(null, async () => {
         const firmwareStatus = el('fwStatus').value;
         const firmwareVersion = el('fwVersion').value;
+        el('requestHashVerifyBtn').dataset.verified = 'false';
         const payload = await callApi('POST', '/api/ev/verification/request', { firmwareStatus, firmwareVersion });
         if (payload.deliveredHash) {
           el('fwHash').value = payload.deliveredHash;
@@ -3923,9 +3930,12 @@
           logLine('info', `Component abnormalities detected: ${(payload.tamperedComponents || []).join(', ') || 'unknown'}`);
         }
         if (!payload.ok) {
+          alert(`Verification failed: ${payload.message || 'Hash mismatch detected.'}`);
           logLine('err', `Verification FAILED: status=${payload.verificationStatus || 'UNKNOWN'} gate=${payload.verificationGateStatus || 'UNKNOWN'} reason=${payload.message || 'No reason provided'}`);
           throw new Error(payload.message || 'Verification did not pass');
         }
+        el('requestHashVerifyBtn').dataset.verified = 'true';
+        el('requestHashVerifyBtn').textContent = 'Verified';
         logLine('ok', `Verification PASSED: status=${payload.verificationStatus || 'VERIFIED'} gate=${payload.verificationGateStatus || 'VERIFIED'} hash=${payload.deliveredHash || payload.usedReportedHash || '-'}`);
         return payload;
       })
@@ -4027,6 +4037,23 @@
       runAction('Digital twin status refreshed', async () => {
         const payload = await callApi('GET', '/api/ev/dev/digital-twin/status', { resetTwin: true });
         updateDigitalTwinUi(payload);
+        return payload;
+      })
+    );
+
+    el('setBatteryBtn')?.addEventListener('click', () =>
+      runAction('Manual battery set', async () => {
+        const pct = Math.max(0, Math.min(100, Number(el('manualBatteryPct').value || 0)));
+        const payload = await callApi('POST', '/api/ev/dev/set-battery', { batteryPct: pct });
+        if (payload && Number.isFinite(Number(payload.batteryPct))) {
+          state.batteryPct = Number(payload.batteryPct);
+        }
+        try {
+          const status = await callApi('GET', '/api/ev/status');
+          updateTopUi(status || {}, { running: false, currentScenario: null });
+        } catch (e) {
+          // ignore
+        }
         return payload;
       })
     );

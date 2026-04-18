@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.web3j.abi.EventEncoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.DynamicStruct;
@@ -120,11 +121,12 @@ public class FirmwareRegistryContract extends Contract {
     public RemoteFunctionCall<SignedGoldenRecord> getSignedGoldenRecord(String stationId) {
         final Function function = new Function(FUNC_GETSIGNEDGOLDENRECORD,
                 Arrays.<Type>asList(new Utf8String(stationId)),
-                Arrays.<TypeReference<?>>asList(new TypeReference<SignedGoldenRecord>() {}));
-        return executeRemoteCallSingleValueReturn(function, SignedGoldenRecord.class);
-    }
-
-        return new RemoteCall<>(new Callable<>() {
+                Arrays.<TypeReference<?>>asList(
+                    new TypeReference<Utf8String>() {},
+                    new TypeReference<Utf8String>() {},
+                    new TypeReference<Utf8String>() {},
+                    new TypeReference<org.web3j.abi.datatypes.generated.Uint256>() {}));
+        return new RemoteFunctionCall<>(function, new Callable<>() {
             @Override
             @SuppressWarnings("rawtypes")
             public SignedGoldenRecord call() throws Exception {
@@ -136,6 +138,9 @@ public class FirmwareRegistryContract extends Contract {
                     (BigInteger) values.get(3).getValue()
                 );
             }
+        });
+    }
+
     public RemoteFunctionCall<TransactionReceipt> recordSessionEvent(String stationId,
             String sessionId, String state) {
         final Function function = new Function(FUNC_RECORDSESSIONEVENT,
@@ -187,19 +192,47 @@ public class FirmwareRegistryContract extends Contract {
         public String goldenHash;
         public String manufacturerSignature;
         public String manufacturerId;
+        public BigInteger registeredAt;
 
-        public SignedGoldenRecord(String goldenHash, String manufacturerSignature, String manufacturerId) {
-            super(new Utf8String(goldenHash), new Utf8String(manufacturerSignature), new Utf8String(manufacturerId));
+        public SignedGoldenRecord(String goldenHash,
+                                  String manufacturerSignature,
+                                  String manufacturerId,
+                                  BigInteger registeredAt) {
+            super(new Utf8String(goldenHash),
+                  new Utf8String(manufacturerSignature),
+                  new Utf8String(manufacturerId),
+                  new org.web3j.abi.datatypes.generated.Uint256(registeredAt));
             this.goldenHash = goldenHash;
             this.manufacturerSignature = manufacturerSignature;
             this.manufacturerId = manufacturerId;
+            this.registeredAt = registeredAt;
         }
 
-        public SignedGoldenRecord(Utf8String goldenHash, Utf8String manufacturerSignature, Utf8String manufacturerId) {
-            super(goldenHash, manufacturerSignature, manufacturerId);
+        public SignedGoldenRecord(Utf8String goldenHash,
+                                  Utf8String manufacturerSignature,
+                                  Utf8String manufacturerId,
+                                  org.web3j.abi.datatypes.generated.Uint256 registeredAt) {
+            super(goldenHash, manufacturerSignature, manufacturerId, registeredAt);
             this.goldenHash = goldenHash.getValue();
             this.manufacturerSignature = manufacturerSignature.getValue();
             this.manufacturerId = manufacturerId.getValue();
+            this.registeredAt = registeredAt.getValue();
+        }
+
+        public String goldenHash() {
+            return goldenHash;
+        }
+
+        public String manufacturerSignature() {
+            return manufacturerSignature;
+        }
+
+        public String manufacturerId() {
+            return manufacturerId;
+        }
+
+        public BigInteger registeredAt() {
+            return registeredAt;
         }
     }
 
@@ -215,4 +248,5 @@ public class FirmwareRegistryContract extends Contract {
         public String state;
     }
 }
+
 

@@ -46,9 +46,10 @@ class MtlsSecurityConfig {
                         "/visualizer", "/visualizer.html", "/visualizer/**",
                         "/panel", "/panel.html",
                         "/ev-control-panel", "/ev-control-panel.html",
-                    "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
-                    "/trust/api/verify-firmware", "/trust/api/latest-verdict",
-                    "/trust/api/escrow/**"
+                        "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
+                        "/trust/api/verify-firmware", "/trust/api/latest-verdict",
+                        "/trust/api/escrow/**",
+                        "/watchdog/api/**"
                     ).permitAll();
 
                 auth.anyRequest().denyAll();
@@ -63,7 +64,7 @@ class MtlsSecurityConfig {
                     .build())
             )
             // Disable CSRF — stateless WebSocket sessions
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**", "/trust/**"));
+            .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**", "/trust/**", "/watchdog/**"));
 
         return http.build();
     }

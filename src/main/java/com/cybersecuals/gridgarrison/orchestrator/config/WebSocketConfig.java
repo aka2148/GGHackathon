@@ -23,13 +23,16 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     private final OcppWebSocketHandler ocppWebSocketHandler;
     private final String[] allowedOrigins;
+    private final String stationCnAliases;
 
     public WebSocketConfig(
         OcppWebSocketHandler ocppWebSocketHandler,
-        @Value("${gridgarrison.security.ocpp.allowed-origins:http://localhost:8443,http://127.0.0.1:8443}") String[] allowedOrigins
+        @Value("${gridgarrison.security.ocpp.allowed-origins:http://localhost:8443,http://127.0.0.1:8443,https://localhost:8443,https://127.0.0.1:8443}") String[] allowedOrigins,
+        @Value("${gridgarrison.security.ocpp.station-cn-aliases:}") String stationCnAliases
     ) {
         this.ocppWebSocketHandler = ocppWebSocketHandler;
         this.allowedOrigins = allowedOrigins;
+        this.stationCnAliases = stationCnAliases;
     }
 
     @Override
@@ -38,6 +41,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
             .addHandler(ocppWebSocketHandler, "/ocpp/{stationId}")
             // OCPP 2.0.1 required sub-protocol header
             .setAllowedOriginPatterns(allowedOrigins)
-            .addInterceptors(new OcppHandshakeInterceptor());
+            .addInterceptors(new OcppHandshakeInterceptor(stationCnAliases));
     }
 }

@@ -29,11 +29,14 @@ class EscrowLifecycleListenerTest {
     @Mock
     private EscrowIntentStore escrowIntentStore;
 
+    @Mock
+    private EscrowAnomalyListener escrowAnomalyListener;
+
     private EscrowLifecycleListener listener;
 
     @BeforeEach
     void setUp() {
-        listener = new EscrowLifecycleListener(escrowService, escrowIntentStore);
+        listener = new EscrowLifecycleListener(escrowService, escrowIntentStore, escrowAnomalyListener);
         when(escrowIntentStore.clear(anyString())).thenReturn(Optional.empty());
         ReflectionTestUtils.setField(listener, "defaultTargetSoc", 80);
         ReflectionTestUtils.setField(listener, "defaultTimeoutSeconds", 3600L);

@@ -74,6 +74,10 @@ class AnomalyReport {
         SOC_SPOOF,               // SoC jump too large in one sample
         SOC_RATE_MISMATCH,       // SoC increasing faster than power allows
 
+        // Ideal-vs-actual drift (user-session simulation)
+        TWIN_DRIFT_ENERGY,       // cumulative energy deviates from ideal profile
+        TWIN_DRIFT_POWER,        // instantaneous power deviates from ideal profile
+
         // CAT-4 Identity / firmware
         FIRMWARE_MISMATCH        // hash ≠ golden hash
     }

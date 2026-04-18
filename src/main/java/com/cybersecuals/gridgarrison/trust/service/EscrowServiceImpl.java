@@ -82,11 +82,11 @@ class EscrowServiceImpl implements EscrowService {
                     ).send()
                 );
 
-                String address = contract.getContractAddress();
-
-
+                String address = escrow.getContractAddress();
+                log.info("[Escrow] deployed station={} escrow={}", stationId, address);
                 return address;
-                throw new RuntimeException(e);
+            } catch (Exception e) {
+                throw new RuntimeException("deployEscrow failed for station=" + stationId, e);
             }
         });
     }
@@ -103,6 +103,7 @@ class EscrowServiceImpl implements EscrowService {
 
                 var receipt = executeWithRetry("deposit", escrowAddress, () ->
                     loadEscrow(escrowAddress)
+                        .deposit(amountWei)
                         .send()
                 );
                 log.info("[Escrow] deposit amountWei={} tx={} escrow={}",
@@ -122,13 +123,12 @@ class EscrowServiceImpl implements EscrowService {
             try {
                 byte[] liveHashBytes = hexToBytes32(liveHash);
                 var receipt = executeWithRetry("authorizeSession", escrowAddress, () ->
-
-                var receipt = loadEscrow(escrowAddress)
+                    loadEscrow(escrowAddress)
                         .verifyStation(liveHashBytes)
-                        .send();
+                        .send()
+                );
 
                 log.info("✅ verifyStation tx={}", receipt.getTransactionHash());
-
                 return receipt.getTransactionHash();
 
             } catch (Exception e) {

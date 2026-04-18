@@ -26,11 +26,34 @@ public interface DigitalTwinService {
      */
     List<AnomalyReport> ingestTelemetry(TelemetrySample sample);
 
+    /**
+     * Ingest telemetry with an optional ideal simulation baseline.
+     * The expectation fields are used for drift detection so the twin can
+     * compare real charging behavior to the intended session profile.
+     */
+    default List<AnomalyReport> ingestTelemetry(TelemetrySample sample,
+                                                TelemetryExpectation expectation) {
+        return ingestTelemetry(sample);
+    }
+
     Optional<AnomalyReport> detectAnomalies(String stationId);
 
     Optional<StationTwin> getTwin(String stationId);
 
+    Optional<StationTwinDiagnostics> getDiagnostics(String stationId);
+
+    void setGoldenHash(String stationId, String goldenHash);
+
     void quarantineStation(String stationId, String reason);
 
     void clearQuarantine(String stationId);
+
+    record TelemetryExpectation(
+        Double expectedEnergyDeliveredKwh,
+        Double expectedPowerKw,
+        Double expectedSocPercent,
+        Double elapsedRatio,
+        Double driftThresholdPct
+    ) {
+    }
 }

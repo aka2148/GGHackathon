@@ -27,6 +27,7 @@ class EscrowLifecycleListener {
 
     private final EscrowService escrowService;
     private final EscrowIntentStore escrowIntentStore;
+    private final EscrowAnomalyListener escrowAnomalyListener;
     private final ConcurrentMap<String, CompletableFuture<EscrowSessionBinding>> stationEscrows =
         new ConcurrentHashMap<>();
     private final ConcurrentMap<String, CompletableFuture<Void>> stationTransitionQueue =
@@ -51,9 +52,11 @@ class EscrowLifecycleListener {
     private String operatorPrivateKey;
 
     EscrowLifecycleListener(EscrowService escrowService,
-                            EscrowIntentStore escrowIntentStore) {
+                            EscrowIntentStore escrowIntentStore,
+                            EscrowAnomalyListener escrowAnomalyListener) {
         this.escrowService = escrowService;
         this.escrowIntentStore = escrowIntentStore;
+        this.escrowAnomalyListener = escrowAnomalyListener;
     }
 
     EscrowIntentStore.EscrowIntent upsertIntent(String stationId,
@@ -91,6 +94,7 @@ class EscrowLifecycleListener {
     EscrowBindingStatus resetBinding(String stationId, boolean clearIntent) {
         String resolvedStationId = normalizeStationId(stationId);
         stationEscrows.remove(resolvedStationId);
+        escrowAnomalyListener.deregisterEscrow(resolvedStationId);
         if (clearIntent) {
             escrowIntentStore.clear(resolvedStationId);
         }
@@ -161,6 +165,7 @@ class EscrowLifecycleListener {
                         return escrowService.refundSession(binding.escrowAddress(), "FIRMWARE_TAMPERED")
                             .thenApply(txHash -> {
                                 binding.markTransition("REFUNDED", txHash);
+                                escrowAnomalyListener.deregisterEscrow(binding.stationId);
                                 return txHash;
                             });
                     })), "TAMPER_REFUND");
@@ -172,7 +177,7 @@ class EscrowLifecycleListener {
             return;
         }
 
-        String stationId = event.stationId();
+        String stationId = normalizeStationId(event.stationId());
 
         CompletableFuture<EscrowSessionBinding> bindingFuture = stationEscrows.get(stationId);
         if (bindingFuture == null) {
@@ -190,7 +195,8 @@ class EscrowLifecycleListener {
     private void enqueueStationTransition(String stationId,
                                           Supplier<CompletableFuture<String>> transitionSupplier,
                                           String requestedState) {
-        stationTransitionQueue.compute(stationId, (id, tail) -> {
+        String normalizedStationId = normalizeStationId(stationId);
+        stationTransitionQueue.compute(normalizedStationId, (id, tail) -> {
             CompletableFuture<Void> previous = tail == null ? CompletableFuture.completedFuture(null) : tail;
             CompletableFuture<Void> chained = previous
                 .exceptionally(error -> null)
@@ -198,13 +204,13 @@ class EscrowLifecycleListener {
                     .handle((txHash, error) -> {
                         if (error != null) {
                             log.warn("[Escrow] transaction transition failed stationId={} state={}",
-                                stationId, requestedState, error);
+                                normalizedStationId, requestedState, error);
                             return null;
                         }
 
                         if (txHash != null && !txHash.isBlank()) {
                             log.info("[Escrow] transaction transition stationId={} state={} txHash={}",
-                                stationId, requestedState, txHash);
+                                normalizedStationId, requestedState, txHash);
                         }
                         return null;
                     }));
@@ -282,6 +288,7 @@ class EscrowLifecycleListener {
                             yield escrowService.releaseFunds(binding.escrowAddress())
                                 .thenApply(releaseTx -> {
                                     binding.markTransition("RELEASED", releaseTx);
+                                    escrowAnomalyListener.deregisterEscrow(binding.stationId);
                                     return releaseTx;
                                 });
                         }
@@ -299,6 +306,7 @@ class EscrowLifecycleListener {
                                 return escrowService.releaseFunds(binding.escrowAddress())
                                     .thenApply(releaseTx -> {
                                         binding.markTransition("RELEASED", releaseTx);
+                                        escrowAnomalyListener.deregisterEscrow(binding.stationId);
                                         return releaseTx;
                                     });
                             });
@@ -314,6 +322,7 @@ class EscrowLifecycleListener {
                             .refundSession(binding.escrowAddress(), "SESSION_ABORTED_" + normalizedState)
                             .thenApply(txHash -> {
                                 binding.markTransition("REFUNDED", txHash);
+                                escrowAnomalyListener.deregisterEscrow(binding.stationId);
                                 return txHash;
                             });
                     }
@@ -397,8 +406,9 @@ class EscrowLifecycleListener {
     }
 
     private CompletableFuture<EscrowSessionBinding> ensureEscrow(String stationId, String goldenHash) {
+        String resolvedStationId = normalizeStationId(stationId);
         CompletableFuture<EscrowSessionBinding> future = stationEscrows.computeIfAbsent(
-            stationId,
+            resolvedStationId,
             id -> createEscrow(id, goldenHash)
         );
 
@@ -428,6 +438,7 @@ class EscrowLifecycleListener {
                     Instant.now()
                 );
                 binding.markTransition("CREATED", null);
+                escrowAnomalyListener.registerEscrow(stationId, address);
 
                 if (!autoDepositEnabled) {
                     binding.setHeldAmountWei(settings.holdAmountWei());
