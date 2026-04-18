@@ -46,7 +46,8 @@ class MtlsSecurityConfig {
                             "/panel", "/panel.html",
                             "/ev-control-panel", "/ev-control-panel.html",
                             "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
-                            "/trust/api/verify-firmware", "/trust/api/latest-verdict"
+                            "/trust/api/verify-firmware", "/trust/api/latest-verdict",
+                            "/trust/api/escrow/**"
                         ).permitAll();
                 } else {
                     auth.requestMatchers(
@@ -54,7 +55,8 @@ class MtlsSecurityConfig {
                             "/panel", "/panel.html",
                             "/ev-control-panel", "/ev-control-panel.html",
                             "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
-                            "/trust/api/verify-firmware", "/trust/api/latest-verdict"
+                            "/trust/api/verify-firmware", "/trust/api/latest-verdict",
+                            "/trust/api/escrow/**"
                         ).authenticated();
                 }
 

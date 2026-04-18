@@ -46,6 +46,13 @@ ev:
       initial-delay-ms: 1000
       max-delay-ms: 30000
 
+    user:
+      initial-wallet-balance: 100.0
+      initial-battery-pct: 20
+      price-per-kwh: 0.25
+      release-poll-max-attempts: 24
+      release-poll-interval-ms: 500
+
     # Auto-scenarios (set to true to enable automated demo sequences)
     auto-scenarios: false
 
@@ -64,6 +71,8 @@ ev:
       backend-base-url: http://localhost:8443
       component-hash-path: /visualizer/api/generate-hash
       latest-verdict-path: /trust/api/latest-verdict
+      escrow-intent-path: /trust/api/escrow/intent
+      escrow-active-path: /trust/api/escrow/active
       connect-timeout-ms: 3000
       read-timeout-ms: 5000
       firmware-status: Downloaded
@@ -75,6 +84,9 @@ ev:
         multiplier: 2.0
       verdict-poll:
         max-attempts: 12
+        interval-ms: 500
+      escrow-poll:
+        max-attempts: 16
         interval-ms: 500
 
 ---

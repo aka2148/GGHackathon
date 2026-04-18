@@ -126,4 +126,22 @@ public class EvVerificationGateState {
             Instant.now()
         ));
     }
+
+    public void reset(String stationId, String message) {
+        snapshot.set(new Snapshot(
+            GateStatus.UNVERIFIED,
+            false,
+            stationId,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            message == null || message.isBlank()
+                ? "Waiting for first verification after reset."
+                : message,
+            Instant.now()
+        ));
+    }
 }

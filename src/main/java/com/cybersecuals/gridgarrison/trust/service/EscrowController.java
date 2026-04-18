@@ -16,6 +16,7 @@ import java.time.Instant;
 class EscrowController {
 
     private final EscrowService escrowService;
+    private final EscrowLifecycleListener escrowLifecycleListener;
 
     @Value("${gridgarrison.escrow.default-target-soc:80}")
     private int defaultTargetSoc;
@@ -32,8 +33,62 @@ class EscrowController {
     @Value("${gridgarrison.blockchain.private-key}")
     private String operatorPrivateKey;
 
-    EscrowController(EscrowService escrowService) {
+    EscrowController(EscrowService escrowService,
+                     EscrowLifecycleListener escrowLifecycleListener) {
         this.escrowService = escrowService;
+        this.escrowLifecycleListener = escrowLifecycleListener;
+    }
+
+    @PostMapping("/intent")
+    EscrowIntentResponse registerIntent(
+        @RequestParam(defaultValue = "CS-101") String stationId,
+        @RequestParam(required = false) BigInteger holdAmountWei,
+        @RequestParam(required = false) Integer targetSoc,
+        @RequestParam(required = false) Long timeoutSeconds,
+        @RequestParam(required = false) String chargerWallet
+    ) {
+        BigInteger effectiveHoldAmount = (holdAmountWei == null || holdAmountWei.signum() <= 0)
+            ? defaultDepositWei
+            : holdAmountWei;
+        Integer effectiveTargetSoc = targetSoc == null
+            ? defaultTargetSoc
+            : Math.max(1, Math.min(100, targetSoc));
+        Long effectiveTimeoutSeconds = (timeoutSeconds == null || timeoutSeconds <= 0)
+            ? defaultTimeoutSeconds
+            : timeoutSeconds;
+        String effectiveCharger = (chargerWallet == null || chargerWallet.isBlank())
+            ? resolveChargerWallet()
+            : chargerWallet;
+
+        EscrowIntentStore.EscrowIntent intent = escrowLifecycleListener.upsertIntent(
+            stationId,
+            effectiveHoldAmount,
+            effectiveTargetSoc,
+            effectiveTimeoutSeconds,
+            effectiveCharger
+        );
+        return EscrowIntentResponse.fromIntent("OK", intent, "Escrow intent registered.");
+    }
+
+    @GetMapping("/intent")
+    EscrowIntentResponse intent(@RequestParam(defaultValue = "CS-101") String stationId) {
+        return escrowLifecycleListener
+            .latestIntent(stationId)
+            .map(intent -> EscrowIntentResponse.fromIntent("OK", intent, "Escrow intent available."))
+            .orElseGet(() -> EscrowIntentResponse.missing(stationId));
+    }
+
+    @GetMapping("/active")
+    EscrowBindingStatus active(@RequestParam(defaultValue = "CS-101") String stationId) {
+        return escrowLifecycleListener.activeBindingStatus(stationId);
+    }
+
+    @PostMapping("/reset")
+    EscrowBindingStatus reset(
+        @RequestParam(defaultValue = "CS-101") String stationId,
+        @RequestParam(defaultValue = "true") boolean clearIntent
+    ) {
+        return escrowLifecycleListener.resetBinding(stationId, clearIntent);
     }
 
     @PostMapping("/deploy")
@@ -215,6 +270,45 @@ class EscrowController {
             Throwable cause = exception.getCause() == null ? exception : exception.getCause();
             String message = cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
             return new EscrowStateResponse("FAILED", escrowAddress, null, message, Instant.now());
+        }
+    }
+
+    record EscrowIntentResponse(
+        String status,
+        String stationId,
+        BigInteger holdAmountWei,
+        Integer targetSoc,
+        Long timeoutSeconds,
+        String chargerWallet,
+        Instant createdAt,
+        String message
+    ) {
+        static EscrowIntentResponse fromIntent(String status,
+                                               EscrowIntentStore.EscrowIntent intent,
+                                               String message) {
+            return new EscrowIntentResponse(
+                status,
+                intent.stationId(),
+                intent.holdAmountWei(),
+                intent.targetSoc(),
+                intent.timeoutSeconds(),
+                intent.chargerWallet(),
+                intent.createdAt(),
+                message
+            );
+        }
+
+        static EscrowIntentResponse missing(String stationId) {
+            return new EscrowIntentResponse(
+                "NOT_FOUND",
+                stationId,
+                null,
+                null,
+                null,
+                null,
+                Instant.now(),
+                "No escrow intent available for station."
+            );
         }
     }
 }

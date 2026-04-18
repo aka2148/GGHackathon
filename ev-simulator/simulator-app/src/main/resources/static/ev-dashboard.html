@@ -16,13 +16,16 @@
       --warn: #f59e0b;
       --danger: #ef4444;
       --accent: #38bdf8;
+      --accent-2: #14b8a6;
+      --gold: #fbbf24;
+      --rose: #fb7185;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: Segoe UI, Arial, sans-serif;
+      font-family: "Bahnschrift", "Trebuchet MS", "Candara", sans-serif;
       color: var(--text);
       background: radial-gradient(circle at top right, #16213e 0%, var(--bg) 55%);
     }
@@ -65,6 +68,52 @@
 
     .status-pill.ok { color: #86efac; border-color: rgba(34,197,94,.45); }
     .status-pill.off { color: #fca5a5; border-color: rgba(239,68,68,.45); }
+
+    .mode-switch {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .mode-label {
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .mode-buttons {
+      display: inline-flex;
+      background: rgba(15, 23, 42, 0.72);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px;
+      gap: 4px;
+    }
+
+    .mode-btn {
+      width: auto;
+      border: none;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--muted);
+      padding: 8px 14px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      transition: background .25s ease, color .25s ease;
+    }
+
+    .mode-btn.active {
+      color: #062a2f;
+      background: linear-gradient(90deg, #67e8f9 0%, #2dd4bf 100%);
+    }
+
+    .mode-btn:not(.active):hover {
+      color: #cbd5e1;
+      background: rgba(51, 65, 85, 0.45);
+    }
 
     .grid {
       display: grid;
@@ -115,6 +164,208 @@
     .metric .value {
       font-size: 18px;
       font-weight: 700;
+      word-break: break-word;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .user-shell {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .user-card {
+      grid-column: span 4;
+      background: linear-gradient(165deg, rgba(17,24,39,0.9) 0%, rgba(15,23,42,0.9) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.24);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .user-card.full {
+      grid-column: span 12;
+    }
+
+    .user-card h3 {
+      margin-bottom: 8px;
+      font-size: 17px;
+    }
+
+    .user-key {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+      color: #cbd5e1;
+    }
+
+    .user-key .value {
+      font-weight: 700;
+    }
+
+    .payment-window {
+      margin-top: 12px;
+      border: 1px solid rgba(251,191,36,0.32);
+      border-radius: 12px;
+      padding: 12px;
+      background:
+        radial-gradient(circle at 95% 5%, rgba(251,191,36,0.2) 0%, rgba(251,191,36,0) 36%),
+        linear-gradient(180deg, rgba(12,23,37,0.93) 0%, rgba(9,14,28,0.92) 100%);
+    }
+
+    .payment-title {
+      font-size: 19px;
+      margin-bottom: 6px;
+    }
+
+    .secure-copy {
+      color: #d1fae5;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .progress-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-width: 850px) {
+      .user-card {
+        grid-column: span 12;
+      }
+
+      .progress-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .progress-wrap {
+      border: 1px solid rgba(100, 116, 139, 0.6);
+      border-radius: 10px;
+      background: rgba(15,23,42,0.56);
+      padding: 8px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #cbd5e1;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 11px;
+      border-radius: 999px;
+      background: rgba(51,65,85,0.72);
+      overflow: hidden;
+      border: 1px solid rgba(100,116,139,0.45);
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      transition: width .32s ease;
+    }
+
+    .bar-fill.battery {
+      background: linear-gradient(90deg, #16a34a 0%, #4ade80 100%);
+    }
+
+    .bar-fill.escrow {
+      background: linear-gradient(90deg, #f59e0b 0%, #facc15 100%);
+    }
+
+    .milestones {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 950px) {
+      .milestones {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .milestone {
+      border: 1px solid rgba(71, 85, 105, 0.85);
+      border-radius: 9px;
+      padding: 8px;
+      background: rgba(15,23,42,0.45);
+      font-size: 12px;
+      color: #cbd5e1;
+      min-height: 64px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .milestone .state {
+      font-size: 11px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .milestone.done {
+      border-color: rgba(34,197,94,0.6);
+      color: #bbf7d0;
+      background: rgba(22, 101, 52, 0.18);
+    }
+
+    .milestone.active {
+      border-color: rgba(250, 204, 21, 0.85);
+      color: #fef08a;
+      box-shadow: 0 0 0 1px rgba(250,204,21,0.22) inset;
+    }
+
+    .milestone.wait {
+      opacity: 0.75;
+    }
+
+    .settlement-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .settlement-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .summary-chip {
+      border: 1px solid rgba(71,85,105,0.75);
+      border-radius: 10px;
+      padding: 10px;
+      background: rgba(15,23,42,0.5);
+    }
+
+    .summary-chip .label {
+      color: #94a3b8;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .summary-chip .value {
+      font-size: 17px;
+      font-weight: 700;
+      color: #e2e8f0;
       word-break: break-word;
     }
 
@@ -314,7 +565,14 @@
         <h1>Single EV Cockpit</h1>
         <p>Demo-friendly controls for one EV: connect, start charging, stream energy, and finish session.</p>
       </div>
-      <div id="connectionPill" class="status-pill off">Offline</div>
+      <div class="mode-switch">
+        <span class="mode-label">Dashboard mode</span>
+        <div class="mode-buttons">
+          <button id="modeUserBtn" class="mode-btn" type="button">User Mode</button>
+          <button id="modeDevBtn" class="mode-btn" type="button">Dev Mode</button>
+        </div>
+        <div id="connectionPill" class="status-pill off">Offline</div>
+      </div>
     </div>
 
     <div class="panel span-12">
@@ -380,49 +638,203 @@
           <div class="label">Gate reason</div>
           <div class="value" id="kpiGateReason">-</div>
         </div>
+        <div class="metric user-only hidden" id="metricWallet">
+          <div class="label">Wallet balance</div>
+          <div class="value" id="kpiWallet">0.00</div>
+        </div>
+        <div class="metric user-only hidden" id="metricEscrowState">
+          <div class="label">Escrow lifecycle</div>
+          <div class="value" id="kpiEscrowLifecycle">NOT_CREATED</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="userModePanel" class="panel span-12 user-only hidden">
+      <h3>User Charging Shell</h3>
+      <p class="hint" style="margin-top:6px;">Simplified flow: choose amount, confirm escrow hold, verify charging, and run guided start.</p>
+
+      <div class="user-shell">
+        <div class="user-card">
+          <h3>Wallet And Trust</h3>
+          <div class="user-key"><span>Wallet balance</span><span id="userWalletBalance" class="value mono">0.00</span></div>
+          <div class="user-key"><span>Battery</span><span id="userBatteryValue" class="value">0%</span></div>
+          <div class="user-key"><span>Trust status</span><span id="userTrustValue" class="value">UNVERIFIED</span></div>
+          <div class="user-key"><span>Escrow status</span><span id="userEscrowValue" class="value">NOT_CREATED</span></div>
+
+          <div class="row">
+            <div class="col-8">
+              <label>Top up wallet amount</label>
+              <input id="walletTopupAmount" type="number" min="0.01" step="0.01" value="5.00" />
+            </div>
+            <div class="col-4"><label>&nbsp;</label><button id="walletTopupBtn" class="warn">Top Up</button></div>
+          </div>
+        </div>
+
+        <div class="user-card">
+          <h3>Charge Request</h3>
+          <div class="row">
+            <div class="col-4">
+              <label>Input mode</label>
+              <select id="userInputMode">
+                <option value="MONEY">Money</option>
+                <option value="VOLTS">Volts</option>
+              </select>
+            </div>
+            <div class="col-4">
+              <label>Input value</label>
+              <input id="userInputValue" type="number" min="0" step="0.1" value="12.5" />
+            </div>
+            <div class="col-4">
+              <label>Estimated kWh</label>
+              <input id="userEstimatedKwh" type="number" min="0" step="0.1" value="5.0" />
+            </div>
+
+            <div class="col-4">
+              <label>Hold amount (wei)</label>
+              <input id="userHoldAmount" value="1000000000000000" />
+            </div>
+            <div class="col-4">
+              <label>Target SOC (%)</label>
+              <input id="userTargetSoc" type="number" min="1" max="100" value="80" />
+            </div>
+            <div class="col-4">
+              <label>Timeout (seconds)</label>
+              <input id="userTimeout" type="number" min="60" step="30" value="3600" />
+            </div>
+
+            <div class="col-6"><button id="confirmIntentBtn" class="primary">Confirm Amount</button></div>
+            <div class="col-6"><button id="startGuidedBtn" class="ok">Start Guided Charging</button></div>
+
+            <div class="col-8">
+              <label>Complete session total (kWh)</label>
+              <input id="userCompleteKwh" type="number" min="0" step="0.1" value="4.0" />
+            </div>
+            <div class="col-4"><label>&nbsp;</label><button id="completeGuidedBtn" class="danger">Complete And Settle</button></div>
+
+            <div class="col-12"><button id="refreshFlowBtn" class="warn">Refresh User Flow Status</button></div>
+          </div>
+        </div>
+
+        <div class="user-card">
+          <h3>Secure Escrow Facts</h3>
+          <div class="user-key"><span>Escrow address</span><span id="paymentEscrowAddress" class="value mono">-</span></div>
+          <div class="user-key"><span>Held amount</span><span id="paymentHeldAmount" class="value mono">0</span></div>
+          <div class="user-key"><span>Lifecycle state</span><span id="paymentLifecycle" class="value">NOT_CREATED</span></div>
+          <div class="user-key"><span>Latest trust verdict</span><span id="paymentVerdict" class="value">-</span></div>
+          <div class="hint" id="paymentMessage">No payment hold yet. Confirm an amount to open the payment window.</div>
+        </div>
+      </div>
+
+      <div id="paymentWindow" class="payment-window hidden">
+        <h3 class="payment-title">Escrow Payment Window</h3>
+        <p class="secure-copy">Funds are held in contract until completion. Release happens only after charging settlement.</p>
+
+        <div class="progress-grid">
+          <div class="progress-wrap">
+            <div class="progress-label"><span>Battery progress</span><span id="batteryProgressPct">0%</span></div>
+            <div class="bar-track"><div id="batteryProgressFill" class="bar-fill battery"></div></div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-label"><span>Escrow progress</span><span id="escrowProgressPct">0%</span></div>
+            <div class="bar-track"><div id="escrowProgressFill" class="bar-fill escrow"></div></div>
+          </div>
+        </div>
+
+        <div class="milestones">
+          <div id="milestoneHold" class="milestone wait"><strong>Hold requested</strong><span class="state">Waiting</span></div>
+          <div id="milestoneCreating" class="milestone wait"><strong>Contract creating</strong><span class="state">Waiting</span></div>
+          <div id="milestoneCreated" class="milestone wait"><strong>Contract created</strong><span class="state">Waiting</span></div>
+          <div id="milestoneFunded" class="milestone wait"><strong>Funds held</strong><span class="state">Waiting</span></div>
+          <div id="milestoneCharging" class="milestone wait"><strong>Charging active</strong><span class="state">Waiting</span></div>
+          <div id="milestoneSettled" class="milestone wait"><strong>Settlement complete</strong><span class="state">Waiting</span></div>
+        </div>
+      </div>
+
+      <div id="settlementSummary" class="user-card full hidden">
+        <h3>Settlement Summary</h3>
+        <p class="hint" id="settlementMessage" style="margin-top:6px;">Complete a guided session to populate settlement metrics.</p>
+
+        <div class="settlement-grid">
+          <div class="summary-chip">
+            <div class="label">Total energy</div>
+            <div id="summaryEnergy" class="value">0.00 kWh</div>
+          </div>
+          <div class="summary-chip">
+            <div class="label">Held amount</div>
+            <div id="summaryHeld" class="value mono">0</div>
+          </div>
+          <div class="summary-chip">
+            <div class="label">Charged amount</div>
+            <div id="summaryCharged" class="value">0.00</div>
+          </div>
+          <div class="summary-chip">
+            <div class="label">Debited amount</div>
+            <div id="summaryDebited" class="value">0.00</div>
+          </div>
+          <div class="summary-chip">
+            <div class="label">Remaining wallet</div>
+            <div id="summaryWallet" class="value">0.00</div>
+          </div>
+          <div class="summary-chip">
+            <div class="label">Final contract state</div>
+            <div id="summaryContractState" class="value">-</div>
+          </div>
+          <div class="summary-chip">
+            <div class="label">Escrow contract</div>
+            <div id="summaryEscrow" class="value mono">-</div>
+          </div>
+          <div class="summary-chip">
+            <div class="label">Transaction ID</div>
+            <div id="summaryTx" class="value mono">-</div>
+          </div>
+          <div class="summary-chip">
+            <div class="label">Settled at</div>
+            <div id="summarySettledAt" class="value">-</div>
+          </div>
+        </div>
       </div>
     </div>
 
     <div class="grid">
       <div class="panel span-8">
-        <h3>Quick Demo Controls</h3>
-        <p class="hint" style="margin-top:6px;">Use these in order for a simple judge demo.</p>
+        <h3 id="quickControlsTitle">Quick Demo Controls</h3>
+        <p class="hint" id="quickControlsHint" style="margin-top:6px;">Use these in order for a simple judge demo.</p>
 
         <div class="row">
           <div class="col-6"><button id="connectBtn" class="ok">Connect EV</button></div>
           <div class="col-6"><button id="disconnectBtn" class="danger">Disconnect EV</button></div>
 
-          <div class="col-8">
+          <div class="col-8 dev-only">
             <label>Choose driving profile</label>
             <select id="profileSelect"></select>
           </div>
-          <div class="col-4"><label>&nbsp;</label><button id="setProfileBtn" class="primary">Apply Profile</button></div>
+          <div class="col-4 dev-only"><label>&nbsp;</label><button id="setProfileBtn" class="primary">Apply Profile</button></div>
 
-          <div class="col-8">
+          <div class="col-8 dev-only">
             <label>Start charging session ID (optional)</label>
             <input id="txId" placeholder="leave blank to auto-create" />
           </div>
-          <div class="col-4"><label>&nbsp;</label><button id="txStartBtn" class="ok">Start Charging</button></div>
+          <div class="col-4 dev-only"><label>&nbsp;</label><button id="txStartBtn" class="ok">Start Charging</button></div>
 
-          <div class="col-4">
+          <div class="col-4 dev-only">
             <label>Send energy (kWh)</label>
             <input id="meterKwh" type="number" step="0.1" value="1.5" />
           </div>
-          <div class="col-4"><label>&nbsp;</label><button id="txMeterBtn" class="primary">Send Energy Update</button></div>
-          <div class="col-4"><label>&nbsp;</label><button id="send3MetersBtn" class="warn">Send 3 Updates</button></div>
+          <div class="col-4 dev-only"><label>&nbsp;</label><button id="txMeterBtn" class="primary">Send Energy Update</button></div>
+          <div class="col-4 dev-only"><label>&nbsp;</label><button id="send3MetersBtn" class="warn">Send 3 Updates</button></div>
 
-          <div class="col-8">
+          <div class="col-8 dev-only">
             <label>End session total (kWh)</label>
             <input id="totalKwh" type="number" step="0.1" value="0.0" />
           </div>
-          <div class="col-4"><label>&nbsp;</label><button id="txEndBtn" class="danger">End Charging</button></div>
+          <div class="col-4 dev-only"><label>&nbsp;</label><button id="txEndBtn" class="danger">End Charging</button></div>
         </div>
       </div>
 
       <div class="panel span-4">
-        <h3>Scenario Runner</h3>
-        <div class="hint" style="margin-top:6px;">One-click narratives for demo storytelling.</div>
-        <div class="row">
+        <h3 id="rightPanelTitle">Scenario Runner</h3>
+        <div class="hint" id="rightPanelHint" style="margin-top:6px;">One-click narratives for demo storytelling.</div>
+        <div class="row dev-only">
           <div class="col-12">
             <label>Scenario</label>
             <select id="scenarioSelect">
@@ -435,8 +847,8 @@
           <div class="col-12"><button id="stopScenarioBtn" class="warn">Stop Scenario</button></div>
         </div>
 
-        <h3 style="margin-top:14px;">Firmware Signal</h3>
-        <div class="row">
+        <h3 id="firmwareSignalTitle" style="margin-top:14px;">Firmware Signal</h3>
+        <div class="row dev-only">
           <div class="col-12">
             <label>Firmware status</label>
             <select id="fwStatus">
@@ -455,21 +867,25 @@
             <input id="fwVersion" value="1.0.0" />
           </div>
           <div class="col-12"><button id="fwSendBtn" class="primary">Send Firmware Signal</button></div>
+        </div>
+
+        <div class="row">
           <div class="col-12"><button id="requestHashVerifyBtn" class="ok">Request Hash + Verify On Backend</button></div>
+          <div class="col-12"><p id="verifyHint" class="hint">Generates component hash and asks backend trust module to verify before charging.</p></div>
         </div>
       </div>
 
       <div class="panel span-6">
-        <h3>EV Event Timeline</h3>
+        <h3 id="timelineHeading">EV Event Timeline</h3>
         <div id="eventLog" class="log" aria-live="polite"></div>
       </div>
 
       <div class="panel span-6">
-        <h3>API Details (for technical Q&A)</h3>
+        <h3 id="apiHeading">API Details (for technical Q&amp;A)</h3>
         <pre id="apiResponse" class="log"></pre>
       </div>
 
-      <div class="panel span-12">
+      <div class="panel span-12 dev-only">
         <details>
           <summary>Advanced Controls (technical)</summary>
           <div class="row">
@@ -484,15 +900,23 @@
   </div>
 
   <script>
+    const MODE_KEY = 'gridgarrison.ev.dashboard.mode';
+
     const state = {
       autoPoll: true,
       timer: null,
+      mode: (localStorage.getItem(MODE_KEY) || 'dev').toLowerCase() === 'user' ? 'user' : 'dev',
       profiles: {},
       meterEvents: 0,
       energySentKwh: 0,
       batteryPct: 20,
       lastFirmwareStatus: '-',
-      completedSessions: 0
+      completedSessions: 0,
+      paymentWindowVisible: false,
+      lastUserFlow: null,
+      lastStatus: null,
+      lastSettlement: null,
+      userFlowAutoResetDone: false
     };
 
     const el = (id) => document.getElementById(id);
@@ -536,7 +960,7 @@
       item.className = `line ${kind}`;
       item.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
       list.prepend(item);
-      while (list.children.length > 200) {
+      while (list.children.length > 220) {
         list.removeChild(list.lastChild);
       }
     }
@@ -551,38 +975,87 @@
       const meter = el('stepMeter');
       const end = el('stepEnd');
 
-      [connect, start, meter, end].forEach(s => s.className = 'step');
+      [connect, start, meter, end].forEach((stepNode) => {
+        stepNode.className = 'step';
+      });
 
       if (status) connect.classList.add('done');
       else connect.classList.add('active');
 
-      if (hasTx) {
-        start.classList.add('done');
-      } else if (status) {
-        start.classList.add('active');
-      }
+      if (hasTx) start.classList.add('done');
+      else if (status) start.classList.add('active');
 
-      if (meterEvents > 0) {
-        meter.classList.add('done');
-      } else if (hasTx) {
-        meter.classList.add('active');
-      }
+      if (meterEvents > 0) meter.classList.add('done');
+      else if (hasTx) meter.classList.add('active');
 
-      if (completedSessions > 0) {
-        end.classList.add('done');
-      } else if (meterEvents > 0 && !hasTx) {
-        end.classList.add('active');
-      }
+      if (completedSessions > 0) end.classList.add('done');
+      else if (meterEvents > 0 && !hasTx) end.classList.add('active');
     }
 
     function updateBatteryDisplay() {
-      const pct = Math.max(0, Math.min(100, state.batteryPct));
+      const pct = Math.max(0, Math.min(100, Number(state.batteryPct || 0)));
       el('batteryFill').style.height = `${pct}%`;
       el('batteryText').textContent = `${Math.round(pct)}%`;
     }
 
+    function isUserMode() {
+      return state.mode === 'user';
+    }
+
+    function setMode(mode) {
+      state.mode = mode === 'user' ? 'user' : 'dev';
+      localStorage.setItem(MODE_KEY, state.mode);
+      applyMode();
+      refreshAll();
+      logLine('info', `Dashboard switched to ${state.mode.toUpperCase()} mode`);
+    }
+
+    function toggleClassBySelector(selector, shouldShow) {
+      document.querySelectorAll(selector).forEach((node) => {
+        node.classList.toggle('hidden', !shouldShow);
+      });
+    }
+
+    function applyMode() {
+      const userMode = isUserMode();
+      document.body.dataset.mode = state.mode;
+
+      el('modeUserBtn').classList.toggle('active', userMode);
+      el('modeDevBtn').classList.toggle('active', !userMode);
+
+      toggleClassBySelector('.dev-only', !userMode);
+      toggleClassBySelector('.user-only', userMode);
+
+      el('quickControlsTitle').textContent = userMode ? 'Connection Controls' : 'Quick Demo Controls';
+      el('quickControlsHint').textContent = userMode
+        ? 'For user mode, continue in the User Charging Shell to request funds hold and guided charging.'
+        : 'Use these in order for a simple judge demo.';
+
+      el('requestHashVerifyBtn').textContent = userMode
+        ? 'Verify Charging'
+        : 'Request Hash + Verify On Backend';
+
+      el('rightPanelTitle').textContent = userMode ? 'Trust Verification' : 'Scenario Runner';
+      el('rightPanelHint').textContent = userMode
+        ? 'Run trust verification before guided charging starts.'
+        : 'One-click narratives for demo storytelling.';
+
+      el('firmwareSignalTitle').textContent = userMode ? 'Verification Signal' : 'Firmware Signal';
+      el('verifyHint').textContent = userMode
+        ? 'Generates component hash and verifies trust state before charging is allowed.'
+        : 'Generates component hash and asks backend trust module to verify before charging.';
+
+      el('timelineHeading').textContent = userMode ? 'Session Activity' : 'EV Event Timeline';
+      el('apiHeading').textContent = userMode
+        ? 'Session Details'
+        : 'API Details (for technical Q&A)';
+    }
+
     async function callApi(method, path, query = null, options = {}) {
       const recordResponse = options.recordResponse !== false;
+      const silent = options.silent === true;
+      const timeoutMs = Number(options.timeoutMs);
+      const requestTimeoutMs = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 10000;
       const configuredBase = normalizeBase(apiBase());
       const originBase = normalizeBase(window.location.origin);
       const candidates = configuredBase === originBase
@@ -594,7 +1067,7 @@
       for (let i = 0; i < candidates.length; i++) {
         const base = candidates[i];
         const url = buildUrl(base, path, query);
-        const { controller, timeout } = withTimeout(10000);
+        const { controller, timeout } = withTimeout(requestTimeoutMs);
 
         try {
           const response = await fetch(url, { method, signal: controller.signal });
@@ -611,20 +1084,23 @@
           }
 
           if (!response.ok) {
-            logLine('err', `${method} ${path} failed (${response.status})`);
+            if (!silent) {
+              logLine('err', `${method} ${path} failed (${response.status})`);
+            }
             throw new Error(body?.message || `HTTP ${response.status}`);
           }
 
           if (i > 0 && base === originBase) {
             el('apiBase').value = originBase;
-            logLine('info', `API base auto-switched to ${originBase}`);
+            if (!silent) {
+              logLine('info', `API base auto-switched to ${originBase}`);
+            }
           }
 
           return body;
-        } catch (err) {
-          lastError = err;
-          const isLast = i === candidates.length - 1;
-          if (isLast) {
+        } catch (error) {
+          lastError = error;
+          if (i === candidates.length - 1) {
             break;
           }
         } finally {
@@ -633,9 +1109,48 @@
       }
 
       if (lastError?.name === 'AbortError') {
-        throw new Error(`Request timed out for ${path}. Check simulator URL in the dashboard.`);
+        throw new Error(`Request timed out for ${path} after ${requestTimeoutMs} ms. Check simulator URL in the dashboard.`);
       }
       throw lastError || new Error(`Request failed for ${path}`);
+    }
+
+    function formatMoney(value) {
+      const num = Number(value);
+      if (!Number.isFinite(num)) {
+        return '-';
+      }
+      return num.toFixed(2);
+    }
+
+    function hasPositiveWei(value) {
+      try {
+        return BigInt(value ?? '0') > 0n;
+      } catch {
+        const num = Number(value);
+        return Number.isFinite(num) && num > 0;
+      }
+    }
+
+    function shortAddress(value) {
+      const text = `${value || ''}`.trim();
+      if (!text) {
+        return '-';
+      }
+      if (text.length <= 16) {
+        return text;
+      }
+      return `${text.slice(0, 8)}...${text.slice(-4)}`;
+    }
+
+    function formatDateTime(value) {
+      if (!value) {
+        return '-';
+      }
+      const parsed = new Date(value);
+      if (Number.isNaN(parsed.getTime())) {
+        return `${value}`;
+      }
+      return parsed.toLocaleString();
     }
 
     function updateTopUi(statusData, scenarioData) {
@@ -647,6 +1162,10 @@
       const chargingAllowed = statusData.chargingAllowed === true;
       const verificationMessage = statusData.verificationMessage || '-';
       const lastFirmwareHash = statusData.lastFirmwareHash || '';
+
+      state.batteryPct = Number.isFinite(Number(statusData.batteryPct))
+        ? Number(statusData.batteryPct)
+        : state.batteryPct;
 
       el('connectionPill').textContent = connected ? 'EV Online' : 'EV Offline';
       el('connectionPill').className = connected ? 'status-pill ok' : 'status-pill off';
@@ -666,6 +1185,8 @@
       el('kpiFirmware').textContent = state.lastFirmwareStatus;
       el('kpiScenarioSimple').textContent = scenario;
       el('kpiGateReason').textContent = verificationMessage;
+      el('kpiWallet').textContent = formatMoney(statusData.walletBalance);
+      el('kpiEscrowLifecycle').textContent = statusData.escrowStatus || '-';
 
       if (!el('txId').value && tx) {
         el('txId').value = tx;
@@ -679,18 +1200,178 @@
       updateBatteryDisplay();
     }
 
+    function updateMilestones(userFlow, statusData) {
+      const journey = userFlow?.journey || {};
+      const escrowActive = userFlow?.escrowActive || {};
+      const latestVerdict = userFlow?.latestVerdict || {};
+      const settlement = userFlow?.settlement || state.lastSettlement;
+
+      const journeyState = `${journey.journeyState || statusData.userJourneyState || ''}`.toUpperCase();
+      const escrowState = `${escrowActive.lifecycleState || journey.escrowStatus || statusData.escrowStatus || ''}`.toUpperCase();
+      const hasIntent = !!(journey.chargeIntent || statusData.userChargeIntent);
+      const hasEscrowAddress = !!((escrowActive.escrowAddress || journey.escrowAddress || statusData.escrowAddress || '').trim());
+      const hasHeldAmount = hasPositiveWei(escrowActive.heldAmountWei || journey.heldAmountWei || statusData.heldAmountWei);
+      const settledBySummary = `${settlement?.finalContractState || ''}`.toUpperCase() === 'RELEASED';
+
+      const milestones = [
+        { id: 'milestoneHold', done: hasIntent },
+        {
+          id: 'milestoneCreating',
+          done: hasIntent || ['CONTRACT_CREATING', 'CONTRACT_CREATED', 'CHARGING', 'SETTLING', 'COMPLETE'].includes(journeyState) || escrowState === 'CREATING'
+        },
+        {
+          id: 'milestoneCreated',
+          done: hasEscrowAddress || ['CONTRACT_CREATED', 'CHARGING', 'SETTLING', 'COMPLETE'].includes(journeyState)
+            || ['CREATED', 'FUNDED', 'AUTHORIZED', 'CHARGING', 'COMPLETED', 'RELEASED', 'REFUNDED'].includes(escrowState)
+        },
+        {
+          id: 'milestoneFunded',
+          done: hasHeldAmount || ['FUNDED', 'AUTHORIZED', 'CHARGING', 'COMPLETED', 'RELEASED'].includes(escrowState)
+        },
+        {
+          id: 'milestoneCharging',
+          done: journeyState === 'CHARGING' || !!statusData.activeTransactionId
+            || ['CHARGING', 'COMPLETED', 'RELEASED'].includes(escrowState)
+        },
+        {
+          id: 'milestoneSettled',
+          done: journeyState === 'COMPLETE' || ['RELEASED'].includes(escrowState)
+            || `${latestVerdict.resultStatus || ''}`.toUpperCase() === 'VERIFIED' && journeyState === 'COMPLETE'
+            || settledBySummary
+        }
+      ];
+
+      let activeAssigned = false;
+      let completedBefore = true;
+      let doneCount = 0;
+
+      milestones.forEach((milestone) => {
+        const node = el(milestone.id);
+        if (!node) {
+          return;
+        }
+        const stateNode = node.querySelector('.state');
+        node.className = 'milestone';
+
+        if (milestone.done) {
+          node.classList.add('done');
+          if (stateNode) {
+            stateNode.textContent = 'Done';
+          }
+          doneCount += 1;
+          return;
+        }
+
+        if (completedBefore && !activeAssigned) {
+          node.classList.add('active');
+          if (stateNode) {
+            stateNode.textContent = 'In progress';
+          }
+          activeAssigned = true;
+        } else {
+          node.classList.add('wait');
+          if (stateNode) {
+            stateNode.textContent = 'Waiting';
+          }
+        }
+
+        completedBefore = false;
+      });
+
+      const escrowPct = Math.round((doneCount / milestones.length) * 100);
+      const batteryPct = Math.max(0, Math.min(100, Number(journey.batteryPct ?? statusData.batteryPct ?? 0)));
+
+      el('escrowProgressFill').style.width = `${escrowPct}%`;
+      el('escrowProgressPct').textContent = `${escrowPct}%`;
+
+      el('batteryProgressFill').style.width = `${batteryPct}%`;
+      el('batteryProgressPct').textContent = `${Math.round(batteryPct)}%`;
+    }
+
+    function updateSettlementSummary(settlement) {
+      const panel = el('settlementSummary');
+      if (!settlement) {
+        panel.classList.add('hidden');
+        return;
+      }
+
+      panel.classList.remove('hidden');
+      state.lastSettlement = settlement;
+
+      el('summaryEnergy').textContent = `${Number(settlement.totalEnergyKwh || 0).toFixed(2)} kWh`;
+      el('summaryHeld').textContent = `${settlement.heldAmountWei ?? '0'}`;
+      el('summaryCharged').textContent = formatMoney(settlement.chargedAmount);
+      el('summaryDebited').textContent = formatMoney(settlement.debitedAmount);
+      el('summaryWallet').textContent = formatMoney(settlement.remainingWalletBalance);
+      el('summaryContractState').textContent = settlement.finalContractState || '-';
+      el('summaryEscrow').textContent = shortAddress(settlement.escrowAddress);
+      el('summaryTx').textContent = settlement.transactionId || '-';
+      el('summarySettledAt').textContent = formatDateTime(settlement.settledAt);
+
+      const finalState = `${settlement.finalContractState || ''}`.toUpperCase();
+      el('settlementMessage').textContent = finalState === 'RELEASED'
+        ? 'Settlement reached RELEASED and escrow funds were released.'
+        : `Settlement completed with state ${settlement.finalContractState || 'UNKNOWN'}.`;
+    }
+
+    function clearUserFlowClientState() {
+      state.lastUserFlow = null;
+      state.lastSettlement = null;
+      state.paymentWindowVisible = false;
+      state.meterEvents = 0;
+      state.energySentKwh = 0;
+      state.completedSessions = 0;
+      el('txId').value = '';
+      updateSettlementSummary(null);
+    }
+
+    function updateUserFlowUi(userFlow, statusData) {
+      const journey = userFlow?.journey || {};
+      const latestVerdict = userFlow?.latestVerdict || {};
+      const escrowActive = userFlow?.escrowActive || {};
+      const settlement = userFlow?.settlement || statusData?.lastSettlement || state.lastSettlement;
+
+      const walletBalance = journey.walletBalance ?? statusData.walletBalance ?? 0;
+      const batteryPct = journey.batteryPct ?? statusData.batteryPct ?? state.batteryPct;
+      const trustStatus = journey.trustStatus || latestVerdict.verificationStatus || statusData.verificationStatus || 'UNVERIFIED';
+      const escrowStatus = journey.escrowStatus || escrowActive.lifecycleState || statusData.escrowStatus || 'NOT_CREATED';
+      const escrowAddress = escrowActive.escrowAddress || journey.escrowAddress || statusData.escrowAddress || '';
+      const heldAmount = escrowActive.heldAmountWei || journey.heldAmountWei || statusData.heldAmountWei || '0';
+
+      el('userWalletBalance').textContent = formatMoney(walletBalance);
+      el('userBatteryValue').textContent = `${Math.max(0, Math.min(100, Number(batteryPct || 0)))}%`;
+      el('userTrustValue').textContent = trustStatus;
+      el('userEscrowValue').textContent = escrowStatus;
+
+      el('paymentEscrowAddress').textContent = shortAddress(escrowAddress);
+      el('paymentHeldAmount').textContent = `${heldAmount}`;
+      el('paymentLifecycle').textContent = escrowStatus;
+      el('paymentVerdict').textContent = latestVerdict.resultStatus || latestVerdict.verificationStatus || '-';
+      el('paymentMessage').textContent = latestVerdict.message || escrowActive.message || 'Payment window waiting for next step.';
+
+      const shouldShowPaymentWindow = state.paymentWindowVisible || !!(journey.chargeIntent || statusData.userChargeIntent);
+      el('paymentWindow').classList.toggle('hidden', !shouldShowPaymentWindow);
+
+      if (shouldShowPaymentWindow) {
+        state.paymentWindowVisible = true;
+        updateMilestones(userFlow, statusData);
+      }
+
+      updateSettlementSummary(settlement);
+    }
+
     async function refreshProfiles() {
-      const profileData = await callApi('GET', '/api/ev/profiles', null, { recordResponse: false });
+      const profileData = await callApi('GET', '/api/ev/profiles', null, { recordResponse: false, silent: true });
       state.profiles = profileData.profiles || {};
       const select = el('profileSelect');
       const previous = select.value;
       select.innerHTML = '';
 
       (profileData.availableProfiles || []).forEach((name) => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name === 'normal' ? 'Normal driving' : name === 'fast' ? 'Fast charging demo' : name;
-        select.appendChild(opt);
+        const option = document.createElement('option');
+        option.value = name;
+        option.textContent = name === 'normal' ? 'Normal driving' : name === 'fast' ? 'Fast charging demo' : name;
+        select.appendChild(option);
       });
 
       if (previous && (profileData.availableProfiles || []).includes(previous)) {
@@ -704,14 +1385,55 @@
 
     async function refreshAll() {
       try {
-        const [statusData, scenarioData] = await Promise.all([
-          callApi('GET', '/api/ev/status', null, { recordResponse: false }),
-          callApi('GET', '/api/ev/scenario/status', null, { recordResponse: false })
-        ]);
-        await refreshProfiles();
+        const statusPromise = callApi('GET', '/api/ev/status', null, { recordResponse: false, silent: true });
+        const scenarioPromise = isUserMode()
+          ? Promise.resolve({ running: false, currentScenario: 'Guided user flow' })
+          : callApi('GET', '/api/ev/scenario/status', null, { recordResponse: false, silent: true });
+
+        const [statusData, scenarioData] = await Promise.all([statusPromise, scenarioPromise]);
+        state.lastStatus = statusData;
+
+        if (!isUserMode()) {
+          await refreshProfiles();
+        }
+
         updateTopUi(statusData, scenarioData);
-      } catch (err) {
-        logLine('err', `Refresh failed: ${err.message}`);
+
+        if (isUserMode() || state.paymentWindowVisible) {
+          const userFlow = await callApi('GET', '/api/ev/user/flow/status', { refreshTrust: true }, { recordResponse: false, silent: true });
+          state.lastUserFlow = userFlow;
+          if (userFlow?.settlement) {
+            state.lastSettlement = userFlow.settlement;
+          }
+          updateUserFlowUi(userFlow, statusData);
+        } else {
+          updateSettlementSummary(statusData.lastSettlement || state.lastSettlement);
+        }
+      } catch (error) {
+        logLine('err', `Refresh failed: ${error.message}`);
+      }
+    }
+
+    async function resetUserFlowOnPageLoad() {
+      if (!isUserMode() || state.userFlowAutoResetDone) {
+        return;
+      }
+
+      state.userFlowAutoResetDone = true;
+      try {
+        await callApi('POST', '/api/ev/user/flow/reset', {
+          clearIntent: true,
+          resetWallet: false,
+          resetBattery: false
+        }, {
+          recordResponse: false,
+          silent: true,
+          timeoutMs: 20000
+        });
+        clearUserFlowClientState();
+        logLine('info', 'User flow reset on dashboard load for a clean session.');
+      } catch (error) {
+        logLine('err', `User flow reset on load failed: ${error.message}`);
       }
     }
 
@@ -729,22 +1451,36 @@
 
     async function runAction(label, fn, onSuccess) {
       try {
-        const data = await fn();
+        const payload = await fn();
         if (onSuccess) {
-          onSuccess(data);
+          onSuccess(payload);
         }
         if (label) {
           logLine('ok', label);
         }
         await refreshAll();
-      } catch (err) {
+      } catch (error) {
         if (label) {
-          logLine('err', `${label} -> ${err.message}`);
+          logLine('err', `${label} -> ${error.message}`);
         } else {
-          logLine('err', `${err.message}`);
+          logLine('err', error.message);
         }
       }
     }
+
+    function readUserIntentInput() {
+      return {
+        inputMode: el('userInputMode').value,
+        inputValue: Number(el('userInputValue').value || 0),
+        estimatedKwh: Number(el('userEstimatedKwh').value || 0),
+        holdAmountWei: `${el('userHoldAmount').value || ''}`.trim(),
+        targetSoc: Number(el('userTargetSoc').value || 80),
+        timeoutSeconds: Number(el('userTimeout').value || 3600)
+      };
+    }
+
+    el('modeUserBtn').addEventListener('click', () => setMode('user'));
+    el('modeDevBtn').addEventListener('click', () => setMode('dev'));
 
     el('refreshAll').addEventListener('click', refreshAll);
     el('togglePoll').addEventListener('click', () => {
@@ -770,9 +1506,9 @@
     el('txStartBtn').addEventListener('click', () =>
       runAction('Charging started', () =>
         callApi('POST', '/api/ev/transaction/start', { transactionId: el('txId').value })
-      , (data) => {
-        if (data.transactionId) {
-          el('txId').value = data.transactionId;
+      , (payload) => {
+        if (payload.transactionId) {
+          el('txId').value = payload.transactionId;
         }
       })
     );
@@ -780,7 +1516,7 @@
     el('txMeterBtn').addEventListener('click', () =>
       runAction('Energy update sent', async () => {
         const kwh = Number(el('meterKwh').value || 0);
-        const result = await callApi('POST', '/api/ev/transaction/meter', {
+        const payload = await callApi('POST', '/api/ev/transaction/meter', {
           transactionId: el('txId').value,
           kwh
         });
@@ -789,7 +1525,7 @@
           state.meterEvents += 1;
           state.batteryPct = Math.min(100, state.batteryPct + (kwh * 2));
         }
-        return result;
+        return payload;
       })
     );
 
@@ -797,7 +1533,7 @@
       for (let i = 0; i < 3; i++) {
         await runAction(`Energy burst ${i + 1}/3`, async () => {
           const kwh = Number(el('meterKwh').value || 0);
-          const result = await callApi('POST', '/api/ev/transaction/meter', {
+          const payload = await callApi('POST', '/api/ev/transaction/meter', {
             transactionId: el('txId').value,
             kwh
           });
@@ -806,21 +1542,21 @@
             state.meterEvents += 1;
             state.batteryPct = Math.min(100, state.batteryPct + (kwh * 2));
           }
-          return result;
+          return payload;
         });
-        await new Promise(r => setTimeout(r, 700));
+        await new Promise((resolve) => setTimeout(resolve, 700));
       }
     });
 
     el('txEndBtn').addEventListener('click', () =>
       runAction('Charging session ended', async () => {
-        const result = await callApi('POST', '/api/ev/transaction/end', {
+        const payload = await callApi('POST', '/api/ev/transaction/end', {
           transactionId: el('txId').value,
           totalKwh: Number(el('totalKwh').value || 0)
         });
         state.completedSessions += 1;
         state.batteryPct = Math.min(100, state.batteryPct + 5);
-        return result;
+        return payload;
       })
     );
 
@@ -838,9 +1574,9 @@
       runAction('Firmware signal sent', async () => {
         const status = el('fwStatus').value;
         const hash = el('fwHash').value;
-        const result = await callApi('POST', '/api/ev/firmware/status', { status, hash });
+        const payload = await callApi('POST', '/api/ev/firmware/status', { status, hash });
         state.lastFirmwareStatus = `${status}`;
-        return result;
+        return payload;
       })
     );
 
@@ -848,20 +1584,105 @@
       runAction(null, async () => {
         const firmwareStatus = el('fwStatus').value;
         const firmwareVersion = el('fwVersion').value;
-        const result = await callApi('POST', '/api/ev/verification/request', { firmwareStatus, firmwareVersion });
-        if (result.deliveredHash) {
-          el('fwHash').value = result.deliveredHash;
+        const payload = await callApi('POST', '/api/ev/verification/request', { firmwareStatus, firmwareVersion });
+        if (payload.deliveredHash) {
+          el('fwHash').value = payload.deliveredHash;
         }
-        if (result.anyTampered) {
-          logLine('info', `Component abnormalities detected: ${(result.tamperedComponents || []).join(', ') || 'unknown'}`);
+        if (payload.anyTampered) {
+          logLine('info', `Component abnormalities detected: ${(payload.tamperedComponents || []).join(', ') || 'unknown'}`);
         }
-        if (!result.ok) {
-          logLine('err', `Verification FAILED: status=${result.verificationStatus || 'UNKNOWN'} gate=${result.verificationGateStatus || 'UNKNOWN'} reason=${result.message || 'No reason provided'}`);
-          throw new Error(result.message || 'Verification did not pass');
+        if (!payload.ok) {
+          logLine('err', `Verification FAILED: status=${payload.verificationStatus || 'UNKNOWN'} gate=${payload.verificationGateStatus || 'UNKNOWN'} reason=${payload.message || 'No reason provided'}`);
+          throw new Error(payload.message || 'Verification did not pass');
         }
-        logLine('ok', `Verification PASSED: status=${result.verificationStatus || 'VERIFIED'} gate=${result.verificationGateStatus || 'VERIFIED'} hash=${result.deliveredHash || result.usedReportedHash || '-'}`);
-        return result;
+        logLine('ok', `Verification PASSED: status=${payload.verificationStatus || 'VERIFIED'} gate=${payload.verificationGateStatus || 'VERIFIED'} hash=${payload.deliveredHash || payload.usedReportedHash || '-'}`);
+        return payload;
       })
+    );
+
+    el('confirmIntentBtn').addEventListener('click', () =>
+      runAction('Charge intent confirmed', async () => {
+        const intent = readUserIntentInput();
+        const payload = await callApi('POST', '/api/ev/user/intent', {
+          inputMode: intent.inputMode,
+          inputValue: intent.inputValue,
+          estimatedKwh: intent.estimatedKwh,
+          holdAmountWei: intent.holdAmountWei,
+          targetSoc: intent.targetSoc,
+          timeoutSeconds: intent.timeoutSeconds,
+          syncTrust: true
+        });
+        state.paymentWindowVisible = true;
+        return payload;
+      })
+    );
+
+    el('startGuidedBtn').addEventListener('click', () =>
+      runAction('Guided charging sequence started', async () => {
+        const intent = readUserIntentInput();
+        const payload = await callApi('POST', '/api/ev/user/flow/start', {
+          inputMode: intent.inputMode,
+          inputValue: intent.inputValue,
+          estimatedKwh: intent.estimatedKwh,
+          holdAmountWei: intent.holdAmountWei,
+          targetSoc: intent.targetSoc,
+          timeoutSeconds: intent.timeoutSeconds,
+          firmwareStatus: el('fwStatus').value,
+          firmwareVersion: el('fwVersion').value,
+          transactionId: el('txId').value
+        });
+        if (payload.transactionId) {
+          el('txId').value = payload.transactionId;
+        }
+        state.lastSettlement = null;
+        updateSettlementSummary(null);
+        state.paymentWindowVisible = true;
+        return payload;
+      })
+    );
+
+    el('completeGuidedBtn').addEventListener('click', () =>
+      runAction('Guided charging session settled', async () => {
+        const payload = await callApi('POST', '/api/ev/user/flow/complete', {
+          transactionId: el('txId').value,
+          totalKwh: Number(el('userCompleteKwh').value || 0)
+        }, {
+          timeoutMs: 45000
+        });
+        if (payload.transactionId) {
+          el('txId').value = payload.transactionId;
+        }
+        if (payload.settlement) {
+          state.lastSettlement = payload.settlement;
+          updateSettlementSummary(payload.settlement);
+        }
+        state.paymentWindowVisible = true;
+        state.completedSessions += 1;
+        return payload;
+      })
+    );
+
+    el('refreshFlowBtn').addEventListener('click', () =>
+      runAction('User flow status refreshed', async () => {
+        const payload = await callApi('GET', '/api/ev/user/flow/status', { refreshTrust: true });
+        state.lastUserFlow = payload;
+        if (payload?.settlement) {
+          state.lastSettlement = payload.settlement;
+        }
+        state.paymentWindowVisible = true;
+        if (state.lastStatus) {
+          updateUserFlowUi(payload, state.lastStatus);
+        }
+        return payload;
+      })
+    );
+
+    el('walletTopupBtn').addEventListener('click', () =>
+      runAction('Wallet topped up', () =>
+        callApi('POST', '/api/ev/user/wallet/topup', {
+          amount: Number(el('walletTopupAmount').value || 0)
+        })
+      )
     );
 
     el('connectRawBtn').addEventListener('click', () => runAction('Raw connect', () => callApi('POST', '/api/ev/connect')));
@@ -873,10 +1694,16 @@
       el('apiBase').value = window.location.origin;
     }
 
-    refreshAll();
-    setupPolling();
-    updateBatteryDisplay();
-    logLine('info', 'EV cockpit ready. Start with: Connect EV → Start Charging → Send Energy Update.');
+    async function initializeDashboard() {
+      applyMode();
+      await resetUserFlowOnPageLoad();
+      await refreshAll();
+      setupPolling();
+      updateBatteryDisplay();
+      logLine('info', 'EV cockpit ready. Use User Mode for guided escrow flow or Dev Mode for technical controls.');
+    }
+
+    initializeDashboard();
   </script>
 </body>
 </html>

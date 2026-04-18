@@ -7,6 +7,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.annotation.PostConstruct;
+import java.math.BigInteger;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
@@ -82,6 +83,98 @@ public class EvTrustVerificationClient {
         } finally {
             verificationInProgress.set(false);
         }
+    }
+
+    public LatestVerdictResponse latestVerdict(String stationId) {
+        return fetchLatestVerdict(stationId);
+    }
+
+    public EscrowIntentResponse submitEscrowIntent(String stationId,
+                                                   BigInteger holdAmountWei,
+                                                   Integer targetSoc,
+                                                   Long timeoutSeconds,
+                                                   String chargerWallet) {
+        UriComponentsBuilder builder = UriComponentsBuilder
+            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getEscrowIntentPath()))
+            .queryParam("stationId", stationId);
+
+        if (holdAmountWei != null) {
+            builder.queryParam("holdAmountWei", holdAmountWei.toString());
+        }
+        if (targetSoc != null) {
+            builder.queryParam("targetSoc", targetSoc);
+        }
+        if (timeoutSeconds != null) {
+            builder.queryParam("timeoutSeconds", timeoutSeconds);
+        }
+        if (chargerWallet != null && !chargerWallet.isBlank()) {
+            builder.queryParam("chargerWallet", chargerWallet);
+        }
+
+        return restTemplate.postForObject(builder.toUriString(), null, EscrowIntentResponse.class);
+    }
+
+    public EscrowActiveResponse escrowActive(String stationId) {
+        String url = UriComponentsBuilder
+            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getEscrowActivePath()))
+            .queryParam("stationId", stationId)
+            .toUriString();
+        return restTemplate.getForObject(url, EscrowActiveResponse.class);
+    }
+
+    public EscrowActiveResponse resetEscrowBinding(String stationId, boolean clearIntent) {
+        String url = UriComponentsBuilder
+            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getEscrowResetPath()))
+            .queryParam("stationId", stationId)
+            .queryParam("clearIntent", clearIntent)
+            .toUriString();
+        return restTemplate.postForObject(url, null, EscrowActiveResponse.class);
+    }
+
+    public EscrowActiveResponse awaitEscrowActive(String stationId) {
+        EvVerificationProperties.EscrowPoll poll = verificationProperties.getEscrowPoll();
+        int maxAttempts = Math.max(1, poll.getMaxAttempts());
+        long intervalMs = Math.max(100L, poll.getIntervalMs());
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            EscrowActiveResponse active = escrowActive(stationId);
+            if (active != null && (isEscrowReady(active) || isEscrowTerminalState(active.lifecycleState()))) {
+                return active;
+            }
+            sleep(intervalMs);
+        }
+
+        return escrowActive(stationId);
+    }
+
+    public EscrowActiveResponse awaitEscrowLifecycle(String stationId,
+                                                     String targetLifecycleState,
+                                                     int maxAttempts,
+                                                     long intervalMs) {
+        String target = normalizeLifecycleState(targetLifecycleState);
+        int safeAttempts = Math.max(1, maxAttempts);
+        long safeIntervalMs = Math.max(100L, intervalMs);
+
+        for (int attempt = 1; attempt <= safeAttempts; attempt++) {
+            EscrowActiveResponse active = escrowActive(stationId);
+            if (active == null) {
+                sleep(safeIntervalMs);
+                continue;
+            }
+
+            String lifecycleState = normalizeLifecycleState(active.lifecycleState());
+            if (target.equals(lifecycleState)) {
+                return active;
+            }
+
+            if (isEscrowSettlementTerminalState(lifecycleState) && !target.equals(lifecycleState)) {
+                return active;
+            }
+
+            sleep(safeIntervalMs);
+        }
+
+        return escrowActive(stationId);
     }
 
     private RequestHashVerificationResult verifyWithRetry(String stationId,
@@ -293,6 +386,45 @@ public class EvTrustVerificationClient {
         return normalizeHash(actualHash).equalsIgnoreCase(normalizeHash(expectedHash));
     }
 
+    private boolean isEscrowReady(EscrowActiveResponse active) {
+        if (active == null || active.escrowAddress() == null || active.escrowAddress().isBlank()) {
+            return false;
+        }
+        String state = active.lifecycleState();
+        if (state == null || state.isBlank()) {
+            return false;
+        }
+        String normalized = state.trim().toUpperCase(Locale.ROOT);
+        return !"NOT_CREATED".equals(normalized) && !"CREATING".equals(normalized);
+    }
+
+    private boolean isEscrowTerminalState(String lifecycleState) {
+        if (lifecycleState == null || lifecycleState.isBlank()) {
+            return false;
+        }
+        return switch (lifecycleState.trim().toUpperCase(Locale.ROOT)) {
+            case "CREATED", "FUNDED", "AUTHORIZED", "CHARGING", "COMPLETED", "RELEASED", "REFUNDED", "FAILED" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isEscrowSettlementTerminalState(String lifecycleState) {
+        if (lifecycleState == null || lifecycleState.isBlank()) {
+            return false;
+        }
+        return switch (lifecycleState.trim().toUpperCase(Locale.ROOT)) {
+            case "RELEASED", "REFUNDED", "FAILED" -> true;
+            default -> false;
+        };
+    }
+
+    private String normalizeLifecycleState(String lifecycleState) {
+        if (lifecycleState == null || lifecycleState.isBlank()) {
+            return "UNKNOWN";
+        }
+        return lifecycleState.trim().toUpperCase(Locale.ROOT);
+    }
+
     private String normalizeHash(String hash) {
         String normalized = hash == null ? "" : hash.trim();
         if (normalized.startsWith("0x") || normalized.startsWith("0X")) {
@@ -384,6 +516,34 @@ public class EvTrustVerificationClient {
         String message,
         String observedAt,
         String sourceEvent
+    ) {
+    }
+
+    record EscrowIntentResponse(
+        String status,
+        String stationId,
+        BigInteger holdAmountWei,
+        Integer targetSoc,
+        Long timeoutSeconds,
+        String chargerWallet,
+        String createdAt,
+        String message
+    ) {
+    }
+
+    record EscrowActiveResponse(
+        String stationId,
+        String escrowAddress,
+        String deployTxHash,
+        String depositTxHash,
+        String lifecycleState,
+        BigInteger heldAmountWei,
+        String sessionId,
+        String goldenHash,
+        String chargerWallet,
+        String createdAt,
+        String lastUpdated,
+        String message
     ) {
     }
 }

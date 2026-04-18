@@ -9,6 +9,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigInteger;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -25,11 +26,15 @@ class EscrowLifecycleListenerTest {
     @Mock
     private EscrowService escrowService;
 
+    @Mock
+    private EscrowIntentStore escrowIntentStore;
+
     private EscrowLifecycleListener listener;
 
     @BeforeEach
     void setUp() {
-        listener = new EscrowLifecycleListener(escrowService);
+        listener = new EscrowLifecycleListener(escrowService, escrowIntentStore);
+        when(escrowIntentStore.clear(anyString())).thenReturn(Optional.empty());
         ReflectionTestUtils.setField(listener, "defaultTargetSoc", 80);
         ReflectionTestUtils.setField(listener, "defaultTimeoutSeconds", 3600L);
         ReflectionTestUtils.setField(listener, "defaultDepositWei", BigInteger.valueOf(1_000_000L));
