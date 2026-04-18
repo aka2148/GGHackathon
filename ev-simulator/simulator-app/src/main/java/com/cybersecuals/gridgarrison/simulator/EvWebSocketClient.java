@@ -3,23 +3,29 @@ package com.cybersecuals.gridgarrison.simulator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.glassfish.tyrus.client.ClientManager;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.drafts.Draft_6455;
+import org.java_websocket.handshake.ServerHandshake;
+import org.java_websocket.protocols.Protocol;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import javax.websocket.*;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.net.URI;
-import java.time.Instant;
-import java.util.LinkedHashMap;
 import java.security.KeyStore;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,6 +41,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 @ConditionalOnProperty(name = "ev.simulator.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 public class EvWebSocketClient {
+
+    private static final String OCPP_201 = "ocpp2.0.1";
 
     @Value("${ev.simulator.station-id}")
     private String stationId;
@@ -75,49 +83,69 @@ public class EvWebSocketClient {
     @Value("${ev.simulator.tls.trust-store-type:PKCS12}")
     private String tlsTrustStoreType;
 
-    private Session session;
+    @Value("${ev.simulator.iso15118.enabled:true}")
+    private boolean iso15118Enabled;
+
+    @Value("${ev.simulator.iso15118.authorization-mode:EIM}")
+    private String isoAuthorizationMode;
+
+    @Value("${ev.simulator.iso15118.contract-certificate-id:}")
+    private String isoContractCertificateId;
+
+    @Value("${ev.simulator.iso15118.secc-id:SECC-LOCAL-001}")
+    private String isoSeccId;
+
     private final ObjectMapper mapper = new ObjectMapper();
     private final AtomicInteger messageId = new AtomicInteger(0);
     private final AtomicBoolean reconnecting = new AtomicBoolean(false);
+    private final AtomicBoolean manualDisconnect = new AtomicBoolean(false);
+
+    private volatile GridGarrisonWebSocketClient webSocketClient;
+
+    public String getStationId() {
+        return stationId;
+    }
 
     /**
      * Initiates the WebSocket connection to GridGarrison.
      */
-    @ConditionalOnProperty(name = "ev.simulator.enabled", havingValue = "true", matchIfMissing = true)
     public synchronized void connect() throws Exception {
-        // Build URI: wss://host:port/ocpp/{stationId}
         String endpoint = gatewayUri.replace("{stationId}", stationId);
-        WebSocketContainer container = resolveWebSocketContainer(endpoint);
+        URI endpointUri = new URI(endpoint);
+        manualDisconnect.set(false);
 
         log.info("🔗 Connecting to {} with stationId={}", endpoint, stationId);
 
-        try {
-            session = container.connectToServer(
-                new EvClientEndpoint(this),
-                new URI(endpoint)
-            );
-            log.info("✅ Connected to GridGarrison");
-        } catch (Exception e) {
-            log.error("❌ Connection failed", e);
-            throw e;
+        GridGarrisonWebSocketClient client = createWebSocketClient(endpointUri);
+        webSocketClient = client;
+
+        if (!client.connectBlocking(30, TimeUnit.SECONDS)) {
+            throw new IllegalStateException("Timed out connecting to " + endpoint);
         }
+
+        log.info("✅ Connected to GridGarrison");
     }
 
-    private WebSocketContainer resolveWebSocketContainer(String endpoint) throws Exception {
-        if (!endpoint.startsWith("wss://")) {
-            return ContainerProvider.getWebSocketContainer();
+    private GridGarrisonWebSocketClient createWebSocketClient(URI endpointUri) throws Exception {
+        Draft_6455 draft = new Draft_6455(
+            Collections.emptyList(),
+            Collections.singletonList(new Protocol(OCPP_201))
+        );
+
+        GridGarrisonWebSocketClient client = new GridGarrisonWebSocketClient(endpointUri, draft);
+        if (endpointUri.getScheme() != null && endpointUri.getScheme().equalsIgnoreCase("wss")) {
+            if (!tlsEnabled) {
+                log.warn("Using wss:// endpoint with default JVM SSL context (ev.simulator.tls.enabled=false)");
+                return client;
+            }
+
+            SSLContext sslContext = buildSslContext();
+            SSLSocketFactory socketFactory = sslContext.getSocketFactory();
+            client.setSocketFactory(socketFactory);
+            log.info("Custom TLS context configured for simulator WebSocket client");
         }
 
-        ClientManager clientManager = ClientManager.createClient();
-        if (!tlsEnabled) {
-            log.warn("Using wss:// endpoint with default JVM SSL context (ev.simulator.tls.enabled=false)");
-            return clientManager;
-        }
-
-        SSLContext sslContext = buildSslContext();
-        SSLContext.setDefault(sslContext);
-        log.info("Custom TLS context configured for simulator WebSocket client");
-        return clientManager;
+        return client;
     }
 
     private SSLContext buildSslContext() throws Exception {
@@ -170,7 +198,7 @@ public class EvWebSocketClient {
      * Tries to connect with exponential backoff.
      */
     public void connectWithBackoff() {
-        if (session != null && session.isOpen()) {
+        if (isConnected()) {
             return;
         }
 
@@ -197,7 +225,10 @@ public class EvWebSocketClient {
         if (!reconnectEnabled) {
             return;
         }
-        if (session != null && session.isOpen()) {
+        if (isConnected()) {
+            return;
+        }
+        if (manualDisconnect.get()) {
             return;
         }
         if (!reconnecting.compareAndSet(false, true)) {
@@ -220,26 +251,28 @@ public class EvWebSocketClient {
      * Sends a Boot Notification to announce the EV / station.
      */
     public void sendBootNotification() throws Exception {
-        if (session == null || !session.isOpen()) {
+        if (!isConnected()) {
             log.warn("Session not open, skipping Boot");
             return;
         }
 
-        // OCPP BootNotification request
         LinkedHashMap<String, Object> payloadMap = new LinkedHashMap<>();
         payloadMap.put("chargingStation", stationId);
         payloadMap.put("reason", "PowerUp");
         payloadMap.put("firmwareVersion", "1.0.0");
+        payloadMap.put("iso15118Enabled", iso15118Enabled);
+        payloadMap.put("authorizationMode", isoAuthorizationMode);
+        payloadMap.put("seccId", isoSeccId);
         String payload = mapper.writeValueAsString(payloadMap);
 
         String ocppFrame = String.format(
             "[2, \"%s\", \"BootNotification\", %s]",
-            UUID.randomUUID().toString(),
+            UUID.randomUUID(),
             payload
         );
 
         log.debug("📤 Boot: {}", ocppFrame);
-        session.getBasicRemote().sendText(ocppFrame);
+        webSocketClient.send(ocppFrame);
     }
 
     /**
@@ -247,25 +280,32 @@ public class EvWebSocketClient {
      */
     @Scheduled(fixedDelayString = "${ev.simulator.heartbeat-interval-ms:30000}")
     public synchronized void sendHeartbeat() throws Exception {
-        if (session == null || !session.isOpen()) {
+        if (!isConnected()) {
             log.debug("Session not open, skipping Heartbeat");
             return;
         }
 
         String ocppFrame = String.format(
             "[2, \"%s\", \"Heartbeat\", {}]",
-            UUID.randomUUID().toString()
+            UUID.randomUUID()
         );
 
         log.debug("💓 Heartbeat sent");
-        session.getBasicRemote().sendText(ocppFrame);
+        webSocketClient.send(ocppFrame);
     }
 
     /**
      * Sends a TransactionEvent (START).
      */
     public void sendTransactionStart(String transactionId) throws Exception {
-        if (session == null || !session.isOpen()) {
+        sendTransactionStart(transactionId, isoAuthorizationMode, isoContractCertificateId);
+    }
+
+    /**
+     * Sends a TransactionEvent (START) with explicit ISO-15118 auth mode context.
+     */
+    public void sendTransactionStart(String transactionId, String authorizationMode, String contractCertificateId) throws Exception {
+        if (!isConnected()) {
             log.warn("Session not open, skipping Transaction");
             return;
         }
@@ -273,25 +313,35 @@ public class EvWebSocketClient {
         LinkedHashMap<String, Object> payloadMap = new LinkedHashMap<>();
         payloadMap.put("eventType", "Started");
         payloadMap.put("transactionData", transactionId);
+        payloadMap.put("transactionId", transactionId);
         payloadMap.put("timestamp", System.currentTimeMillis());
         payloadMap.put("meterStart", 0.0);
+        payloadMap.put("iso15118Enabled", iso15118Enabled);
+        payloadMap.put("authorizationMode", authorizationMode == null || authorizationMode.isBlank() ? isoAuthorizationMode : authorizationMode);
+        payloadMap.put("seccId", isoSeccId);
+        String resolvedContractCertificateId = contractCertificateId == null || contractCertificateId.isBlank()
+            ? isoContractCertificateId
+            : contractCertificateId;
+        if (resolvedContractCertificateId != null && !resolvedContractCertificateId.isBlank()) {
+            payloadMap.put("contractCertificateId", resolvedContractCertificateId);
+        }
         String payload = mapper.writeValueAsString(payloadMap);
 
         String ocppFrame = String.format(
             "[2, \"%s\", \"TransactionEvent\", %s]",
-            UUID.randomUUID().toString(),
+            UUID.randomUUID(),
             payload
         );
 
         log.info("🔌 Transaction START: {}", transactionId);
-        session.getBasicRemote().sendText(ocppFrame);
+        webSocketClient.send(ocppFrame);
     }
 
     /**
      * Sends a TransactionEvent (METER_UPDATE).
      */
     public void sendMeterUpdate(String transactionId, double kWh) throws Exception {
-        if (session == null || !session.isOpen()) {
+        if (!isConnected()) {
             log.warn("Session not open, skipping Meter");
             return;
         }
@@ -299,25 +349,26 @@ public class EvWebSocketClient {
         LinkedHashMap<String, Object> payloadMap = new LinkedHashMap<>();
         payloadMap.put("eventType", "Updated");
         payloadMap.put("transactionData", transactionId);
+        payloadMap.put("transactionId", transactionId);
         payloadMap.put("meterValue", kWh);
         payloadMap.put("timestamp", System.currentTimeMillis());
         String payload = mapper.writeValueAsString(payloadMap);
 
         String ocppFrame = String.format(
             "[2, \"%s\", \"TransactionEvent\", %s]",
-            UUID.randomUUID().toString(),
+            UUID.randomUUID(),
             payload
         );
 
         log.debug("⚡ Meter update: {} kWh", kWh);
-        session.getBasicRemote().sendText(ocppFrame);
+        webSocketClient.send(ocppFrame);
     }
 
     /**
      * Sends a TransactionEvent (END).
      */
     public void sendTransactionEnd(String transactionId, double totalKWh) throws Exception {
-        if (session == null || !session.isOpen()) {
+        if (!isConnected()) {
             log.warn("Session not open, skipping Transaction End");
             return;
         }
@@ -325,62 +376,65 @@ public class EvWebSocketClient {
         LinkedHashMap<String, Object> payloadMap = new LinkedHashMap<>();
         payloadMap.put("eventType", "Ended");
         payloadMap.put("transactionData", transactionId);
+        payloadMap.put("transactionId", transactionId);
         payloadMap.put("meterStop", totalKWh);
         payloadMap.put("timestamp", System.currentTimeMillis());
         String payload = mapper.writeValueAsString(payloadMap);
 
         String ocppFrame = String.format(
             "[2, \"%s\", \"TransactionEvent\", %s]",
-            UUID.randomUUID().toString(),
+            UUID.randomUUID(),
             payload
         );
 
         log.info("🛑 Transaction END: {} (total: {} kWh)", transactionId, totalKWh);
-        session.getBasicRemote().sendText(ocppFrame);
+        webSocketClient.send(ocppFrame);
     }
 
     /**
      * Sends a FirmwareStatusNotification.
      */
     public void sendFirmwareStatus(String status, String hash) throws Exception {
-        if (session == null || !session.isOpen()) {
+        if (!isConnected()) {
             log.warn("Session not open, skipping Firmware Status");
             return;
         }
 
         LinkedHashMap<String, Object> payloadMap = new LinkedHashMap<>();
-        payloadMap.put("status_field", status);
+        payloadMap.put("status", status);
         payloadMap.put("firmwareHash", hash);
         payloadMap.put("receivedAt", Instant.now().toString());
         String payload = mapper.writeValueAsString(payloadMap);
 
         String ocppFrame = String.format(
             "[2, \"%s\", \"FirmwareStatusNotification\", %s]",
-            UUID.randomUUID().toString(),
+            UUID.randomUUID(),
             payload
         );
 
         log.info("🔐 Firmware Status: {} | hash={}", status, hash);
-        session.getBasicRemote().sendText(ocppFrame);
+        webSocketClient.send(ocppFrame);
     }
 
     /**
      * Closes the WebSocket session.
      */
-    public void disconnect() throws Exception {
-        if (session != null && session.isOpen()) {
-            session.close();
+    public synchronized void disconnect() {
+        manualDisconnect.set(true);
+        GridGarrisonWebSocketClient client = webSocketClient;
+        if (client != null) {
+            client.close();
             log.info("🔌 Disconnected from GridGarrison");
         }
+        webSocketClient = null;
     }
 
     public boolean isConnected() {
-        return session != null && session.isOpen();
+        GridGarrisonWebSocketClient client = webSocketClient;
+        return client != null && client.isOpen();
     }
 
-    // Internal callback for endpoint
-    void onOpen(Session session) {
-        this.session = session;
+    void onOpen() {
         log.info("✅ WebSocket opened");
         try {
             sendBootNotification();
@@ -391,7 +445,6 @@ public class EvWebSocketClient {
 
     void onMessage(String message) {
         log.debug("📥 Received: {}", message);
-        // OCPP CALLRESULT / CALLERROR handling can go here
     }
 
     void onError(Throwable throwable) {
@@ -399,9 +452,37 @@ public class EvWebSocketClient {
         triggerReconnectAsync("websocket error");
     }
 
-    void onClose() {
-        log.info("🔌 WebSocket closed");
-        this.session = null;
-        triggerReconnectAsync("websocket close");
+    void onClose(int code, String reason, boolean remote) {
+        log.info("🔌 WebSocket closed: code={} reason={} remote={}", code, reason, remote);
+        webSocketClient = null;
+        if (!manualDisconnect.get()) {
+            triggerReconnectAsync("websocket close");
+        }
+    }
+
+    private final class GridGarrisonWebSocketClient extends WebSocketClient {
+        GridGarrisonWebSocketClient(URI serverUri, Draft_6455 draft) {
+            super(serverUri, draft);
+        }
+
+        @Override
+        public void onOpen(ServerHandshake handshakeData) {
+            EvWebSocketClient.this.onOpen();
+        }
+
+        @Override
+        public void onMessage(String message) {
+            EvWebSocketClient.this.onMessage(message);
+        }
+
+        @Override
+        public void onClose(int code, String reason, boolean remote) {
+            EvWebSocketClient.this.onClose(code, reason, remote);
+        }
+
+        @Override
+        public void onError(Exception ex) {
+            EvWebSocketClient.this.onError(ex);
+        }
     }
 }

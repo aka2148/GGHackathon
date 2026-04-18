@@ -49,6 +49,13 @@ ev:
     # Auto-scenarios (set to true to enable automated demo sequences)
     auto-scenarios: false
 
+    # ISO-15118 bridge context for realistic auth/session metadata in OCPP messages
+    iso15118:
+      enabled: true
+      authorization-mode: EIM
+      contract-certificate-id: ISO15118-CERT-LOCAL-001
+      secc-id: SECC-LOCAL-001
+
     # Certificate configuration (for wss + optional mTLS)
     tls:
       enabled: false
@@ -79,6 +86,18 @@ spring:
 
 ev:
   simulator:
+    station-id: EV-Simulator-001
     gateway-uri: wss://localhost:8443/ocpp/{stationId}
+    iso15118:
+      enabled: true
+      authorization-mode: PlugAndCharge
+      contract-certificate-id: ISO15118-CERT-DEMO-001
+      secc-id: SECC-DEMO-MTLS-001
     tls:
       enabled: true
+      key-store-path: classpath:certs/ev-sim.jks
+      key-store-password: changeit
+      key-store-type: JKS
+      trust-store-path: classpath:certs/truststore.jks
+      trust-store-password: changeit
+      trust-store-type: JKS

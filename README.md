@@ -72,6 +72,46 @@ orchestrator  ──[TransactionEvent]───► watchdog  (updates session st
 
 \* For full mTLS, generate certs and place in `src/main/resources/certs/`.
 
+## demo-mtls profile behavior
+
+When running with `SPRING_PROFILES_ACTIVE=demo-mtls`:
+
+- Backend HTTPS still runs on `https://localhost:8443`
+- Default TLS client auth is `want` (optional cert at connector level)
+- OCPP endpoint `/ocpp/**` still enforces station auth and CN/stationId checks
+- Visualizer/UI can open without browser client certificate
+
+To force strict connector-level client certs for all HTTPS requests, set:
+
+```powershell
+$env:GG_CLIENT_AUTH = "need"
+```
+
+For demo-friendly behavior, keep:
+
+```powershell
+$env:GG_CLIENT_AUTH = "want"
+```
+
+## mTLS handshake tests
+
+Automated handshake verification lives in:
+
+- `src/test/java/com/cybersecuals/gridgarrison/orchestrator/config/OcppHandshakeInterceptorTest.java`
+
+Covered scenarios:
+
+- accepts when `Sec-WebSocket-Protocol` includes `ocpp2.0.1` and certificate CN matches `/ocpp/{stationId}`
+- rejects when CN and `stationId` mismatch
+- rejects when required OCPP subprotocol is missing
+- rejects when client certificate subject has no CN
+
+Run only this test class:
+
+```powershell
+mvn -Dtest=OcppHandshakeInterceptorTest test
+```
+
 ## Local Env Setup
 
 If you do not want to retype Ganache variables every session, use the helper files under `scripts/`:
@@ -106,6 +146,7 @@ scripts\start-local.ps1 -Bootstrap
 | `GG_DB_URL` | JDBC URL | H2 in-memory |
 | `GG_SERVER_KS_PASSWORD` | Server keystore password | `changeit` |
 | `GG_CA_TS_PASSWORD` | CA truststore password | `changeit` |
+| `GG_CLIENT_AUTH` | TLS client-auth mode (`want` or `need`) | `want` |
 
 ## Ganache Bootstrap (Deploy + Seed)
 

@@ -5,9 +5,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
+import org.springframework.web.socket.SubProtocolCapable;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.security.Principal;
+import java.util.List;
 
 /**
  * Public-API component of the {@code orchestrator} module.
@@ -25,7 +27,9 @@ import java.security.Principal;
  */
 @Slf4j
 @Component
-public class OcppWebSocketHandler extends TextWebSocketHandler {
+public class OcppWebSocketHandler extends TextWebSocketHandler implements SubProtocolCapable {
+
+    private static final String OCPP_201 = "ocpp2.0.1";
 
     private final ApplicationEventPublisher eventPublisher;
     private final boolean enforceStationIdPrincipalMatch;
@@ -36,6 +40,11 @@ public class OcppWebSocketHandler extends TextWebSocketHandler {
     ) {
         this.eventPublisher = eventPublisher;
         this.enforceStationIdPrincipalMatch = enforceStationIdPrincipalMatch;
+    }
+
+    @Override
+    public List<String> getSubProtocols() {
+        return List.of(OCPP_201);
     }
 
     // -------------------------------------------------------------------------
@@ -124,6 +133,15 @@ public class OcppWebSocketHandler extends TextWebSocketHandler {
     private void handleTransactionEvent(WebSocketSession session, OcppMessage msg) {
         log.info("[OCPP] TransactionEvent stationId={}", msg.stationId());
         eventPublisher.publishEvent(new TransactionEvent(msg.stationId(), msg.rawPayload()));
+
+        String isoViolation = Iso15118PolicyValidator.validateTransactionPayload(msg.rawPayload());
+        if (isoViolation != null) {
+            log.warn("[OCPP][ISO15118] Policy violation stationId={} reason={}", msg.stationId(), isoViolation);
+            eventPublisher.publishEvent(new SecurityAlertEvent(
+                msg.stationId(),
+                "{\"alertType\":\"ISO15118_POLICY_VIOLATION\",\"reason\":\"" + isoViolation.replace("\"", "'") + "\"}"
+            ));
+        }
     }
 
     private void handleFirmwareStatus(WebSocketSession session, OcppMessage msg) {

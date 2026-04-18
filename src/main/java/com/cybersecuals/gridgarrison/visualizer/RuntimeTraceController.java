@@ -167,7 +167,7 @@ public class RuntimeTraceController {
 
     private void publishSimulatedTransaction(String stationId, String state) {
         String payload = "{\"sessionId\":\"SIM-" + UUID.randomUUID() + "\",\"eventType\":\""
-            + state + "\",\"source\":\"visualizer\"}";
+            + state + "\",\"source\":\"visualizer\",\"authorizationMode\":\"EIM\"}";
         eventPublisher.publishEvent(new TransactionEvent(stationId, payload));
     }
 
