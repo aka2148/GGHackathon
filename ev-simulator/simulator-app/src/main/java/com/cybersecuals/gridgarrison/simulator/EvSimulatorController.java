@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -28,6 +29,7 @@ public class EvSimulatorController {
     private final EvVerificationGateState verificationGateState;
     private final EvUserJourneyState userJourneyState;
     private final AtomicReference<String> activeTransactionId = new AtomicReference<>();
+    private final AtomicReference<String> settlingTransactionId = new AtomicReference<>();
     private final AtomicReference<SettlementSummary> lastSettlement = new AtomicReference<>();
 
     @Value("${ev.simulator.user.price-per-kwh:0.25}")
@@ -38,6 +40,12 @@ public class EvSimulatorController {
 
     @Value("${ev.simulator.user.release-poll-interval-ms:500}")
     private long releasePollIntervalMs;
+
+    @Value("${ev.simulator.user.authorized-poll-max-attempts:24}")
+    private int authorizedPollMaxAttempts;
+
+    @Value("${ev.simulator.user.authorized-poll-interval-ms:500}")
+    private long authorizedPollIntervalMs;
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> status() {
@@ -117,6 +125,7 @@ public class EvSimulatorController {
     public ResponseEntity<Map<String, Object>> disconnect() throws Exception {
         client.disconnect();
         activeTransactionId.set(null);
+        settlingTransactionId.set(null);
         scenarios.clearCurrentTransactionId();
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("ok", true);
@@ -186,7 +195,12 @@ public class EvSimulatorController {
         }
 
         String resolvedTransactionId = resolveTransactionId(transactionId);
-        SettlementSummary settlement = settleAndCompleteSession(resolvedTransactionId, totalKwh, false);
+        SettlementSummary settlement;
+        try {
+            settlement = settleAndCompleteSession(resolvedTransactionId, totalKwh, false);
+        } catch (IllegalStateException ex) {
+            return settlementConflictResponse(resolvedTransactionId, ex);
+        }
         lastSettlement.set(settlement);
 
         Map<String, Object> body = new LinkedHashMap<>();
@@ -352,13 +366,39 @@ public class EvSimulatorController {
         }
 
         syncEscrowState(activeEscrow);
-        body.put("escrowActive", activeEscrow);
 
         if (activeEscrow == null || activeEscrow.escrowAddress() == null || activeEscrow.escrowAddress().isBlank()) {
             body.put("ok", false);
             body.put("message", "Escrow contract is not ready yet. Try polling /api/ev/user/flow/status.");
             body.put("userJourneyState", userJourneyState.snapshot().journeyState().name());
             return ResponseEntity.status(504).body(body);
+        }
+
+        try {
+            activeEscrow = trustVerificationClient.awaitEscrowLifecycle(
+                stationId,
+                "AUTHORIZED",
+                Math.max(1, authorizedPollMaxAttempts),
+                Math.max(100L, authorizedPollIntervalMs)
+            );
+            syncEscrowState(activeEscrow);
+        } catch (Exception ex) {
+            body.put("ok", false);
+            body.put("message", "Escrow authorization poll failed: " + safeMessage(ex));
+            body.put("userJourneyState", userJourneyState.snapshot().journeyState().name());
+            return ResponseEntity.status(502).body(body);
+        }
+
+        String escrowLifecycle = normalizeLifecycleState(activeEscrow == null ? null : activeEscrow.lifecycleState());
+        body.put("escrowActive", activeEscrow);
+        body.put("escrowLifecycleState", escrowLifecycle);
+
+        if (!"AUTHORIZED".equals(escrowLifecycle)) {
+            body.put("ok", false);
+            body.put("message", "Escrow is not ready to start charging (expected AUTHORIZED, found "
+                + escrowLifecycle + ").");
+            body.put("userJourneyState", userJourneyState.snapshot().journeyState().name());
+            return ResponseEntity.status(409).body(body);
         }
 
         ResponseEntity<Map<String, Object>> blocked = verifyChargingGate();
@@ -431,7 +471,12 @@ public class EvSimulatorController {
         }
 
         String resolvedTransactionId = resolveTransactionId(transactionId);
-        SettlementSummary settlement = settleAndCompleteSession(resolvedTransactionId, totalKwh, true);
+        SettlementSummary settlement;
+        try {
+            settlement = settleAndCompleteSession(resolvedTransactionId, totalKwh, true);
+        } catch (IllegalStateException ex) {
+            return settlementConflictResponse(resolvedTransactionId, ex);
+        }
         lastSettlement.set(settlement);
 
         Map<String, Object> body = new LinkedHashMap<>();
@@ -469,6 +514,7 @@ public class EvSimulatorController {
         }
 
         activeTransactionId.set(null);
+        settlingTransactionId.set(null);
         lastSettlement.set(null);
         userJourneyState.resetJourney(resetWallet, resetBattery);
         verificationGateState.reset(stationId, "Dashboard reset requested. Verify firmware to start a new charging session.");
@@ -687,56 +733,100 @@ public class EvSimulatorController {
     private SettlementSummary settleAndCompleteSession(String transactionId,
                                                        double totalKwh,
                                                        boolean debitWallet) throws Exception {
-        double safeTotalKwh = Math.max(0.0d, totalKwh);
-        EvUserJourneyState.Snapshot beforeSettlement = userJourneyState.snapshot();
-
-        userJourneyState.markSettling();
-        client.sendTransactionEnd(transactionId, safeTotalKwh);
-        activeTransactionId.compareAndSet(transactionId, null);
-
-        EvTrustVerificationClient.EscrowActiveResponse activeEscrow = trustVerificationClient.awaitEscrowLifecycle(
-            client.getStationId(),
-            "RELEASED",
-            Math.max(1, releasePollMaxAttempts),
-            Math.max(100L, releasePollIntervalMs)
-        );
-        syncEscrowState(activeEscrow);
-
-        String finalContractState = activeEscrow == null || activeEscrow.lifecycleState() == null
-            ? "UNKNOWN"
-            : activeEscrow.lifecycleState().trim().toUpperCase();
-
-        BigInteger heldAmountWei = activeEscrow != null && activeEscrow.heldAmountWei() != null
-            ? activeEscrow.heldAmountWei()
-            : beforeSettlement.heldAmountWei();
-
-        double chargedAmount = roundMoney(safeTotalKwh * Math.max(0.0d, userPricePerKwh));
-        double debitedAmount = debitWallet ? roundMoney(Math.min(beforeSettlement.walletBalance(), chargedAmount)) : 0.0d;
-        double remainingWalletBalance = debitWallet
-            ? roundMoney(Math.max(0.0d, beforeSettlement.walletBalance() - debitedAmount))
-            : roundMoney(beforeSettlement.walletBalance());
-
-        if (debitWallet) {
-            userJourneyState.setWalletBalance(remainingWalletBalance);
+        String inFlight = settlingTransactionId.get();
+        if (inFlight != null) {
+            if (inFlight.equals(transactionId)) {
+                throw new IllegalStateException("Settlement is already in progress for this transaction.");
+            }
+            throw new IllegalStateException("Another settlement is already in progress for transaction " + inFlight + ".");
         }
 
-        if ("RELEASED".equals(finalContractState)) {
-            userJourneyState.markComplete();
-        } else {
+        if (!settlingTransactionId.compareAndSet(null, transactionId)) {
+            String current = settlingTransactionId.get();
+            if (transactionId.equals(current)) {
+                throw new IllegalStateException("Settlement is already in progress for this transaction.");
+            }
+            throw new IllegalStateException("Another settlement is already in progress.");
+        }
+
+        try {
+            SettlementSummary previous = lastSettlement.get();
+            if (previous != null
+                && transactionId.equals(previous.transactionId())
+                && "RELEASED".equalsIgnoreCase(previous.finalContractState())) {
+                return previous;
+            }
+
+            double safeTotalKwh = Math.max(0.0d, totalKwh);
+            EvUserJourneyState.Snapshot beforeSettlement = userJourneyState.snapshot();
+
             userJourneyState.markSettling();
-        }
+            client.sendTransactionEnd(transactionId, safeTotalKwh);
+            activeTransactionId.compareAndSet(transactionId, null);
 
-        return new SettlementSummary(
-            transactionId,
-            safeTotalKwh,
-            heldAmountWei,
-            chargedAmount,
-            debitedAmount,
-            remainingWalletBalance,
-            finalContractState,
-            activeEscrow == null ? null : activeEscrow.escrowAddress(),
-            Instant.now()
-        );
+            EvTrustVerificationClient.EscrowActiveResponse activeEscrow = trustVerificationClient.awaitEscrowLifecycle(
+                client.getStationId(),
+                "RELEASED",
+                Math.max(1, releasePollMaxAttempts),
+                Math.max(100L, releasePollIntervalMs)
+            );
+            syncEscrowState(activeEscrow);
+
+            String finalContractState = activeEscrow == null || activeEscrow.lifecycleState() == null
+                ? "UNKNOWN"
+                : activeEscrow.lifecycleState().trim().toUpperCase();
+
+            BigInteger heldAmountWei = activeEscrow != null && activeEscrow.heldAmountWei() != null
+                ? activeEscrow.heldAmountWei()
+                : beforeSettlement.heldAmountWei();
+
+            double chargedAmount = roundMoney(safeTotalKwh * Math.max(0.0d, userPricePerKwh));
+            double debitedAmount = debitWallet ? roundMoney(Math.min(beforeSettlement.walletBalance(), chargedAmount)) : 0.0d;
+            double remainingWalletBalance = debitWallet
+                ? roundMoney(Math.max(0.0d, beforeSettlement.walletBalance() - debitedAmount))
+                : roundMoney(beforeSettlement.walletBalance());
+
+            if (debitWallet) {
+                userJourneyState.setWalletBalance(remainingWalletBalance);
+            }
+
+            if ("RELEASED".equals(finalContractState)) {
+                userJourneyState.markComplete();
+            } else {
+                userJourneyState.markSettling();
+            }
+
+            return new SettlementSummary(
+                transactionId,
+                safeTotalKwh,
+                heldAmountWei,
+                chargedAmount,
+                debitedAmount,
+                remainingWalletBalance,
+                finalContractState,
+                activeEscrow == null ? null : activeEscrow.escrowAddress(),
+                Instant.now()
+            );
+        } finally {
+            settlingTransactionId.compareAndSet(transactionId, null);
+        }
+    }
+
+    private ResponseEntity<Map<String, Object>> settlementConflictResponse(String transactionId,
+                                                                           IllegalStateException ex) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", false);
+        body.put("transactionId", transactionId);
+        body.put("message", safeMessage(ex));
+        body.put("userJourneyState", userJourneyState.snapshot().journeyState().name());
+        return ResponseEntity.status(409).body(body);
+    }
+
+    private String normalizeLifecycleState(String lifecycleState) {
+        if (lifecycleState == null || lifecycleState.isBlank()) {
+            return "UNKNOWN";
+        }
+        return lifecycleState.trim().toUpperCase(Locale.ROOT);
     }
 
     private double roundMoney(double value) {
