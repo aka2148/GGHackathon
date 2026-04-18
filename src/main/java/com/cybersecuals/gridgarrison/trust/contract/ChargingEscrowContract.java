@@ -28,6 +28,7 @@ import java.util.Collections;
  * The deploy binary is loaded from src/main/resources/solidity/ChargingEscrow.bin,
  * which is generated from the truffle artifact at build/contracts/ChargingEscrow.json.
  */
+@SuppressWarnings("rawtypes")
 public class ChargingEscrowContract extends Contract {
 
     public static final String BINARY = loadBinaryFromResources();
@@ -245,4 +246,57 @@ public class ChargingEscrowContract extends Contract {
             throw new ExceptionInInitializerError("Failed to load ChargingEscrow bytecode: " + ex.getMessage());
         }
     }
+
+    public RemoteFunctionCall<TransactionReceipt> cancel(String reason) {
+        final Function function = new Function(FUNC_CANCEL,
+                Arrays.<Type>asList(new org.web3j.abi.datatypes.Utf8String(reason)),
+                Collections.<TypeReference<?>>emptyList());
+        return executeRemoteCallTransaction(function);
+    }
+
+    public RemoteFunctionCall<BigInteger> getState() {
+        final Function function = new Function(FUNC_GETSTATE,
+                Arrays.<Type>asList(),
+                Arrays.<TypeReference<?>>asList(new TypeReference<Uint8>() {}));
+        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
+    }
+
+    public RemoteFunctionCall<BigInteger> getBalance() {
+        final Function function = new Function(FUNC_GETBALANCE,
+                Arrays.<Type>asList(),
+                Arrays.<TypeReference<?>>asList(new TypeReference<Uint256>() {}));
+        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
+    }
+
+    public RemoteFunctionCall<BigInteger> amount() {
+        final Function function = new Function(FUNC_AMOUNT,
+                Arrays.<Type>asList(),
+                Arrays.<TypeReference<?>>asList(new TypeReference<Uint256>() {}));
+        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
+    }
+
+    public RemoteFunctionCall<BigInteger> currentSoc() {
+        final Function function = new Function(FUNC_CURRENTSOC,
+                Arrays.<Type>asList(),
+                Arrays.<TypeReference<?>>asList(new TypeReference<Uint8>() {}));
+        return executeRemoteCallSingleValueReturn(function, BigInteger.class);
+    }
+
+    private static String getDeploymentBinary() {
+        return librariesLinkedBinary != null ? librariesLinkedBinary : BINARY;
+    }
+
+    protected String getStaticDeployedAddress(String networkId) { return _addresses.get(networkId); }
+    public static String getPreviouslyDeployedAddress(String networkId) { return _addresses.get(networkId); }
+
+    // ── Event response classes ────────────────────────────────────────────────
+    public static class DepositedEventResponse extends BaseEventResponse { public String buyer; public BigInteger amount; }
+    public static class StationVerifiedEventResponse extends BaseEventResponse { public String stationId; public byte[] liveHash; }
+    public static class VerificationFailedEventResponse extends BaseEventResponse { public String stationId; public byte[] liveHash; public byte[] goldenHash; }
+    public static class ChargingStartedEventResponse extends BaseEventResponse { public String sessionId; public BigInteger targetSoc; }
+    public static class SocUpdatedEventResponse extends BaseEventResponse { public BigInteger previousSoc; public BigInteger currentSoc; }
+    public static class SessionCompletedEventResponse extends BaseEventResponse { public String sessionId; public BigInteger finalSoc; }
+    public static class FundsReleasedEventResponse extends BaseEventResponse { public String charger; public BigInteger amount; }
+    public static class RefundedEventResponse extends BaseEventResponse { public String buyer; public BigInteger amount; public String reason; }
+    public static class CancelledEventResponse extends BaseEventResponse { public String reason; }
 }

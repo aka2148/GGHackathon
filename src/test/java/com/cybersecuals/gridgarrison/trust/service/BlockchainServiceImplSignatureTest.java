@@ -16,10 +16,9 @@ import java.time.Instant;
 import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
-class BlockchainServiceImplSignatureTest {
+class BlockchainServiceImplSignatureTest {  // Focused unit tests for signature verification logic in BlockchainServiceImpl.
 
     @SuppressWarnings("unchecked")
     private static <T> RemoteCall<T> remoteCallMock() {
@@ -28,6 +27,7 @@ class BlockchainServiceImplSignatureTest {
 
     @Test
     void verifiesSignatureAndHashAsVerified() throws Exception {
+
         KeyPair keyPair = newRsaKeyPair();
         String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
         String goldenHash = "0xabc123";
@@ -56,16 +56,19 @@ class BlockchainServiceImplSignatureTest {
         ReflectionTestUtils.setField(service, "manufacturerPublicKeyBase64", publicKey);
 
         FirmwareHash input = FirmwareHash.builder()
-            .stationId("CS-101")
-            .reportedHash(goldenHash)
-            .firmwareVersion("1.0.0")
-            .reportedAt(Instant.now())
-            .status(FirmwareHash.VerificationStatus.PENDING)
-            .build();
+                .stationId("CS-101")
+                .reportedHash(goldenHash)
+                .firmwareVersion("1.0.0")
+                .reportedAt(Instant.now())
+                .status(FirmwareHash.VerificationStatus.PENDING)
+                .build();
 
-        TrustVerificationResult result = service.verifyGoldenHashWithEvidence(input).join();
+        TrustVerificationResult result =
+                service.verifyGoldenHashWithEvidence(input).join();
 
-        assertThat(result.firmwareHash().getStatus()).isEqualTo(FirmwareHash.VerificationStatus.VERIFIED);
+        assertThat(result.firmwareHash().getStatus())
+                .isEqualTo(FirmwareHash.VerificationStatus.VERIFIED);
+
         assertThat(result.firmwareHash().getSignatureVerified()).isTrue();
         assertThat(result.evidence().verdict()).isEqualTo(TrustEvidence.Verdict.VERIFIED);
         assertThat(result.evidence().txHash()).isEqualTo("0xverifytx-101");
@@ -73,6 +76,7 @@ class BlockchainServiceImplSignatureTest {
 
     @Test
     void failsVerificationWhenSignatureIsInvalid() throws Exception {
+
         KeyPair keyPair = newRsaKeyPair();
         String publicKey = Base64.getEncoder().encodeToString(keyPair.getPublic().getEncoded());
         String goldenHash = "0xabc123";
@@ -101,16 +105,19 @@ class BlockchainServiceImplSignatureTest {
         ReflectionTestUtils.setField(service, "manufacturerPublicKeyBase64", publicKey);
 
         FirmwareHash input = FirmwareHash.builder()
-            .stationId("CS-101")
-            .reportedHash(goldenHash)
-            .firmwareVersion("1.0.0")
-            .reportedAt(Instant.now())
-            .status(FirmwareHash.VerificationStatus.PENDING)
-            .build();
+                .stationId("CS-101")
+                .reportedHash(goldenHash)
+                .firmwareVersion("1.0.0")
+                .reportedAt(Instant.now())
+                .status(FirmwareHash.VerificationStatus.PENDING)
+                .build();
 
-        TrustVerificationResult result = service.verifyGoldenHashWithEvidence(input).join();
+        TrustVerificationResult result =
+                service.verifyGoldenHashWithEvidence(input).join();
 
-        assertThat(result.firmwareHash().getStatus()).isEqualTo(FirmwareHash.VerificationStatus.TAMPERED);
+        assertThat(result.firmwareHash().getStatus())
+                .isEqualTo(FirmwareHash.VerificationStatus.TAMPERED);
+
         assertThat(result.firmwareHash().getSignatureVerified()).isFalse();
         assertThat(result.evidence().rationale()).contains("signature verification failed");
         assertThat(result.evidence().txHash()).isEqualTo("0xverifytx-102");

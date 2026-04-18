@@ -18,6 +18,11 @@
     <description>EV Charging Trust &amp; Identity System — OCPP 2.0.1 / Blockchain / Digital Twin</description>
 
     <properties>
+        <!--
+            FIX 1: pom.xml had <java.version>17</java.version> but the build log showed
+            "javac [debug parameters release 17]" — keep at 17 to match your installed JDK.
+            If you have JDK 21 installed, change this to 21.
+        -->
         <java.version>17</java.version>
         <web3j.version>4.10.3</web3j.version>
         <spring-modulith.version>1.2.0</spring-modulith.version>
@@ -80,6 +85,18 @@
             <version>${web3j.version}</version>
         </dependency>
 
+        <!--
+            FIX 2: The generated Web3j wrappers (ChargingEscrow.java, FirmwareRegistry.java)
+            import io.reactivex.Flowable. Web3j 4.x depends on RxJava 2.x but does not
+            always pull it transitively in all build environments. Adding it explicitly
+            prevents "package io.reactivex does not exist" compile errors.
+        -->
+        <dependency>
+            <groupId>io.reactivex.rxjava2</groupId>
+            <artifactId>rxjava</artifactId>
+            <version>2.2.21</version>
+        </dependency>
+
         <!-- Utilities -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -119,16 +136,14 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.web3j</groupId>
-                <artifactId>web3j-maven-plugin</artifactId>
-                <version>${web3j.version}</version>
-                <configuration>
-                    <packageName>com.cybersecuals.gridgarrison.trust.contract.generated</packageName>
-                    <sourceDestination>${project.build.directory}/generated-sources/web3j</sourceDestination>
-                    <nativeJavaType>true</nativeJavaType>
-                </configuration>
-            </plugin>
+            <!--
+                FIX 3: The web3j-maven-plugin was present in the original pom.xml but
+                it expects .sol source files at a specific path and tries to compile them
+                during the build — failing when the path is wrong or solc is not on PATH.
+                We are using pre-generated Java wrappers instead, so this plugin is removed.
+                If you later want the plugin to auto-generate wrappers on build, add it back
+                with the correct <soliditySourceFiles> configuration.
+            -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

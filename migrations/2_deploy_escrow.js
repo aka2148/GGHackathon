@@ -7,19 +7,22 @@ module.exports = async function (deployer, network, accounts) {
 
   const stationId = "CS-101";
 
-  // SAFE bytes32
+  // IMPORTANT: Proper bytes32 hash
   const goldenHash = web3.utils.keccak256("CS-101");
 
   const targetSoc = 80;
-  const timeout   = 3600;
+  const sessionTimeout = 3600;
+
+  console.log("Deploying with:");
+  console.log({ operator, charger, stationId, goldenHash, targetSoc, sessionTimeout });
 
   await deployer.deploy(
-  ChargingEscrow,
-  operator,
-  charger,
-  stationId,
-  goldenHash,
-  targetSoc,
-  timeout
-);
+    ChargingEscrow,
+    operator,
+    charger,
+    stationId,
+    goldenHash,
+    targetSoc,
+    sessionTimeout
+  );
 };

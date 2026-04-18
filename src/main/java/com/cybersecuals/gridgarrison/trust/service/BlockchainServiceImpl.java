@@ -489,8 +489,8 @@ class BlockchainServiceImpl implements BlockchainService {
                 }
 
                 return new GoldenRecord(
-                    nativeRecord.goldenHash(),
-                    nativeRecord.manufacturerSignature(),
+                    nativeRecord.goldenHash,
+                    nativeRecord.manufacturerSignature,
                     manufacturerId
                 );
             }
