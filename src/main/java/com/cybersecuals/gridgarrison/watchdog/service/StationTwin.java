@@ -9,24 +9,19 @@ import java.util.List;
 
 /**
  * Snapshot of a station's digital twin state.
- * Exposed as part of the {@code watchdog} module's public API.
  */
 @Value
 @Builder
 public class StationTwin {
 
-    String stationId;
+    String  stationId;
     Instant registeredAt;
     Instant lastHeartbeat;
 
-    /** All sessions observed since registration (bounded ring buffer in impl). */
     List<ChargingSession> recentSessions;
 
-    /** Running average energy per session (kWh), used as baseline. */
     double avgEnergyPerSessionKwh;
-
-    /** Number of anomalies raised lifetime. */
-    int totalAnomaliesRaised;
+    int    totalAnomaliesRaised;
 
     TwinStatus status;
 
@@ -39,26 +34,47 @@ public class StationTwin {
 }
 
 /**
- * Describes a detected behavioural anomaly.
- * Exposed as part of the {@code watchdog} module's public API.
+ * Describes one detected anomaly signal.
+ * Package-private — external consumers receive AnomalyEvent.
+ *
+ * ADDED new AnomalyType values for the four real-time detectors:
+ *   POWER_SPIKE_ABSOLUTE, POWER_SPIKE_RATE, POWER_TWIN_MISMATCH
+ *   TEMPERATURE_SPIKE, TEMPERATURE_RATE
+ *   SOC_SPOOF, SOC_RATE_MISMATCH
  */
 @Value
 @Builder
 class AnomalyReport {
 
-    String stationId;
+    String      stationId;
     AnomalyType type;
-    String description;
-    double observedValue;
-    double expectedValue;
-    Instant detectedAt;
+    String      description;
+    double      observedValue;
+    double      expectedValue;
+    Instant     detectedAt;
 
     public enum AnomalyType {
-        ENERGY_SPIKE,          // single session >> baseline
-        RAPID_RECONNECT,       // boot loops / crash cycling
-        CLOCK_DRIFT,           // timestamp deviation from grid time
-        FIRMWARE_MISMATCH,     // reported hash ≠ golden hash
-        SESSION_OVERFLOW,      // concurrent sessions > EVSE capacity
-        HEARTBEAT_MISSED       // station went silent
+        // Session-level (original rules)
+        ENERGY_SPIKE,
+        RAPID_RECONNECT,
+        CLOCK_DRIFT,
+        SESSION_OVERFLOW,
+        HEARTBEAT_MISSED,
+
+        // CAT-1 Power (real-time telemetry)
+        POWER_SPIKE_ABSOLUTE,    // power > hard cap
+        POWER_SPIKE_RATE,        // power jumped too fast between samples
+        POWER_TWIN_MISMATCH,     // live power >> twin baseline
+
+        // CAT-2 Temperature (real-time telemetry)
+        TEMPERATURE_SPIKE,       // temp > hard cap
+        TEMPERATURE_RATE,        // temp rising too fast
+
+        // CAT-3 SoC spoof (real-time telemetry)
+        SOC_SPOOF,               // SoC jump too large in one sample
+        SOC_RATE_MISMATCH,       // SoC increasing faster than power allows
+
+        // CAT-4 Identity / firmware
+        FIRMWARE_MISMATCH        // hash ≠ golden hash
     }
 }

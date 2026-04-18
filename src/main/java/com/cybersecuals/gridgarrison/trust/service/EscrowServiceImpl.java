@@ -9,23 +9,11 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.http.HttpService;
 import org.web3j.tx.gas.ContractGasProvider;
 import org.web3j.tx.gas.StaticGasProvider;
-import org.web3j.utils.Convert;
 
 import jakarta.annotation.PostConstruct;
 import java.math.BigInteger;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * Web3j-backed implementation of {@link EscrowService}.
- * Package-private — callers depend on the interface.
- *
- * Each public method loads a fresh ChargingEscrowContract instance bound to
- * the provided escrowAddress and submits the appropriate transaction.
- *
- * One ChargingEscrow contract is deployed per charging session — this service
- * does NOT maintain a registry of contracts. The escrowAddress is managed by
- * your session layer (e.g. stored in ChargingSession or a dedicated EscrowSession DTO).
- */
 @Slf4j
 @Service
 class EscrowServiceImpl implements EscrowService {
@@ -42,157 +30,207 @@ class EscrowServiceImpl implements EscrowService {
     @Value("${gridgarrison.blockchain.gas-limit:6000000}")
     private BigInteger gasLimit;
 
-    private Web3j             web3j;
-    private Credentials       credentials;
+    private Web3j web3j;
+    private Credentials credentials;
     private ContractGasProvider gasProvider;
 
     @PostConstruct
     void init() {
-        web3j       = Web3j.build(new HttpService(rpcUrl));
+        web3j = Web3j.build(new HttpService(rpcUrl));
         credentials = Credentials.create(privateKey);
         gasProvider = new StaticGasProvider(gasPriceWei, gasLimit);
-        log.info("[Escrow] EscrowService initialised — rpc={}", rpcUrl);
+
+        log.info("✅ EscrowService initialised rpc={} wallet={}",
+                rpcUrl, credentials.getAddress());
     }
 
-    // ── Deploy ────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // DEPLOY ESCROW
+    // ─────────────────────────────────────────────────────────────
 
     @Override
     public CompletableFuture<String> deployEscrow(String stationId,
-                                                   String chargerWallet,
-                                                   String goldenHash,
-                                                   int    targetSoc,
-                                                   long   timeoutSeconds) {
+                                                  String chargerWallet,
+                                                  String goldenHash,
+                                                  int targetSoc,
+                                                  long timeoutSeconds) {
+
         return CompletableFuture.supplyAsync(() -> {
             try {
-                // Convert 0x-prefixed goldenHash string to bytes32
+                log.info("🚀 Deploying escrow for station={}", stationId);
+
                 byte[] goldenHashBytes = hexToBytes32(goldenHash);
 
-                ChargingEscrowContract escrow = ChargingEscrowContract.deploy(
-                    web3j,
-                    credentials,
-                    gasProvider,
-                    credentials.getAddress(),          // operator = this backend wallet
-                    chargerWallet,                     // charger payable address
-                    stationId,
-                    goldenHashBytes,
-                    BigInteger.valueOf(targetSoc),
-                    BigInteger.valueOf(timeoutSeconds)
+                ChargingEscrowContract contract = ChargingEscrowContract.deploy(
+                        web3j,
+                        credentials,
+                        gasProvider,
+                        credentials.getAddress(),
+                        chargerWallet,
+                        stationId,
+                        goldenHashBytes,
+                        BigInteger.valueOf(targetSoc),
+                        BigInteger.valueOf(timeoutSeconds)
                 ).send();
 
-                String address = escrow.getContractAddress();
-                log.info("[Escrow] Deployed for stationId={} escrow={}", stationId, address);
+                String address = contract.getContractAddress();
+
+                log.info("✅ Escrow deployed at {}", address);
+
                 return address;
+
             } catch (Exception e) {
-                throw new RuntimeException(
-                    "Failed to deploy ChargingEscrow for station " + stationId, e);
+                log.error("❌ DEPLOY FAILED", e);
+                throw new RuntimeException(e);
             }
         });
     }
 
-    // ── FUNDED → AUTHORIZED ───────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // AUTHORIZE SESSION
+    // ─────────────────────────────────────────────────────────────
 
     @Override
     public CompletableFuture<String> authorizeSession(String escrowAddress, String liveHash) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 byte[] liveHashBytes = hexToBytes32(liveHash);
+
                 var receipt = loadEscrow(escrowAddress)
-                    .verifyStation(liveHashBytes)
-                    .send();
-                log.info("[Escrow] verifyStation tx={} escrow={}", receipt.getTransactionHash(), escrowAddress);
+                        .verifyStation(liveHashBytes)
+                        .send();
+
+                log.info("✅ verifyStation tx={}", receipt.getTransactionHash());
+
                 return receipt.getTransactionHash();
+
             } catch (Exception e) {
-                throw new RuntimeException("authorizeSession failed for escrow=" + escrowAddress, e);
+                log.error("❌ AUTHORIZE FAILED", e);
+                throw new RuntimeException(e);
             }
         });
     }
 
-    // ── AUTHORIZED → CHARGING ─────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // START CHARGING
+    // ─────────────────────────────────────────────────────────────
 
     @Override
     public CompletableFuture<String> startCharging(String escrowAddress, String sessionId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var receipt = loadEscrow(escrowAddress)
-                    .startCharging(sessionId)
-                    .send();
-                log.info("[Escrow] startCharging tx={} session={}", receipt.getTransactionHash(), sessionId);
+                        .startCharging(sessionId)
+                        .send();
+
+                log.info("✅ startCharging tx={}", receipt.getTransactionHash());
+
                 return receipt.getTransactionHash();
+
             } catch (Exception e) {
-                throw new RuntimeException("startCharging failed for escrow=" + escrowAddress, e);
+                log.error("❌ START FAILED", e);
+                throw new RuntimeException(e);
             }
         });
     }
 
-    // ── SoC update (CHARGING, no state change) ────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // UPDATE SOC
+    // ─────────────────────────────────────────────────────────────
 
     @Override
     public CompletableFuture<String> updateSoc(String escrowAddress, int soc) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var receipt = loadEscrow(escrowAddress)
-                    .updateSoc(BigInteger.valueOf(soc))
-                    .send();
-                log.debug("[Escrow] updateSoc={} tx={}", soc, receipt.getTransactionHash());
+                        .updateSoc(BigInteger.valueOf(soc))
+                        .send();
+
+                log.info("⚡ updateSoc={} tx={}", soc, receipt.getTransactionHash());
+
                 return receipt.getTransactionHash();
+
             } catch (Exception e) {
-                throw new RuntimeException("updateSoc failed for escrow=" + escrowAddress, e);
+                log.error("❌ updateSoc FAILED", e);
+                throw new RuntimeException(e);
             }
         });
     }
 
-    // ── CHARGING → COMPLETED ─────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // COMPLETE SESSION
+    // ─────────────────────────────────────────────────────────────
 
     @Override
     public CompletableFuture<String> completeSession(String escrowAddress) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var receipt = loadEscrow(escrowAddress)
-                    .completeSession()
-                    .send();
-                log.info("[Escrow] completeSession tx={} escrow={}", receipt.getTransactionHash(), escrowAddress);
+                        .completeSession()
+                        .send();
+
+                log.info("✅ completeSession tx={}", receipt.getTransactionHash());
+
                 return receipt.getTransactionHash();
+
             } catch (Exception e) {
-                throw new RuntimeException("completeSession failed for escrow=" + escrowAddress, e);
+                log.error("❌ COMPLETE FAILED", e);
+                throw new RuntimeException(e);
             }
         });
     }
 
-    // ── COMPLETED → RELEASED ─────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // RELEASE FUNDS
+    // ─────────────────────────────────────────────────────────────
 
     @Override
     public CompletableFuture<String> releaseFunds(String escrowAddress) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 var receipt = loadEscrow(escrowAddress)
-                    .releaseFunds()
-                    .send();
-                log.info("[Escrow] releaseFunds tx={} escrow={}", receipt.getTransactionHash(), escrowAddress);
+                        .releaseFunds()
+                        .send();
+
+                log.info("💰 releaseFunds tx={}", receipt.getTransactionHash());
+
                 return receipt.getTransactionHash();
+
             } catch (Exception e) {
-                throw new RuntimeException("releaseFunds failed for escrow=" + escrowAddress, e);
+                log.error("❌ RELEASE FAILED", e);
+                throw new RuntimeException(e);
             }
         });
     }
 
-    // ── Refund (FUNDED | AUTHORIZED | CHARGING → REFUNDED) ───────────────────
+    // ─────────────────────────────────────────────────────────────
+    // 🔥 REFUND (YOUR MAIN ISSUE FIXED HERE)
+    // ─────────────────────────────────────────────────────────────
 
     @Override
     public CompletableFuture<String> refundSession(String escrowAddress, String reason) {
         return CompletableFuture.supplyAsync(() -> {
             try {
+                log.error("🚨 SENDING REFUND TRANSACTION escrow={}", escrowAddress);
+
                 var receipt = loadEscrow(escrowAddress)
-                    .refund(reason)
-                    .send();
-                log.info("[Escrow] refund tx={} reason={}", receipt.getTransactionHash(), reason);
+                        .refund(reason)
+                        .send();
+
+                log.error("✅ REFUND TX SENT: {}", receipt.getTransactionHash());
+
                 return receipt.getTransactionHash();
+
             } catch (Exception e) {
-                throw new RuntimeException("refundSession failed for escrow=" + escrowAddress, e);
+                log.error("❌ REFUND FAILED HARD", e);
+                throw new RuntimeException(e);
             }
         });
     }
 
-    // ── Read state ────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // READ STATE
+    // ─────────────────────────────────────────────────────────────
 
     @Override
     public CompletableFuture<BigInteger> getSessionState(String escrowAddress) {
@@ -200,27 +238,25 @@ class EscrowServiceImpl implements EscrowService {
             try {
                 return loadEscrow(escrowAddress).getState().send();
             } catch (Exception e) {
-                throw new RuntimeException("getSessionState failed for escrow=" + escrowAddress, e);
+                throw new RuntimeException(e);
             }
         });
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────────────────────
 
-    /** Load a contract wrapper bound to a specific deployed escrow address. */
     private ChargingEscrowContract loadEscrow(String address) {
         return ChargingEscrowContract.load(address, web3j, credentials, gasProvider);
     }
 
-    /**
-     * Convert a 0x-prefixed hex string to a 32-byte array (bytes32 in Solidity).
-     * Pads with leading zeros if shorter; truncates if longer.
-     */
     private byte[] hexToBytes32(String hex) {
         String clean = hex.startsWith("0x") ? hex.substring(2) : hex;
-        // Pad to 64 hex chars = 32 bytes
+
         while (clean.length() < 64) clean = "0" + clean;
         if (clean.length() > 64) clean = clean.substring(clean.length() - 64);
+
         byte[] result = new byte[32];
         for (int i = 0; i < 32; i++) {
             result[i] = (byte) Integer.parseInt(clean.substring(i * 2, i * 2 + 2), 16);
