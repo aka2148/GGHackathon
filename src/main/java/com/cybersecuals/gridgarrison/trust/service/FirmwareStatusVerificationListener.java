@@ -21,12 +21,15 @@ class FirmwareStatusVerificationListener {
     private static final Logger log = LoggerFactory.getLogger(FirmwareStatusVerificationListener.class);
 
     private final BlockchainService blockchainService;
+    private final LatestTrustVerdictStore latestTrustVerdictStore;
     private final ApplicationEventPublisher eventPublisher;
 
     @SuppressWarnings("unused")
     FirmwareStatusVerificationListener(BlockchainService blockchainService,
+                                       LatestTrustVerdictStore latestTrustVerdictStore,
                                        ApplicationEventPublisher eventPublisher) {
         this.blockchainService = blockchainService;
+        this.latestTrustVerdictStore = latestTrustVerdictStore;
         this.eventPublisher = eventPublisher;
     }
 
@@ -46,11 +49,34 @@ class FirmwareStatusVerificationListener {
                 reason,
                 Instant.now()
             );
+            latestTrustVerdictStore.markFailed(
+                event.stationId(),
+                null,
+                FirmwareHash.VerificationStatus.UNKNOWN_STATION.name(),
+                reason,
+                evidence,
+                "GoldenHashVerificationFailedEvent"
+            );
             eventPublisher.publishEvent(new GoldenHashVerificationFailedEvent(
                 event.stationId(), event.rawPayload(), reason, evidence
             ));
+            eventPublisher.publishEvent(new EvHashRequestEvaluatedEvent(
+                event.stationId(),
+                "EV hash request evaluation failed due to malformed firmware payload",
+                null,
+                null,
+                FirmwareHash.VerificationStatus.UNKNOWN_STATION.name(),
+                false,
+                evidence
+            ));
             return;
         }
+
+        latestTrustVerdictStore.markPending(
+            event.stationId(),
+            firmwareHash.getReportedHash(),
+            "Firmware status received. Awaiting blockchain golden-hash verification."
+        );
 
         eventPublisher.publishEvent(new GoldenHashRequestedEvent(
             event.stationId(),
@@ -76,8 +102,25 @@ class FirmwareStatusVerificationListener {
                     "Trust verification future failed: " + reason,
                     Instant.now()
                 );
+                latestTrustVerdictStore.markFailed(
+                    event.stationId(),
+                    firmwareHash.getReportedHash(),
+                    FirmwareHash.VerificationStatus.UNKNOWN_STATION.name(),
+                    reason,
+                    evidence,
+                    "GoldenHashVerificationFailedEvent"
+                );
                 eventPublisher.publishEvent(new GoldenHashVerificationFailedEvent(
                     event.stationId(), event.rawPayload(), reason, evidence
+                ));
+                eventPublisher.publishEvent(new EvHashRequestEvaluatedEvent(
+                    event.stationId(),
+                    "EV hash request evaluation failed while verifying against on-chain golden hash",
+                    firmwareHash.getReportedHash(),
+                    evidence.expectedHash(),
+                    FirmwareHash.VerificationStatus.UNKNOWN_STATION.name(),
+                    false,
+                    evidence
                 ));
                 return;
             }
@@ -121,6 +164,22 @@ class FirmwareStatusVerificationListener {
                     evidence
                 ));
             }
+
+            latestTrustVerdictStore.markCompleted(
+                resolvedHash,
+                evidence,
+                "EvHashRequestEvaluatedEvent",
+                "Firmware hash request evaluated against on-chain golden baseline."
+            );
+            eventPublisher.publishEvent(new EvHashRequestEvaluatedEvent(
+                resolvedHash.getStationId(),
+                "EV hash request evaluated against current component-derived hash",
+                resolvedHash.getReportedHash(),
+                resolvedHash.getGoldenHash(),
+                status.name(),
+                status == FirmwareHash.VerificationStatus.VERIFIED,
+                evidence
+            ));
         });
     }
 
@@ -239,3 +298,11 @@ record GoldenHashVerificationFailedEvent(String stationId,
                                          String rawPayload,
                                          String reason,
                                          TrustEvidence evidence) {}
+
+record EvHashRequestEvaluatedEvent(String stationId,
+                                   String rawPayload,
+                                   String reportedHash,
+                                   String goldenHash,
+                                   String verificationStatus,
+                                   boolean verified,
+                                   TrustEvidence evidence) {}

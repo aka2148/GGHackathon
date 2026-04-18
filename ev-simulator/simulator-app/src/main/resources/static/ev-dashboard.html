@@ -321,8 +321,8 @@
       <div class="row">
         <div class="col-8">
           <label>Simulator URL</label>
-          <input id="apiBase" value="http://localhost:8080" />
-          <div class="hint">Default works for local demos.</div>
+          <input id="apiBase" value="" />
+          <div class="hint">Defaults to this page origin (auto-fallback if wrong).</div>
         </div>
         <div class="col-4">
           <label>Live refresh</label>
@@ -448,7 +448,7 @@
           </div>
           <div class="col-12">
             <label>Firmware hash</label>
-            <input id="fwHash" value="abc123def456ghi789jkl012mno345pqr" />
+            <input id="fwHash" placeholder="Filled from backend-generated component hash" />
           </div>
           <div class="col-12">
             <label>Firmware version</label>
@@ -502,6 +502,34 @@
       return configured || window.location.origin;
     }
 
+    function normalizeBase(base) {
+      const trimmed = (base || '').trim();
+      return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+    }
+
+    function buildUrl(base, path, query = null) {
+      let url = `${normalizeBase(base)}${path}`;
+      if (query && Object.keys(query).length) {
+        const params = new URLSearchParams();
+        for (const [k, v] of Object.entries(query)) {
+          if (v !== undefined && v !== null && `${v}`.trim() !== '') {
+            params.append(k, v);
+          }
+        }
+        const qs = params.toString();
+        if (qs) {
+          url += `?${qs}`;
+        }
+      }
+      return url;
+    }
+
+    function withTimeout(ms = 10000) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), Math.max(1000, ms));
+      return { controller, timeout };
+    }
+
     function logLine(kind, message) {
       const list = el('eventLog');
       const item = document.createElement('div');
@@ -553,40 +581,61 @@
       el('batteryText').textContent = `${Math.round(pct)}%`;
     }
 
-    async function callApi(method, path, query = null) {
-      const base = apiBase().replace(/\/$/, '');
-      let url = `${base}${path}`;
+    async function callApi(method, path, query = null, options = {}) {
+      const recordResponse = options.recordResponse !== false;
+      const configuredBase = normalizeBase(apiBase());
+      const originBase = normalizeBase(window.location.origin);
+      const candidates = configuredBase === originBase
+        ? [configuredBase]
+        : [configuredBase, originBase];
 
-      if (query && Object.keys(query).length) {
-        const params = new URLSearchParams();
-        for (const [k, v] of Object.entries(query)) {
-          if (v !== undefined && v !== null && `${v}`.trim() !== '') {
-            params.append(k, v);
+      let lastError = null;
+
+      for (let i = 0; i < candidates.length; i++) {
+        const base = candidates[i];
+        const url = buildUrl(base, path, query);
+        const { controller, timeout } = withTimeout(10000);
+
+        try {
+          const response = await fetch(url, { method, signal: controller.signal });
+          const text = await response.text();
+          let body;
+          try {
+            body = text ? JSON.parse(text) : {};
+          } catch {
+            body = { raw: text };
           }
+
+          if (recordResponse) {
+            setResponse({ method, url, status: response.status, body });
+          }
+
+          if (!response.ok) {
+            logLine('err', `${method} ${path} failed (${response.status})`);
+            throw new Error(body?.message || `HTTP ${response.status}`);
+          }
+
+          if (i > 0 && base === originBase) {
+            el('apiBase').value = originBase;
+            logLine('info', `API base auto-switched to ${originBase}`);
+          }
+
+          return body;
+        } catch (err) {
+          lastError = err;
+          const isLast = i === candidates.length - 1;
+          if (isLast) {
+            break;
+          }
+        } finally {
+          clearTimeout(timeout);
         }
-        const qs = params.toString();
-        if (qs) {
-          url += `?${qs}`;
-        }
       }
 
-      const response = await fetch(url, { method });
-      const text = await response.text();
-      let body;
-      try {
-        body = text ? JSON.parse(text) : {};
-      } catch {
-        body = { raw: text };
+      if (lastError?.name === 'AbortError') {
+        throw new Error(`Request timed out for ${path}. Check simulator URL in the dashboard.`);
       }
-
-      setResponse({ method, url, status: response.status, body });
-
-      if (!response.ok) {
-        logLine('err', `${method} ${path} failed (${response.status})`);
-        throw new Error(body?.message || `HTTP ${response.status}`);
-      }
-
-      return body;
+      throw lastError || new Error(`Request failed for ${path}`);
     }
 
     function updateTopUi(statusData, scenarioData) {
@@ -631,7 +680,7 @@
     }
 
     async function refreshProfiles() {
-      const profileData = await callApi('GET', '/api/ev/profiles');
+      const profileData = await callApi('GET', '/api/ev/profiles', null, { recordResponse: false });
       state.profiles = profileData.profiles || {};
       const select = el('profileSelect');
       const previous = select.value;
@@ -656,8 +705,8 @@
     async function refreshAll() {
       try {
         const [statusData, scenarioData] = await Promise.all([
-          callApi('GET', '/api/ev/status'),
-          callApi('GET', '/api/ev/scenario/status')
+          callApi('GET', '/api/ev/status', null, { recordResponse: false }),
+          callApi('GET', '/api/ev/scenario/status', null, { recordResponse: false })
         ]);
         await refreshProfiles();
         updateTopUi(statusData, scenarioData);
@@ -684,10 +733,16 @@
         if (onSuccess) {
           onSuccess(data);
         }
-        logLine('ok', label);
+        if (label) {
+          logLine('ok', label);
+        }
         await refreshAll();
       } catch (err) {
-        logLine('err', `${label} -> ${err.message}`);
+        if (label) {
+          logLine('err', `${label} -> ${err.message}`);
+        } else {
+          logLine('err', `${err.message}`);
+        }
       }
     }
 
@@ -790,13 +845,21 @@
     );
 
     el('requestHashVerifyBtn').addEventListener('click', () =>
-      runAction('Requested hash and verification', async () => {
-        const hash = el('fwHash').value;
+      runAction(null, async () => {
+        const firmwareStatus = el('fwStatus').value;
         const firmwareVersion = el('fwVersion').value;
-        const result = await callApi('POST', '/api/ev/verification/request', { hash, firmwareVersion });
+        const result = await callApi('POST', '/api/ev/verification/request', { firmwareStatus, firmwareVersion });
+        if (result.deliveredHash) {
+          el('fwHash').value = result.deliveredHash;
+        }
+        if (result.anyTampered) {
+          logLine('info', `Component abnormalities detected: ${(result.tamperedComponents || []).join(', ') || 'unknown'}`);
+        }
         if (!result.ok) {
+          logLine('err', `Verification FAILED: status=${result.verificationStatus || 'UNKNOWN'} gate=${result.verificationGateStatus || 'UNKNOWN'} reason=${result.message || 'No reason provided'}`);
           throw new Error(result.message || 'Verification did not pass');
         }
+        logLine('ok', `Verification PASSED: status=${result.verificationStatus || 'VERIFIED'} gate=${result.verificationGateStatus || 'VERIFIED'} hash=${result.deliveredHash || result.usedReportedHash || '-'}`);
         return result;
       })
     );
@@ -805,6 +868,10 @@
     el('disconnectRawBtn').addEventListener('click', () => runAction('Raw disconnect', () => callApi('POST', '/api/ev/disconnect')));
     el('statusRawBtn').addEventListener('click', () => runAction('Raw status', () => callApi('GET', '/api/ev/status')));
     el('profilesRawBtn').addEventListener('click', () => runAction('Raw profiles', () => callApi('GET', '/api/ev/profiles')));
+
+    if (!el('apiBase').value.trim()) {
+      el('apiBase').value = window.location.origin;
+    }
 
     refreshAll();
     setupPolling();

@@ -16,9 +16,12 @@ import com.cybersecuals.gridgarrison.shared.dto.FirmwareHash;
 class TrustReadController {
 
     private final BlockchainService blockchainService;
+    private final LatestTrustVerdictStore latestTrustVerdictStore;
 
-    TrustReadController(BlockchainService blockchainService) {
+    TrustReadController(BlockchainService blockchainService,
+                        LatestTrustVerdictStore latestTrustVerdictStore) {
         this.blockchainService = blockchainService;
+        this.latestTrustVerdictStore = latestTrustVerdictStore;
     }
 
     @GetMapping("/golden-hash")
@@ -105,6 +108,13 @@ class TrustReadController {
             TrustEvidence evidence = verificationResult.evidence();
             boolean verified = output.getStatus() == FirmwareHash.VerificationStatus.VERIFIED;
 
+            latestTrustVerdictStore.markCompleted(
+                output,
+                evidence,
+                "TrustReadController.verifyFirmware",
+                "Manual verify endpoint completed."
+            );
+
             return new VerifyFirmwareResponse(
                 output.getStationId(),
                 verified,
@@ -124,6 +134,21 @@ class TrustReadController {
             String message = cause.getMessage() == null
                 ? cause.getClass().getSimpleName()
                 : cause.getMessage();
+            TrustEvidence evidence = TrustEvidence.infrastructureFailure(
+                stationId,
+                reportedHash,
+                TrustEvidence.RpcStatus.UNREACHABLE.name(),
+                message,
+                Instant.now()
+            );
+            latestTrustVerdictStore.markFailed(
+                stationId,
+                reportedHash,
+                FirmwareHash.VerificationStatus.UNKNOWN_STATION.name(),
+                message,
+                evidence,
+                "TrustReadController.verifyFirmware"
+            );
             return new VerifyFirmwareResponse(
                 stationId,
                 false,
@@ -139,6 +164,28 @@ class TrustReadController {
                 message
             );
         }
+    }
+
+    @GetMapping("/latest-verdict")
+    LatestTrustVerdictResponse latestVerdict(
+        @RequestParam(defaultValue = "CS-101") String stationId
+    ) {
+        LatestTrustVerdictStore.TrustVerdictSnapshot snapshot = latestTrustVerdictStore.latest(stationId);
+        return new LatestTrustVerdictResponse(
+            snapshot.stationId(),
+            snapshot.resultStatus(),
+            snapshot.verified(),
+            snapshot.verificationStatus(),
+            snapshot.reportedHash(),
+            snapshot.expectedHash(),
+            snapshot.signatureVerified(),
+            snapshot.contractAddress(),
+            snapshot.rpcStatus(),
+            snapshot.verificationTxHash(),
+            snapshot.message(),
+            snapshot.observedAt(),
+            snapshot.sourceEvent()
+        );
     }
 
     @PostMapping("/register-runtime-signed-baseline")
@@ -230,6 +277,23 @@ class TrustReadController {
         Instant observedAt,
         String status,
         String message
+    ) {
+    }
+
+    record LatestTrustVerdictResponse(
+        String stationId,
+        String resultStatus,
+        boolean verified,
+        String verificationStatus,
+        String reportedHash,
+        String expectedHash,
+        Boolean signatureVerified,
+        String contractAddress,
+        String rpcStatus,
+        String verificationTxHash,
+        String message,
+        Instant observedAt,
+        String sourceEvent
     ) {
     }
 }

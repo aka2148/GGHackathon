@@ -169,19 +169,17 @@ public class EvSimulatorController {
 
     @PostMapping("/verification/request")
     public ResponseEntity<Map<String, Object>> requestVerification(
-        @RequestParam(required = false) String hash,
+        @RequestParam(required = false) String firmwareStatus,
         @RequestParam(required = false) String firmwareVersion
     ) {
         String stationId = client.getStationId();
-        String resolvedHash = (hash != null && !hash.isBlank())
-            ? hash
-            : client.getLastFirmwareHash();
-
-        EvVerificationGateState.Snapshot snapshot = trustVerificationClient.requestHashAndVerify(
+        EvTrustVerificationClient.RequestHashVerificationResult result = trustVerificationClient.requestHashAndVerify(
             stationId,
-            resolvedHash,
-            firmwareVersion
+            firmwareStatus,
+            firmwareVersion,
+            client::sendFirmwareStatus
         );
+        EvVerificationGateState.Snapshot snapshot = result.snapshot();
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("ok", snapshot.gateStatus() == EvVerificationGateState.GateStatus.VERIFIED);
@@ -193,6 +191,10 @@ public class EvSimulatorController {
         body.put("chargingAllowed", snapshot.chargingAllowed());
         body.put("message", snapshot.message());
         body.put("updatedAt", snapshot.updatedAt());
+        body.put("deliveredHash", result.deliveredHash());
+        body.put("generationSource", result.generationSource());
+        body.put("anyTampered", result.anyTampered());
+        body.put("tamperedComponents", result.tamperedComponents());
         return ResponseEntity.ok(body);
     }
 

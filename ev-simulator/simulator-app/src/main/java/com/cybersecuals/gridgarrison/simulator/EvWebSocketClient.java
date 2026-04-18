@@ -346,6 +346,13 @@ public class EvWebSocketClient {
      * Sends a FirmwareStatusNotification.
      */
     public void sendFirmwareStatus(String status, String hash) throws Exception {
+        sendFirmwareStatus(status, hash, "1.0.0");
+    }
+
+    /**
+     * Sends a FirmwareStatusNotification with an explicit firmware version.
+     */
+    public void sendFirmwareStatus(String status, String hash, String firmwareVersion) throws Exception {
         if (session == null || !session.isOpen()) {
             log.warn("Session not open, skipping Firmware Status");
             return;
@@ -358,6 +365,7 @@ public class EvWebSocketClient {
         LinkedHashMap<String, Object> payloadMap = new LinkedHashMap<>();
         payloadMap.put("status_field", status);
         payloadMap.put("firmwareHash", hash);
+        payloadMap.put("firmwareVersion", firmwareVersion);
         payloadMap.put("receivedAt", Instant.now().toString());
         String payload = mapper.writeValueAsString(payloadMap);
 
@@ -399,7 +407,12 @@ public class EvWebSocketClient {
         log.info("✅ WebSocket opened");
         try {
             sendBootNotification();
-            verificationClient.verifyAfterConnectAsync(stationId, lastFirmwareHash.get());
+            verificationClient.verifyAfterConnectAsync(
+                stationId,
+                null,
+                null,
+                this::sendFirmwareStatus
+            );
         } catch (Exception e) {
             log.error("Failed to send boot notification", e);
         }

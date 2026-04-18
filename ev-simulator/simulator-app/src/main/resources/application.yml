@@ -3,7 +3,7 @@ spring:
     name: ggev-simulator
 
 server:
-  port: 8080
+  port: 8082
 
 logging:
   level:
@@ -16,7 +16,7 @@ ev:
     enabled: true
 
     # Station identity
-    station-id: CS-101-EV
+    station-id: CS-101
 
     # Gateway endpoint (replace {stationId} with actual station ID)
     # GridGarrison default server.port is 8443 in this repo
@@ -62,17 +62,20 @@ ev:
     verify:
       enabled: true
       backend-base-url: http://localhost:8443
-      golden-hash-path: /trust/api/golden-hash
-      verify-path: /trust/api/verify-firmware
+      component-hash-path: /visualizer/api/generate-hash
+      latest-verdict-path: /trust/api/latest-verdict
       connect-timeout-ms: 3000
       read-timeout-ms: 5000
-      reported-hash: abc123def456ghi789jkl012mno345pqr
+      firmware-status: Downloaded
       firmware-version: 1.0.0
       retry:
         max-attempts: 3
         initial-delay-ms: 500
         max-delay-ms: 5000
         multiplier: 2.0
+      verdict-poll:
+        max-attempts: 12
+        interval-ms: 500
 
 ---
 spring:

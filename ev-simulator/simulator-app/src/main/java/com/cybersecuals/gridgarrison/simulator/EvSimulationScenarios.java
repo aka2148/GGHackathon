@@ -17,6 +17,9 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class EvSimulationScenarios {
 
+    private static final String HEALTHY_BASELINE_HASH =
+        "0x02c67b670e370ba17f7627f99a8f75e42c7265ec12d3eccd041a6698d009e34f";
+
     private final EvWebSocketClient client;
     private final EvTelemetryProfileProperties telemetryProfiles;
     private final EvVerificationGateState verificationGateState;
@@ -157,8 +160,12 @@ public class EvSimulationScenarios {
         currentTransactionId = "TXN-" + UUID.randomUUID();
         currentMeterValue = 0.0;
 
-        // Send firmware with normal (golden) hash
-        String goldenHash = "abc123def456ghi789jkl012mno345pqr";
+        // Use latest verified/component-derived hash; fall back to known healthy canonical baseline.
+        EvVerificationGateState.Snapshot verificationSnapshot = verificationGateState.snapshot();
+        String goldenHash = verificationSnapshot.reportedHash();
+        if (goldenHash == null || goldenHash.isBlank()) {
+            goldenHash = HEALTHY_BASELINE_HASH;
+        }
         client.sendFirmwareStatus("Downloaded", goldenHash);
         checkStopRequested();
 

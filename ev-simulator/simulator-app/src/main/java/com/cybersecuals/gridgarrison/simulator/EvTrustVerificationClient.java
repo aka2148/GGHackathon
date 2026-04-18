@@ -8,6 +8,8 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.annotation.PostConstruct;
 import java.time.Duration;
+import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -37,18 +39,21 @@ public class EvTrustVerificationClient {
             .build();
     }
 
-    public void verifyAfterConnectAsync(String stationId, String reportedHashOverride) {
+    public void verifyAfterConnectAsync(String stationId,
+                                        String firmwareStatusOverride,
+                                        String firmwareVersionOverride,
+                                        FirmwareStatusSender firmwareStatusSender) {
         if (!verificationInProgress.compareAndSet(false, true)) {
             log.debug("Verification already in progress, skipping duplicate trigger");
             return;
         }
 
-        String resolvedReportedHash = resolveReportedHash(reportedHashOverride);
-        String resolvedFirmwareVersion = resolveFirmwareVersion(null);
+        String resolvedFirmwareStatus = resolveFirmwareStatus(firmwareStatusOverride);
+        String resolvedFirmwareVersion = resolveFirmwareVersion(firmwareVersionOverride);
 
         Thread verificationThread = new Thread(() -> {
             try {
-                verifyWithRetry(stationId, resolvedReportedHash, resolvedFirmwareVersion);
+                verifyWithRetry(stationId, resolvedFirmwareStatus, resolvedFirmwareVersion, firmwareStatusSender);
             } finally {
                 verificationInProgress.set(false);
             }
@@ -57,33 +62,36 @@ public class EvTrustVerificationClient {
         verificationThread.start();
     }
 
-    public EvVerificationGateState.Snapshot requestHashAndVerify(String stationId,
-                                                                 String reportedHashOverride,
-                                                                 String firmwareVersionOverride) {
+    public RequestHashVerificationResult requestHashAndVerify(String stationId,
+                                                              String firmwareStatusOverride,
+                                                              String firmwareVersionOverride,
+                                                              FirmwareStatusSender firmwareStatusSender) {
         if (!verificationInProgress.compareAndSet(false, true)) {
             gateState.markPending(
                 stationId,
-                resolveReportedHash(reportedHashOverride),
+                null,
                 "Verification is already running."
             );
-            return gateState.snapshot();
+            return new RequestHashVerificationResult(gateState.snapshot(), null, null, false, List.of());
         }
 
-        String resolvedReportedHash = resolveReportedHash(reportedHashOverride);
+        String resolvedFirmwareStatus = resolveFirmwareStatus(firmwareStatusOverride);
         String resolvedFirmwareVersion = resolveFirmwareVersion(firmwareVersionOverride);
         try {
-            verifyWithRetry(stationId, resolvedReportedHash, resolvedFirmwareVersion);
-            return gateState.snapshot();
+            return verifyWithRetry(stationId, resolvedFirmwareStatus, resolvedFirmwareVersion, firmwareStatusSender);
         } finally {
             verificationInProgress.set(false);
         }
     }
 
-    private void verifyWithRetry(String stationId, String reportedHash, String firmwareVersion) {
+    private RequestHashVerificationResult verifyWithRetry(String stationId,
+                                                          String firmwareStatus,
+                                                          String firmwareVersion,
+                                                          FirmwareStatusSender firmwareStatusSender) {
         if (!verificationProperties.isEnabled()) {
             gateState.markFailed(
                 stationId,
-                reportedHash,
+                null,
                 null,
                 null,
                 null,
@@ -91,10 +99,10 @@ public class EvTrustVerificationClient {
                 null,
                 "Verification gate is disabled by configuration."
             );
-            return;
+            return new RequestHashVerificationResult(gateState.snapshot(), null, null, false, List.of());
         }
 
-        if (reportedHash == null || reportedHash.isBlank()) {
+        if (firmwareStatusSender == null) {
             gateState.markFailed(
                 stationId,
                 null,
@@ -103,9 +111,9 @@ public class EvTrustVerificationClient {
                 null,
                 null,
                 null,
-                "No reported hash available. Send firmware status first or provide a hash."
+                "No firmware status sender available for verification flow."
             );
-            return;
+            return new RequestHashVerificationResult(gateState.snapshot(), null, null, false, List.of());
         }
 
         EvVerificationProperties.Retry retry = verificationProperties.getRetry();
@@ -113,49 +121,67 @@ public class EvTrustVerificationClient {
         long delayMs = Math.max(100L, retry.getInitialDelayMs());
         long maxDelayMs = Math.max(delayMs, retry.getMaxDelayMs());
 
+        GeneratedHashResponse latestGeneratedHash = null;
+
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             gateState.markPending(
                 stationId,
-                reportedHash,
-                String.format("Running firmware verification (attempt %d/%d)", attempt, maxAttempts)
+                latestGeneratedHash == null ? null : latestGeneratedHash.hash(),
+                String.format("Requesting component-state hash and trust verdict (attempt %d/%d)", attempt, maxAttempts)
             );
 
             try {
-                GoldenHashResponse goldenHashResponse = fetchGoldenHash(stationId);
-                if (goldenHashResponse == null) {
-                    throw new IllegalStateException("No golden hash response received from backend");
-                }
-                if (goldenHashResponse.goldenHash() == null || goldenHashResponse.goldenHash().isBlank()) {
-                    String reason = goldenHashResponse.message() == null
-                        ? "Golden hash is missing on backend"
-                        : goldenHashResponse.message();
-                    throw new IllegalStateException(reason);
+                latestGeneratedHash = requestComponentHash(stationId);
+                if (latestGeneratedHash == null || latestGeneratedHash.hash() == null
+                    || latestGeneratedHash.hash().isBlank()) {
+                    throw new IllegalStateException("Backend did not return a component-state hash");
                 }
 
-                VerifyFirmwareResponse verifyResponse = verifyFirmware(stationId, reportedHash, firmwareVersion);
-                if (verifyResponse == null) {
-                    throw new IllegalStateException("No verification response received from backend");
+                String reportedHash = latestGeneratedHash.hash();
+                gateState.markPending(
+                    stationId,
+                    reportedHash,
+                    "Firmware hash requested from component state. Sending status "
+                        + firmwareStatus + " firmwareVersion=" + firmwareVersion
+                        + " and awaiting trust verdict."
+                );
+
+                firmwareStatusSender.send(firmwareStatus, reportedHash, firmwareVersion);
+
+                LatestVerdictResponse verdict = awaitLatestVerdict(stationId, reportedHash);
+                if (verdict == null) {
+                    throw new IllegalStateException("No trust verdict returned for the requested hash");
                 }
 
-                if (verifyResponse.verified()) {
+                if (isVerifiedVerdict(verdict)) {
                     gateState.markVerified(
-                        verifyResponse.stationId(),
-                        verifyResponse.reportedHash(),
-                        verifyResponse.goldenHash(),
-                        verifyResponse.verificationStatus(),
-                        verifyResponse.signatureVerified(),
-                        verifyResponse.contractAddress(),
-                        verifyResponse.rpcStatus(),
-                        verifyResponse.message()
+                        verdict.stationId(),
+                        verdict.reportedHash(),
+                        verdict.expectedHash(),
+                        verdict.verificationStatus(),
+                        verdict.signatureVerified(),
+                        verdict.contractAddress(),
+                        verdict.rpcStatus(),
+                        verdict.message()
                     );
-                    log.info("Firmware verification passed for stationId={} status={}",
-                        verifyResponse.stationId(), verifyResponse.verificationStatus());
-                    return;
+                    log.info("Firmware verification passed via event flow for stationId={} resultStatus={}",
+                        verdict.stationId(), verdict.resultStatus());
+                    return new RequestHashVerificationResult(
+                        gateState.snapshot(),
+                        reportedHash,
+                        latestGeneratedHash.generationSource(),
+                        latestGeneratedHash.anyTampered(),
+                        latestGeneratedHash.tamperedComponents() == null ? List.of() : latestGeneratedHash.tamperedComponents()
+                    );
                 }
 
-                String reason = verifyResponse.message() == null
+                if ("PENDING".equalsIgnoreCase(verdict.resultStatus())) {
+                    throw new IllegalStateException("Trust verdict is still pending");
+                }
+
+                String reason = verdict.message() == null
                     ? "Backend returned non-verified status"
-                    : verifyResponse.message();
+                    : verdict.message();
                 throw new IllegalStateException(reason);
 
             } catch (Exception ex) {
@@ -167,7 +193,7 @@ public class EvTrustVerificationClient {
                 if (lastAttempt) {
                     gateState.markFailed(
                         stationId,
-                        reportedHash,
+                        latestGeneratedHash == null ? null : latestGeneratedHash.hash(),
                         null,
                         null,
                         null,
@@ -175,7 +201,15 @@ public class EvTrustVerificationClient {
                         null,
                         "Verification failed: " + reason
                     );
-                    return;
+                    return new RequestHashVerificationResult(
+                        gateState.snapshot(),
+                        latestGeneratedHash == null ? null : latestGeneratedHash.hash(),
+                        latestGeneratedHash == null ? null : latestGeneratedHash.generationSource(),
+                        latestGeneratedHash != null && latestGeneratedHash.anyTampered(),
+                        latestGeneratedHash == null || latestGeneratedHash.tamperedComponents() == null
+                            ? List.of()
+                            : latestGeneratedHash.tamperedComponents()
+                    );
                 }
 
                 sleep(delayMs);
@@ -183,14 +217,99 @@ public class EvTrustVerificationClient {
                 delayMs = Math.min(maxDelayMs, nextDelay);
             }
         }
+
+        return new RequestHashVerificationResult(gateState.snapshot(), null, null, false, List.of());
     }
 
-    private String resolveReportedHash(String reportedHashOverride) {
-        if (reportedHashOverride != null && !reportedHashOverride.isBlank()) {
-            return reportedHashOverride.trim();
+    private GeneratedHashResponse requestComponentHash(String stationId) {
+        String url = UriComponentsBuilder
+            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getComponentHashPath()))
+            .queryParam("stationId", stationId)
+            .toUriString();
+
+        return restTemplate.postForObject(url, null, GeneratedHashResponse.class);
+    }
+
+    private LatestVerdictResponse awaitLatestVerdict(String stationId,
+                                                     String expectedReportedHash) {
+        EvVerificationProperties.VerdictPoll poll = verificationProperties.getVerdictPoll();
+        int maxAttempts = Math.max(1, poll.getMaxAttempts());
+        long intervalMs = Math.max(100L, poll.getIntervalMs());
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            LatestVerdictResponse verdict = fetchLatestVerdict(stationId);
+            if (verdict == null) {
+                sleep(intervalMs);
+                continue;
+            }
+
+            if (!hashMatches(verdict.reportedHash(), expectedReportedHash)) {
+                sleep(intervalMs);
+                continue;
+            }
+
+            if (isTerminalVerdict(verdict.resultStatus())) {
+                return verdict;
+            }
+
+            sleep(intervalMs);
         }
-        String configured = verificationProperties.getReportedHash();
-        return configured == null ? null : configured.trim();
+
+        return fetchLatestVerdict(stationId);
+    }
+
+    private LatestVerdictResponse fetchLatestVerdict(String stationId) {
+        String url = UriComponentsBuilder
+            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getLatestVerdictPath()))
+            .queryParam("stationId", stationId)
+            .toUriString();
+
+        return restTemplate.getForObject(url, LatestVerdictResponse.class);
+    }
+
+    private boolean isVerifiedVerdict(LatestVerdictResponse verdict) {
+        return verdict != null
+            && verdict.verified()
+            && "VERIFIED".equalsIgnoreCase(verdict.resultStatus());
+    }
+
+    private boolean isTerminalVerdict(String resultStatus) {
+        if (resultStatus == null || resultStatus.isBlank()) {
+            return false;
+        }
+        return switch (resultStatus.trim().toUpperCase(Locale.ROOT)) {
+            case "VERIFIED", "TAMPERED", "FAILED", "UNAVAILABLE" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean hashMatches(String actualHash, String expectedHash) {
+        if (expectedHash == null || expectedHash.isBlank()) {
+            return true;
+        }
+        if (actualHash == null || actualHash.isBlank()) {
+            return false;
+        }
+        return normalizeHash(actualHash).equalsIgnoreCase(normalizeHash(expectedHash));
+    }
+
+    private String normalizeHash(String hash) {
+        String normalized = hash == null ? "" : hash.trim();
+        if (normalized.startsWith("0x") || normalized.startsWith("0X")) {
+            return normalized.substring(2);
+        }
+        return normalized;
+    }
+
+    private String resolveFirmwareStatus(String firmwareStatusOverride) {
+        if (firmwareStatusOverride != null && !firmwareStatusOverride.isBlank()) {
+            return firmwareStatusOverride.trim();
+        }
+        String configured = verificationProperties.getFirmwareStatus();
+        if (configured == null || configured.isBlank()) {
+            return "Downloaded";
+        }
+        return configured.trim();
     }
 
     private String resolveFirmwareVersion(String firmwareVersionOverride) {
@@ -202,28 +321,6 @@ public class EvTrustVerificationClient {
             return "1.0.0";
         }
         return configured.trim();
-    }
-
-    private GoldenHashResponse fetchGoldenHash(String stationId) {
-        String url = UriComponentsBuilder
-            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getGoldenHashPath()))
-            .queryParam("stationId", stationId)
-            .toUriString();
-
-        return restTemplate.getForObject(url, GoldenHashResponse.class);
-    }
-
-    private VerifyFirmwareResponse verifyFirmware(String stationId,
-                                                  String reportedHash,
-                                                  String firmwareVersion) {
-        String url = UriComponentsBuilder
-            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getVerifyPath()))
-            .queryParam("stationId", stationId)
-            .queryParam("reportedHash", reportedHash)
-            .queryParam("firmwareVersion", firmwareVersion)
-            .toUriString();
-
-        return restTemplate.postForObject(url, null, VerifyFirmwareResponse.class);
     }
 
     private String normalizeBaseUrl() {
@@ -249,30 +346,44 @@ public class EvTrustVerificationClient {
         }
     }
 
-    record GoldenHashResponse(
-        String stationId,
-        String goldenHash,
-        String manufacturerId,
-        String contractAddress,
-        String observedAt,
-        String status,
-        String message
+    @FunctionalInterface
+    public interface FirmwareStatusSender {
+        void send(String status, String hash, String firmwareVersion) throws Exception;
+    }
+
+    public record RequestHashVerificationResult(
+        EvVerificationGateState.Snapshot snapshot,
+        String deliveredHash,
+        String generationSource,
+        boolean anyTampered,
+        List<String> tamperedComponents
     ) {
     }
 
-    record VerifyFirmwareResponse(
+    record GeneratedHashResponse(
         String stationId,
+        String hash,
+        String generationSource,
+        boolean anyTampered,
+        List<String> tamperedComponents,
+        String generatedAt
+    ) {
+    }
+
+    record LatestVerdictResponse(
+        String stationId,
+        String resultStatus,
         boolean verified,
         String verificationStatus,
         String reportedHash,
-        String goldenHash,
+        String expectedHash,
         Boolean signatureVerified,
         String contractAddress,
         String rpcStatus,
         String verificationTxHash,
+        String message,
         String observedAt,
-        String status,
-        String message
+        String sourceEvent
     ) {
     }
 }

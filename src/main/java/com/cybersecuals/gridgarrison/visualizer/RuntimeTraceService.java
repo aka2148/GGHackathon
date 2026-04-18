@@ -738,6 +738,18 @@ public class RuntimeTraceService {
                     markFailed(7, detail);
                     finalVerdict = "FAILED";
                 }
+                case "EvHashRequestEvaluatedEvent" -> {
+                    String verdict = event.trustEvidence() == null || event.trustEvidence().verdict() == null
+                        ? "FAILED"
+                        : event.trustEvidence().verdict().toUpperCase();
+                    if ("VERIFIED".equals(verdict)) {
+                        markDone(7, detail);
+                        finalVerdict = "VERIFIED";
+                    } else {
+                        markFailed(7, detail);
+                        finalVerdict = verdict;
+                    }
+                }
                 default -> {
                     // no-op
                 }
