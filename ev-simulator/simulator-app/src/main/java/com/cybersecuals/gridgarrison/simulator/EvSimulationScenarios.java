@@ -19,6 +19,7 @@ public class EvSimulationScenarios {
 
     private final EvWebSocketClient client;
     private final EvTelemetryProfileProperties telemetryProfiles;
+    private final EvVerificationGateState verificationGateState;
 
     @Value("${ev.simulator.auto-scenarios:false}")
     private boolean autoScenariosEnabled;
@@ -56,6 +57,10 @@ public class EvSimulationScenarios {
 
     public boolean runScenarioAsync(String scenarioName) {
         if (scenarioName == null || scenarioName.isBlank()) {
+            return false;
+        }
+        if (!verificationGateState.isVerifiedForCharging()) {
+            log.warn("Scenario '{}' blocked: {}", scenarioName, verificationGateState.blockReason());
             return false;
         }
 
@@ -110,6 +115,10 @@ public class EvSimulationScenarios {
     @Scheduled(initialDelayString = "15000", fixedDelayString = "120000")
     public void scenario_normalCharging() throws Exception {
         if (!autoScenariosEnabled) {
+            return;
+        }
+        if (!verificationGateState.isVerifiedForCharging()) {
+            log.debug("Skipping auto normalCharging because verification gate is not verified");
             return;
         }
         if (chargingActive) {
@@ -177,6 +186,10 @@ public class EvSimulationScenarios {
         if (!autoScenariosEnabled) {
             return;
         }
+        if (!verificationGateState.isVerifiedForCharging()) {
+            log.debug("Skipping auto firmwareTamper because verification gate is not verified");
+            return;
+        }
         if (chargingActive) {
             log.debug("Charge session already active, skipping");
             return;
@@ -227,6 +240,10 @@ public class EvSimulationScenarios {
     @Scheduled(initialDelayString = "180000", fixedDelayString = "120000")
     public void scenario_reconnectLoop() throws Exception {
         if (!autoScenariosEnabled) {
+            return;
+        }
+        if (!verificationGateState.isVerifiedForCharging()) {
+            log.debug("Skipping auto reconnectLoop because verification gate is not verified");
             return;
         }
         if (chargingActive) {

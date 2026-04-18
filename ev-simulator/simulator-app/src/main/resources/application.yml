@@ -59,6 +59,21 @@ ev:
       trust-store-password: changeit
       trust-store-type: PKCS12
 
+    verify:
+      enabled: true
+      backend-base-url: http://localhost:8443
+      golden-hash-path: /trust/api/golden-hash
+      verify-path: /trust/api/verify-firmware
+      connect-timeout-ms: 3000
+      read-timeout-ms: 5000
+      reported-hash: abc123def456ghi789jkl012mno345pqr
+      firmware-version: 1.0.0
+      retry:
+        max-attempts: 3
+        initial-delay-ms: 500
+        max-delay-ms: 5000
+        multiplier: 2.0
+
 ---
 spring:
   config:

@@ -343,6 +343,7 @@
           <div class="car-row"><span>Current session</span><span id="kpiTx" class="mono">-</span></div>
           <div class="car-row"><span>Driving mode</span><span id="kpiProfile">-</span></div>
           <div class="car-row"><span>Simulation</span><span id="kpiScenario">-</span></div>
+          <div class="car-row"><span>Verification gate</span><span id="kpiVerification">-</span></div>
 
           <div class="journey">
             <div id="stepConnect" class="step">1. Connected</div>
@@ -374,6 +375,10 @@
         <div class="metric">
           <div class="label">Scenario mode</div>
           <div class="value" id="kpiScenarioSimple">Idle</div>
+        </div>
+        <div class="metric">
+          <div class="label">Gate reason</div>
+          <div class="value" id="kpiGateReason">-</div>
         </div>
       </div>
     </div>
@@ -445,7 +450,12 @@
             <label>Firmware hash</label>
             <input id="fwHash" value="abc123def456ghi789jkl012mno345pqr" />
           </div>
+          <div class="col-12">
+            <label>Firmware version</label>
+            <input id="fwVersion" value="1.0.0" />
+          </div>
           <div class="col-12"><button id="fwSendBtn" class="primary">Send Firmware Signal</button></div>
+          <div class="col-12"><button id="requestHashVerifyBtn" class="ok">Request Hash + Verify On Backend</button></div>
         </div>
       </div>
 
@@ -584,6 +594,10 @@
       const tx = statusData.activeTransactionId || null;
       const profile = statusData.activeProfile || '-';
       const scenario = scenarioData.running ? (scenarioData.currentScenario || 'running') : 'Idle';
+      const verificationGate = statusData.verificationGateStatus || 'UNVERIFIED';
+      const chargingAllowed = statusData.chargingAllowed === true;
+      const verificationMessage = statusData.verificationMessage || '-';
+      const lastFirmwareHash = statusData.lastFirmwareHash || '';
 
       el('connectionPill').textContent = connected ? 'EV Online' : 'EV Offline';
       el('connectionPill').className = connected ? 'status-pill ok' : 'status-pill off';
@@ -594,14 +608,22 @@
       el('kpiTx').textContent = tx || '-';
       el('kpiProfile').textContent = profile;
       el('kpiScenario').textContent = scenario;
+      el('kpiVerification').innerHTML = chargingAllowed
+        ? `<span class="badge ok">${verificationGate}</span>`
+        : `<span class="badge warn">${verificationGate}</span>`;
 
       el('kpiEnergy').textContent = `${state.energySentKwh.toFixed(2)} kWh`;
       el('kpiMeterCount').textContent = `${state.meterEvents}`;
       el('kpiFirmware').textContent = state.lastFirmwareStatus;
       el('kpiScenarioSimple').textContent = scenario;
+      el('kpiGateReason').textContent = verificationMessage;
 
       if (!el('txId').value && tx) {
         el('txId').value = tx;
+      }
+
+      if (!el('fwHash').value && lastFirmwareHash) {
+        el('fwHash').value = lastFirmwareHash;
       }
 
       setJourneyStep(connected, !!tx, state.meterEvents, state.completedSessions);
@@ -763,6 +785,18 @@
         const hash = el('fwHash').value;
         const result = await callApi('POST', '/api/ev/firmware/status', { status, hash });
         state.lastFirmwareStatus = `${status}`;
+        return result;
+      })
+    );
+
+    el('requestHashVerifyBtn').addEventListener('click', () =>
+      runAction('Requested hash and verification', async () => {
+        const hash = el('fwHash').value;
+        const firmwareVersion = el('fwVersion').value;
+        const result = await callApi('POST', '/api/ev/verification/request', { hash, firmwareVersion });
+        if (!result.ok) {
+          throw new Error(result.message || 'Verification did not pass');
+        }
         return result;
       })
     );

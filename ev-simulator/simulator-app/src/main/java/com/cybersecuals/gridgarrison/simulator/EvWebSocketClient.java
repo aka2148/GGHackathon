@@ -22,6 +22,7 @@ import java.security.KeyStore;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * WebSocket client that connects to GridGarrison as a dummy EV.
@@ -76,9 +77,11 @@ public class EvWebSocketClient {
     private String tlsTrustStoreType;
 
     private Session session;
+    private final EvTrustVerificationClient verificationClient;
     private final ObjectMapper mapper = new ObjectMapper();
     private final AtomicInteger messageId = new AtomicInteger(0);
     private final AtomicBoolean reconnecting = new AtomicBoolean(false);
+    private final AtomicReference<String> lastFirmwareHash = new AtomicReference<>();
 
     /**
      * Initiates the WebSocket connection to GridGarrison.
@@ -348,6 +351,10 @@ public class EvWebSocketClient {
             return;
         }
 
+        if (hash != null && !hash.isBlank()) {
+            lastFirmwareHash.set(hash);
+        }
+
         LinkedHashMap<String, Object> payloadMap = new LinkedHashMap<>();
         payloadMap.put("status_field", status);
         payloadMap.put("firmwareHash", hash);
@@ -378,12 +385,21 @@ public class EvWebSocketClient {
         return session != null && session.isOpen();
     }
 
+    public String getStationId() {
+        return stationId;
+    }
+
+    public String getLastFirmwareHash() {
+        return lastFirmwareHash.get();
+    }
+
     // Internal callback for endpoint
     void onOpen(Session session) {
         this.session = session;
         log.info("✅ WebSocket opened");
         try {
             sendBootNotification();
+            verificationClient.verifyAfterConnectAsync(stationId, lastFirmwareHash.get());
         } catch (Exception e) {
             log.error("Failed to send boot notification", e);
         }

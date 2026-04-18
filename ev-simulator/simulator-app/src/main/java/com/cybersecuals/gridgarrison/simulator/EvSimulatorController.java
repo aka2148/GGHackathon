@@ -19,8 +19,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class EvSimulatorController {
 
     private final EvWebSocketClient client;
+    private final EvTrustVerificationClient trustVerificationClient;
     private final EvTelemetryProfileProperties telemetryProfiles;
     private final EvSimulationScenarios scenarios;
+    private final EvVerificationGateState verificationGateState;
     private final AtomicReference<String> activeTransactionId = new AtomicReference<>();
 
     @GetMapping("/status")
@@ -28,8 +30,19 @@ public class EvSimulatorController {
         Map<String, Object> body = new LinkedHashMap<>();
         String resolvedActiveTransactionId = getCurrentActiveTransactionId();
         body.put("connected", client.isConnected());
+        body.put("stationId", client.getStationId());
+        body.put("lastFirmwareHash", client.getLastFirmwareHash());
         body.put("activeTransactionId", resolvedActiveTransactionId);
         body.put("activeProfile", telemetryProfiles.getActiveProfile());
+        EvVerificationGateState.Snapshot verificationSnapshot = verificationGateState.snapshot();
+        body.put("verificationGateStatus", verificationSnapshot.gateStatus().name());
+        body.put("chargingAllowed", verificationSnapshot.chargingAllowed());
+        body.put("verificationMessage", verificationSnapshot.message());
+        body.put("verificationStationId", verificationSnapshot.stationId());
+        body.put("verificationReportedHash", verificationSnapshot.reportedHash());
+        body.put("verificationGoldenHash", verificationSnapshot.goldenHash());
+        body.put("verificationStatus", verificationSnapshot.verificationStatus());
+        body.put("verificationUpdatedAt", verificationSnapshot.updatedAt());
         return ResponseEntity.ok(body);
     }
 
@@ -81,6 +94,11 @@ public class EvSimulatorController {
     public ResponseEntity<Map<String, Object>> startTransaction(
         @RequestParam(required = false) String transactionId
     ) throws Exception {
+        ResponseEntity<Map<String, Object>> blocked = verifyChargingGate();
+        if (blocked != null) {
+            return blocked;
+        }
+
         String resolvedTransactionId = transactionId == null || transactionId.isBlank()
             ? "TXN-" + UUID.randomUUID()
             : transactionId;
@@ -99,6 +117,11 @@ public class EvSimulatorController {
         @RequestParam(required = false) String transactionId,
         @RequestParam double kwh
     ) throws Exception {
+        ResponseEntity<Map<String, Object>> blocked = verifyChargingGate();
+        if (blocked != null) {
+            return blocked;
+        }
+
         String resolvedTransactionId = resolveTransactionId(transactionId);
         client.sendMeterUpdate(resolvedTransactionId, kwh);
 
@@ -114,6 +137,11 @@ public class EvSimulatorController {
         @RequestParam(required = false) String transactionId,
         @RequestParam(defaultValue = "0.0") double totalKwh
     ) throws Exception {
+        ResponseEntity<Map<String, Object>> blocked = verifyChargingGate();
+        if (blocked != null) {
+            return blocked;
+        }
+
         String resolvedTransactionId = resolveTransactionId(transactionId);
         client.sendTransactionEnd(resolvedTransactionId, totalKwh);
         activeTransactionId.compareAndSet(resolvedTransactionId, null);
@@ -139,6 +167,35 @@ public class EvSimulatorController {
         return ResponseEntity.ok(body);
     }
 
+    @PostMapping("/verification/request")
+    public ResponseEntity<Map<String, Object>> requestVerification(
+        @RequestParam(required = false) String hash,
+        @RequestParam(required = false) String firmwareVersion
+    ) {
+        String stationId = client.getStationId();
+        String resolvedHash = (hash != null && !hash.isBlank())
+            ? hash
+            : client.getLastFirmwareHash();
+
+        EvVerificationGateState.Snapshot snapshot = trustVerificationClient.requestHashAndVerify(
+            stationId,
+            resolvedHash,
+            firmwareVersion
+        );
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", snapshot.gateStatus() == EvVerificationGateState.GateStatus.VERIFIED);
+        body.put("stationId", snapshot.stationId());
+        body.put("usedReportedHash", snapshot.reportedHash());
+        body.put("goldenHash", snapshot.goldenHash());
+        body.put("verificationGateStatus", snapshot.gateStatus().name());
+        body.put("verificationStatus", snapshot.verificationStatus());
+        body.put("chargingAllowed", snapshot.chargingAllowed());
+        body.put("message", snapshot.message());
+        body.put("updatedAt", snapshot.updatedAt());
+        return ResponseEntity.ok(body);
+    }
+
     @GetMapping("/scenario/status")
     public ResponseEntity<Map<String, Object>> scenarioStatus() {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -151,6 +208,11 @@ public class EvSimulatorController {
 
     @PostMapping("/scenario/run")
     public ResponseEntity<Map<String, Object>> runScenario(@RequestParam String name) {
+        ResponseEntity<Map<String, Object>> blocked = verifyChargingGate();
+        if (blocked != null) {
+            return blocked;
+        }
+
         boolean started = scenarios.runScenarioAsync(name);
 
         Map<String, Object> body = new LinkedHashMap<>();
@@ -183,6 +245,22 @@ public class EvSimulatorController {
 
         body.put("message", "Stop requested.");
         return ResponseEntity.ok(body);
+    }
+
+    private ResponseEntity<Map<String, Object>> verifyChargingGate() {
+        if (verificationGateState.isVerifiedForCharging()) {
+            return null;
+        }
+
+        EvVerificationGateState.Snapshot verificationSnapshot = verificationGateState.snapshot();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", false);
+        body.put("message", verificationGateState.blockReason());
+        body.put("verificationGateStatus", verificationSnapshot.gateStatus().name());
+        body.put("chargingAllowed", verificationSnapshot.chargingAllowed());
+        body.put("verificationStatus", verificationSnapshot.verificationStatus());
+        body.put("verificationUpdatedAt", verificationSnapshot.updatedAt());
+        return ResponseEntity.status(409).body(body);
     }
 
     private String resolveTransactionId(String transactionId) {

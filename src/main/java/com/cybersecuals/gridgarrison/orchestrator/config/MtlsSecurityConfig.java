@@ -45,14 +45,16 @@ class MtlsSecurityConfig {
                             "/visualizer", "/visualizer.html", "/visualizer/**",
                             "/panel", "/panel.html",
                             "/ev-control-panel", "/ev-control-panel.html",
-                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
+                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
+                            "/trust/api/verify-firmware"
                         ).permitAll();
                 } else {
                     auth.requestMatchers(
                             "/visualizer", "/visualizer.html", "/visualizer/**",
                             "/panel", "/panel.html",
                             "/ev-control-panel", "/ev-control-panel.html",
-                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
+                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
+                            "/trust/api/verify-firmware"
                         ).authenticated();
                 }
 
