@@ -14,6 +14,10 @@ public class EvVerificationProperties {
     private String escrowIntentPath = "/trust/api/escrow/intent";
     private String escrowActivePath = "/trust/api/escrow/active";
     private String escrowResetPath = "/trust/api/escrow/reset";
+    private String watchdogMetricsPath = "/watchdog/api/station-metrics";
+    private String watchdogTelemetryPath = "/watchdog/api/telemetry";
+    private String watchdogGoldenHashPath = "/watchdog/api/golden-hash";
+    private String watchdogResetPath = "/watchdog/api/reset";
     private long connectTimeoutMs = 3000;
     private long readTimeoutMs = 5000;
     private String firmwareStatus = "Downloaded";
@@ -76,6 +80,38 @@ public class EvVerificationProperties {
 
     public void setEscrowResetPath(String escrowResetPath) {
         this.escrowResetPath = escrowResetPath;
+    }
+
+    public String getWatchdogMetricsPath() {
+        return watchdogMetricsPath;
+    }
+
+    public void setWatchdogMetricsPath(String watchdogMetricsPath) {
+        this.watchdogMetricsPath = watchdogMetricsPath;
+    }
+
+    public String getWatchdogTelemetryPath() {
+        return watchdogTelemetryPath;
+    }
+
+    public void setWatchdogTelemetryPath(String watchdogTelemetryPath) {
+        this.watchdogTelemetryPath = watchdogTelemetryPath;
+    }
+
+    public String getWatchdogGoldenHashPath() {
+        return watchdogGoldenHashPath;
+    }
+
+    public void setWatchdogGoldenHashPath(String watchdogGoldenHashPath) {
+        this.watchdogGoldenHashPath = watchdogGoldenHashPath;
+    }
+
+    public String getWatchdogResetPath() {
+        return watchdogResetPath;
+    }
+
+    public void setWatchdogResetPath(String watchdogResetPath) {
+        this.watchdogResetPath = watchdogResetPath;
     }
 
     public long getConnectTimeoutMs() {

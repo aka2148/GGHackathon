@@ -322,6 +322,71 @@
       border-bottom: 2px solid;
     }
 
+    .twin-bios-grid {
+      margin-top: 10px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .twin-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(212, 175, 55, 0.3);
+      background: rgba(7, 10, 7, 0.82);
+      border-radius: 2px;
+      padding: 7px 9px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .bios-value {
+      color: var(--ok);
+      font-size: 13px;
+      letter-spacing: 0.09em;
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .bios-ok { color: var(--ok); }
+    .bios-warn { color: var(--warn); }
+    .bios-danger { color: var(--danger); }
+
+    .twin-controls-row {
+      margin-top: 10px;
+    }
+
+    .twin-controls-row input[type="number"] {
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .twin-toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .twin-summary {
+      margin-top: 10px;
+      border: 1px dashed rgba(212, 175, 55, 0.35);
+      border-radius: 2px;
+      padding: 8px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      color: var(--gold-bright);
+      background: rgba(6, 10, 6, 0.75);
+      letter-spacing: 0.04em;
+    }
+
     .hero {
       overflow: hidden;
       position: relative;
@@ -2146,6 +2211,49 @@
                 <div class="col-4 dev-only"><label>&nbsp;</label><button id="txEndBtn" class="danger">End Charging</button></div>
               </div>
             </div>
+
+            <div class="panel span-4 dev-only">
+              <h3>Digital Twin Monitor</h3>
+              <p class="hint" style="margin-top:6px;">BIOS-style watchdog readings for live anomaly storytelling.</p>
+              <div class="twin-bios-grid">
+                <div class="twin-line"><span>Twin status</span><strong id="dtTwinStatus" class="bios-value bios-ok">HEALTHY</strong></div>
+                <div class="twin-line"><span>Last severity</span><strong id="dtLastSeverity" class="bios-value bios-ok">NONE</strong></div>
+                <div class="twin-line"><span>Total anomalies</span><strong id="dtTotalAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>Power anomalies</span><strong id="dtPowerAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>Temp anomalies</span><strong id="dtTempAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>SoC anomalies</span><strong id="dtSocAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>Hash mismatches</span><strong id="dtFirmwareAnomalies" class="bios-value">0</strong></div>
+                <div class="twin-line"><span>Power surge</span><strong id="dtPowerSurge" class="bios-value bios-ok">NO</strong></div>
+                <div class="twin-line"><span>Hash changed</span><strong id="dtHashChanged" class="bios-value bios-ok">NO</strong></div>
+                <div class="twin-line"><span>Last power (kW)</span><strong id="dtLastPower" class="bios-value">-</strong></div>
+                <div class="twin-line"><span>Last temp (C)</span><strong id="dtLastTemp" class="bios-value">-</strong></div>
+                <div class="twin-line"><span>Last SoC (%)</span><strong id="dtLastSoc" class="bios-value">-</strong></div>
+              </div>
+            </div>
+
+            <div class="panel span-4 dev-only">
+              <h3>Real-Time Twin Controls</h3>
+              <p class="hint" style="margin-top:6px;">Tune charge behavior and push live telemetry while charging.</p>
+              <div class="row twin-controls-row">
+                <div class="col-6">
+                  <label>Rate multiplier</label>
+                  <input id="dtRateMultiplier" type="number" min="0.1" max="5" step="0.1" value="1.0" />
+                </div>
+                <div class="col-6">
+                  <label>Power (kW)</label>
+                  <input id="dtPowerKw" type="number" min="0" max="350" step="1" value="46" />
+                </div>
+                <div class="col-6">
+                  <label>Connector temp (C)</label>
+                  <input id="dtConnectorTemp" type="number" min="-20" max="140" step="0.5" value="31" />
+                </div>
+                <div class="col-6"><button id="dtApplyControlsBtn" class="primary">Apply Controls</button></div>
+                <div class="col-6"><button id="dtResetControlsBtn" class="warn">Reset Defaults</button></div>
+                <div class="col-6"><button id="dtSendSampleBtn" class="ok">Send Twin Sample</button></div>
+                <div class="col-6"><button id="dtRefreshStatusBtn" class="primary">Refresh Twin Status</button></div>
+              </div>
+              <div id="dtControlSummary" class="twin-summary">Multiplier x1.00 | Power 46.0 kW | Temp 31.0 C</div>
+            </div>
           </div>
         </div>
 
@@ -2257,7 +2365,10 @@
       lastUserFlow: null,
       lastStatus: null,
       lastSettlement: null,
-      userFlowAutoResetDone: false
+      userFlowAutoResetDone: false,
+      digitalTwinMetrics: null,
+      digitalTwinControls: null,
+      digitalTwinWarning: null
     };
 
     const el = (id) => document.getElementById(id);
@@ -2670,6 +2781,102 @@
       return Math.min(max, Math.max(min, num));
     }
 
+    function parseOptionalNumber(value) {
+      const raw = `${value ?? ''}`.trim();
+      if (!raw) {
+        return undefined;
+      }
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) ? parsed : undefined;
+    }
+
+    function applyBiosTone(node, tone) {
+      if (!node) {
+        return;
+      }
+      node.classList.remove('bios-ok', 'bios-warn', 'bios-danger');
+      if (tone === 'danger') {
+        node.classList.add('bios-danger');
+      } else if (tone === 'warn') {
+        node.classList.add('bios-warn');
+      } else {
+        node.classList.add('bios-ok');
+      }
+    }
+
+    function updateDigitalTwinSummary() {
+      const summaryNode = el('dtControlSummary');
+      if (!summaryNode) {
+        return;
+      }
+
+      const controls = state.digitalTwinControls;
+      if (!controls) {
+        summaryNode.textContent = 'Digital twin controls waiting for backend snapshot.';
+        return;
+      }
+
+      const rate = Number(controls.rateMultiplier ?? 1);
+      const power = Number(controls.powerKw ?? 0).toFixed(1);
+      const temp = Number(controls.connectorTempC ?? 0).toFixed(1);
+      const warning = state.digitalTwinWarning ? ` | ${state.digitalTwinWarning}` : '';
+
+      summaryNode.textContent = `Multiplier x${rate.toFixed(2)} | Power ${power} kW | Temp ${temp} C${warning}`;
+    }
+
+    function updateDigitalTwinUi(payload) {
+      if (payload?.metrics) {
+        state.digitalTwinMetrics = payload.metrics;
+      }
+      if (payload?.controls) {
+        state.digitalTwinControls = payload.controls;
+      }
+      if (payload?.warning !== undefined) {
+        state.digitalTwinWarning = payload.warning || null;
+      }
+
+      const metrics = state.digitalTwinMetrics;
+      const controls = state.digitalTwinControls;
+
+      if (controls) {
+        if (el('dtRateMultiplier')) el('dtRateMultiplier').value = Number(controls.rateMultiplier ?? 1).toFixed(2);
+        if (el('dtPowerKw')) el('dtPowerKw').value = controls.powerKw ?? 0;
+        if (el('dtConnectorTemp')) el('dtConnectorTemp').value = controls.connectorTempC ?? 0;
+      }
+
+      if (metrics) {
+        const twinStatus = `${metrics.twinStatus || 'UNKNOWN'}`.toUpperCase();
+        const lastSeverity = `${metrics.lastSeverity || 'NONE'}`.toUpperCase();
+
+        el('dtTwinStatus').textContent = twinStatus;
+        el('dtLastSeverity').textContent = lastSeverity;
+        el('dtTotalAnomalies').textContent = `${metrics.totalAnomalies ?? 0}`;
+        el('dtPowerAnomalies').textContent = `${metrics.powerAnomalyCount ?? 0}`;
+        el('dtTempAnomalies').textContent = `${metrics.temperatureAnomalyCount ?? 0}`;
+        el('dtSocAnomalies').textContent = `${metrics.socAnomalyCount ?? 0}`;
+        el('dtFirmwareAnomalies').textContent = `${metrics.firmwareMismatchCount ?? 0}`;
+        el('dtPowerSurge').textContent = metrics.powerSurgeDetected ? 'YES' : 'NO';
+        el('dtHashChanged').textContent = metrics.stationHashChanged ? 'YES' : 'NO';
+        el('dtLastPower').textContent = metrics.lastPowerKw == null ? '-' : Number(metrics.lastPowerKw).toFixed(1);
+        el('dtLastTemp').textContent = metrics.lastTempC == null ? '-' : Number(metrics.lastTempC).toFixed(1);
+        el('dtLastSoc').textContent = metrics.lastSocPercent == null ? '-' : Number(metrics.lastSocPercent).toFixed(1);
+
+        const twinTone = twinStatus === 'HEALTHY' ? 'ok'
+          : twinStatus === 'SUSPICIOUS' ? 'warn'
+            : 'danger';
+        const severityTone = lastSeverity === 'CRITICAL' ? 'danger'
+          : lastSeverity === 'HIGH' || lastSeverity === 'MEDIUM' ? 'warn'
+            : 'ok';
+
+        applyBiosTone(el('dtTwinStatus'), twinTone);
+        applyBiosTone(el('dtLastSeverity'), severityTone);
+        applyBiosTone(el('dtPowerSurge'), metrics.powerSurgeDetected ? 'danger' : 'ok');
+        applyBiosTone(el('dtHashChanged'), metrics.stationHashChanged ? 'danger' : 'ok');
+      }
+
+      updateDigitalTwinSummary();
+    }
+
     function hasPositiveWei(value) {
       try {
         return BigInt(value ?? '0') > 0n;
@@ -2986,9 +3193,21 @@
         const scenarioPromise = isUserMode()
           ? Promise.resolve({ running: false, currentScenario: 'Guided user flow' })
           : callApi('GET', '/api/ev/scenario/status', null, { recordResponse: false, silent: true });
+        const twinPromise = isUserMode()
+          ? Promise.resolve(null)
+          : callApi('GET', '/api/ev/dev/digital-twin/status', null, { recordResponse: false, silent: true })
+            .catch((error) => {
+              state.digitalTwinWarning = error?.message || 'Digital twin status unavailable';
+              updateDigitalTwinSummary();
+              return null;
+            });
 
-        const [statusData, scenarioData] = await Promise.all([statusPromise, scenarioPromise]);
+        const [statusData, scenarioData, twinData] = await Promise.all([statusPromise, scenarioPromise, twinPromise]);
         state.lastStatus = statusData;
+
+        if (twinData) {
+          updateDigitalTwinUi(twinData);
+        }
 
         if (!isUserMode()) {
           await refreshProfiles();
@@ -3075,6 +3294,23 @@
         targetSoc: Number(el('userTargetSoc').value || 80),
         timeoutSeconds: Number(el('userTimeout').value || 3600)
       };
+    }
+
+    function readDigitalTwinControlInput() {
+      const query = {
+        telemetryEnabled: true,
+        socBiasPct: 0
+      };
+
+      const rateMultiplier = parseOptionalNumber(el('dtRateMultiplier').value);
+      const powerKw = parseOptionalNumber(el('dtPowerKw').value);
+      const connectorTempC = parseOptionalNumber(el('dtConnectorTemp').value);
+
+      if (rateMultiplier !== undefined) query.rateMultiplier = rateMultiplier;
+      if (powerKw !== undefined) query.powerKw = powerKw;
+      if (connectorTempC !== undefined) query.connectorTempC = connectorTempC;
+
+      return query;
     }
 
     el('modeUserBtn').addEventListener('click', () => setMode('user'));
@@ -3286,6 +3522,42 @@
       )
     );
 
+    el('dtApplyControlsBtn').addEventListener('click', () =>
+      runAction('Digital twin controls applied', async () => {
+        const payload = await callApi('POST', '/api/ev/dev/digital-twin/controls', readDigitalTwinControlInput());
+        updateDigitalTwinUi(payload);
+        return payload;
+      })
+    );
+
+    el('dtResetControlsBtn').addEventListener('click', () =>
+      runAction('Digital twin controls reset', async () => {
+        const payload = await callApi('POST', '/api/ev/dev/digital-twin/controls', { reset: true });
+        updateDigitalTwinUi(payload);
+        return payload;
+      })
+    );
+
+    el('dtSendSampleBtn').addEventListener('click', () =>
+      runAction('Digital twin sample sent', async () => {
+        const sampleKwh = parseOptionalNumber(el('meterKwh').value) ?? 0;
+        const payload = await callApi('POST', '/api/ev/dev/digital-twin/sample', {
+          transactionId: el('txId').value,
+          kwh: sampleKwh
+        });
+        updateDigitalTwinUi(payload);
+        return payload;
+      })
+    );
+
+    el('dtRefreshStatusBtn').addEventListener('click', () =>
+      runAction('Digital twin status refreshed', async () => {
+        const payload = await callApi('GET', '/api/ev/dev/digital-twin/status');
+        updateDigitalTwinUi(payload);
+        return payload;
+      })
+    );
+
     el('connectRawBtn').addEventListener('click', () => runAction('Raw connect', () => callApi('POST', '/api/ev/connect')));
     el('disconnectRawBtn').addEventListener('click', () => runAction('Raw disconnect', () => callApi('POST', '/api/ev/disconnect')));
     el('statusRawBtn').addEventListener('click', () => runAction('Raw status', () => callApi('GET', '/api/ev/status')));
@@ -3300,6 +3572,7 @@
       applySidebarState();
       applyView();
       syncChargePlanner();
+      updateDigitalTwinSummary();
       await resetUserFlowOnPageLoad();
       await refreshAll();
       setupPolling();

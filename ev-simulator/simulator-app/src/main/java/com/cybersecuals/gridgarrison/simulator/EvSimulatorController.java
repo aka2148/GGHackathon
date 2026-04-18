@@ -1,6 +1,7 @@
 package com.cybersecuals.gridgarrison.simulator;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,6 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @RestController
 @RequestMapping("/api/ev")
 @RequiredArgsConstructor
+@Slf4j
 public class EvSimulatorController {
 
     private final EvWebSocketClient client;
@@ -28,9 +30,12 @@ public class EvSimulatorController {
     private final EvSimulationScenarios scenarios;
     private final EvVerificationGateState verificationGateState;
     private final EvUserJourneyState userJourneyState;
+    private final EvDigitalTwinRuntimeState digitalTwinRuntimeState;
     private final AtomicReference<String> activeTransactionId = new AtomicReference<>();
     private final AtomicReference<String> settlingTransactionId = new AtomicReference<>();
     private final AtomicReference<SettlementSummary> lastSettlement = new AtomicReference<>();
+    private final AtomicReference<AutoChargeRuntime> autoChargeRuntime = new AtomicReference<>();
+    private final AtomicReference<Thread> autoChargeThread = new AtomicReference<>();
 
     @Value("${ev.simulator.user.price-per-kwh:0.25}")
     private double userPricePerKwh;
@@ -46,6 +51,18 @@ public class EvSimulatorController {
 
     @Value("${ev.simulator.user.authorized-poll-interval-ms:500}")
     private long authorizedPollIntervalMs;
+
+    @Value("${ev.simulator.user.auto-charge-duration-ms:30000}")
+    private long autoChargeDurationMs;
+
+    @Value("${ev.simulator.user.auto-charge-tick-ms:1000}")
+    private long autoChargeTickMs;
+
+    @Value("${ev.simulator.user.auto-charge-min-target-kwh:1.0}")
+    private double autoChargeMinTargetKwh;
+
+    @Value("${ev.simulator.user.auto-charge-drift-threshold-pct:25.0}")
+    private double autoChargeDriftThresholdPct;
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> status() {
@@ -78,6 +95,8 @@ public class EvSimulatorController {
         body.put("walletBalance", userSnapshot.walletBalance());
         body.put("userChargeIntent", userSnapshot.chargeIntent());
         body.put("lastSettlement", lastSettlement.get());
+        body.put("autoCharge", autoChargeRuntime.get());
+        body.put("digitalTwin", digitalTwinRuntimeState.snapshot());
         return ResponseEntity.ok(body);
     }
 
@@ -107,6 +126,96 @@ public class EvSimulatorController {
         return ResponseEntity.ok(body);
     }
 
+    @GetMapping("/dev/digital-twin/status")
+    public ResponseEntity<Map<String, Object>> digitalTwinStatus() {
+        String stationId = client.getStationId();
+        try {
+            EvTrustVerificationClient.WatchdogStationMetricsResponse response =
+                trustVerificationClient.watchdogStationMetrics(stationId);
+            if (response != null) {
+                digitalTwinRuntimeState.setLastMetrics(response.metrics());
+                if (response.message() != null && !response.message().isBlank()) {
+                    digitalTwinRuntimeState.setWarning(response.message());
+                }
+            }
+        } catch (Exception ex) {
+            String warning = "Watchdog metrics unavailable: " + safeMessage(ex);
+            digitalTwinRuntimeState.setWarning(warning);
+            log.warn("[EV SIM] {}", warning);
+        }
+
+        EvDigitalTwinRuntimeState.Snapshot snapshot = digitalTwinRuntimeState.snapshot();
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", true);
+        body.put("stationId", stationId);
+        body.put("controls", snapshot.controls());
+        body.put("metrics", snapshot.metrics());
+        body.put("telemetry", snapshot.telemetry());
+        body.put("warning", snapshot.warning());
+        body.put("autoCharge", autoChargeRuntime.get());
+        body.put("capturedAt", snapshot.capturedAt());
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/dev/digital-twin/controls")
+    public ResponseEntity<Map<String, Object>> updateDigitalTwinControls(
+        @RequestParam(defaultValue = "false") boolean reset,
+        @RequestParam(required = false) Double rateMultiplier,
+        @RequestParam(required = false) Double energyPerUpdateKwh,
+        @RequestParam(required = false) Double powerKw,
+        @RequestParam(required = false) Double connectorTempC,
+        @RequestParam(required = false) Double socBiasPct,
+        @RequestParam(required = false) Boolean telemetryEnabled
+    ) {
+        EvDigitalTwinRuntimeState.ControlState controls = reset
+            ? digitalTwinRuntimeState.reset()
+            : digitalTwinRuntimeState.update(
+                rateMultiplier,
+                energyPerUpdateKwh,
+                powerKw,
+                connectorTempC,
+                socBiasPct,
+                telemetryEnabled
+            );
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", true);
+        body.put("stationId", client.getStationId());
+        body.put("reset", reset);
+        body.put("controls", controls);
+        body.put("metrics", digitalTwinRuntimeState.snapshot().metrics());
+        body.put("message", reset
+            ? "Digital twin controls reset to defaults."
+            : "Digital twin controls updated.");
+        return ResponseEntity.ok(body);
+    }
+
+    @PostMapping("/dev/digital-twin/sample")
+    public ResponseEntity<Map<String, Object>> sendDigitalTwinSample(
+        @RequestParam(required = false) String transactionId,
+        @RequestParam(defaultValue = "0.0") double kwh
+    ) {
+        String resolvedTransactionId = resolveSampleTransactionId(transactionId);
+        double profileDefault = telemetryProfiles.resolveActiveProfile().getEnergyPerUpdateKwh();
+        double effectiveKwh = digitalTwinRuntimeState.resolveMeterStepKwh(kwh, profileDefault);
+
+        EvTrustVerificationClient.WatchdogTelemetryResponse telemetry =
+            publishWatchdogTelemetry(resolvedTransactionId, effectiveKwh, true, null);
+
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("ok", true);
+        body.put("stationId", client.getStationId());
+        body.put("transactionId", resolvedTransactionId);
+        body.put("effectiveKwh", effectiveKwh);
+        body.put("controls", digitalTwinRuntimeState.controls());
+        body.put("telemetry", telemetry);
+        body.put("metrics", digitalTwinRuntimeState.snapshot().metrics());
+        body.put("warning", digitalTwinRuntimeState.snapshot().warning());
+        body.put("message", "Digital twin sample sent to watchdog API.");
+        return ResponseEntity.ok(body);
+    }
+
     @PostMapping("/connect")
     public ResponseEntity<Map<String, Object>> connect() {
         client.connectWithBackoff();
@@ -123,6 +232,7 @@ public class EvSimulatorController {
 
     @PostMapping("/disconnect")
     public ResponseEntity<Map<String, Object>> disconnect() throws Exception {
+        stopAutoChargeLoop("Simulator disconnected");
         client.disconnect();
         activeTransactionId.set(null);
         settlingTransactionId.set(null);
@@ -169,18 +279,32 @@ public class EvSimulatorController {
         }
 
         String resolvedTransactionId = resolveTransactionId(transactionId);
-        client.sendMeterUpdate(resolvedTransactionId, kwh);
+        MeterProcessingOutcome outcome = processMeterUpdate(
+            resolvedTransactionId,
+            kwh,
+            true,
+            expectationForTransaction(resolvedTransactionId)
+        );
 
-        int currentBattery = userJourneyState.snapshot().batteryPct();
-        if (kwh > 0.0d) {
-            userJourneyState.setBatteryPct(currentBattery + 1);
+        if (isRetractSeverity(outcome.telemetry())) {
+            abortAutoChargeOnAnomaly(
+                resolvedTransactionId,
+                outcome.telemetry(),
+                "Anomaly severity escalated during active charging."
+            );
         }
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("ok", true);
         body.put("transactionId", resolvedTransactionId);
-        body.put("kwh", kwh);
-        body.put("batteryPct", userJourneyState.snapshot().batteryPct());
+        body.put("requestedKwh", kwh);
+        body.put("effectiveKwh", outcome.effectiveKwh());
+        body.put("batteryPct", outcome.batteryPct());
+        body.put("controls", digitalTwinRuntimeState.controls());
+        body.put("telemetry", outcome.telemetry());
+        body.put("digitalTwinMetrics", digitalTwinRuntimeState.snapshot().metrics());
+        body.put("digitalTwinWarning", digitalTwinRuntimeState.snapshot().warning());
+        body.put("autoCharge", autoChargeRuntime.get());
         return ResponseEntity.ok(body);
     }
 
@@ -195,6 +319,7 @@ public class EvSimulatorController {
         }
 
         String resolvedTransactionId = resolveTransactionId(transactionId);
+        stopAutoChargeLoop("Manual transaction end requested");
         SettlementSummary settlement;
         try {
             settlement = settleAndCompleteSession(resolvedTransactionId, totalKwh, false);
@@ -337,6 +462,7 @@ public class EvSimulatorController {
         if (verificationSnapshot.gateStatus() == EvVerificationGateState.GateStatus.VERIFIED) {
             userJourneyState.markVerified(verificationSnapshot.verificationStatus());
         }
+        syncGoldenHashToWatchdog(stationId, verificationSnapshot.goldenHash());
 
         body.put("stationId", stationId);
         body.put("connected", true);
@@ -407,8 +533,12 @@ public class EvSimulatorController {
         }
 
         String resolvedTransactionId = startTransactionInternal(transactionId);
+        AutoChargeRuntime runtime = startAutoChargeSession(resolvedTransactionId, intent);
+
         body.put("ok", true);
         body.put("transactionId", resolvedTransactionId);
+        body.put("autoCharge", runtime);
+        body.put("message", "Charging simulation started for 30 seconds on the same user session.");
         body.put("userJourneyState", userJourneyState.snapshot().journeyState().name());
         return ResponseEntity.ok(body);
     }
@@ -429,6 +559,9 @@ public class EvSimulatorController {
                 if (latestVerdict != null && latestVerdict.verificationStatus() != null) {
                     userJourneyState.updateTrustStatus(latestVerdict.verificationStatus());
                 }
+                if (latestVerdict != null) {
+                    syncGoldenHashToWatchdog(stationId, latestVerdict.expectedHash());
+                }
             } catch (Exception ex) {
                 body.put("trustRefreshError", safeMessage(ex));
             }
@@ -443,6 +576,7 @@ public class EvSimulatorController {
 
         EvVerificationGateState.Snapshot verificationSnapshot = verificationGateState.snapshot();
         EvUserJourneyState.Snapshot userSnapshot = userJourneyState.snapshot();
+        SettlementSummary settlement = reconcileSettlementWithEscrow(lastSettlement.get(), activeEscrow);
 
         body.put("ok", true);
         body.put("connected", client.isConnected());
@@ -456,7 +590,8 @@ public class EvSimulatorController {
         body.put("journey", userSnapshot);
         body.put("latestVerdict", latestVerdict);
         body.put("escrowActive", activeEscrow);
-        body.put("settlement", lastSettlement.get());
+        body.put("settlement", settlement);
+        body.put("autoCharge", autoChargeRuntime.get());
         return ResponseEntity.ok(body);
     }
 
@@ -471,6 +606,7 @@ public class EvSimulatorController {
         }
 
         String resolvedTransactionId = resolveTransactionId(transactionId);
+        stopAutoChargeLoop("Manual complete requested");
         SettlementSummary settlement;
         try {
             settlement = settleAndCompleteSession(resolvedTransactionId, totalKwh, true);
@@ -500,10 +636,12 @@ public class EvSimulatorController {
         @RequestParam(defaultValue = "false") boolean resetWallet,
         @RequestParam(defaultValue = "false") boolean resetBattery
     ) {
+        stopAutoChargeLoop("User flow reset requested");
         Map<String, Object> body = new LinkedHashMap<>();
         String stationId = client.getStationId();
 
         EvTrustVerificationClient.EscrowActiveResponse escrowReset;
+        EvTrustVerificationClient.WatchdogResetResponse watchdogReset = null;
         try {
             escrowReset = trustVerificationClient.resetEscrowBinding(stationId, clearIntent);
         } catch (Exception ex) {
@@ -513,9 +651,19 @@ public class EvSimulatorController {
             return ResponseEntity.status(502).body(body);
         }
 
+        try {
+            watchdogReset = trustVerificationClient.resetWatchdogStation(stationId);
+            if (watchdogReset != null && watchdogReset.metrics() != null) {
+                digitalTwinRuntimeState.setLastMetrics(watchdogReset.metrics());
+            }
+        } catch (Exception ex) {
+            digitalTwinRuntimeState.setWarning("Watchdog reset failed: " + safeMessage(ex));
+        }
+
         activeTransactionId.set(null);
         settlingTransactionId.set(null);
         lastSettlement.set(null);
+        digitalTwinRuntimeState.reset();
         userJourneyState.resetJourney(resetWallet, resetBattery);
         verificationGateState.reset(stationId, "Dashboard reset requested. Verify firmware to start a new charging session.");
 
@@ -525,8 +673,10 @@ public class EvSimulatorController {
         body.put("resetWallet", resetWallet);
         body.put("resetBattery", resetBattery);
         body.put("escrowReset", escrowReset);
+        body.put("watchdogReset", watchdogReset);
         body.put("userJourney", userJourneyState.snapshot());
         body.put("verification", verificationGateState.snapshot());
+        body.put("digitalTwin", digitalTwinRuntimeState.snapshot());
         return ResponseEntity.ok(body);
     }
 
@@ -608,6 +758,7 @@ public class EvSimulatorController {
         if (snapshot.gateStatus() == EvVerificationGateState.GateStatus.VERIFIED) {
             userJourneyState.markVerified(snapshot.verificationStatus());
         }
+        syncGoldenHashToWatchdog(stationId, snapshot.goldenHash());
 
         body.put("userJourneyState", userJourneyState.snapshot().journeyState().name());
         return ResponseEntity.ok(body);
@@ -691,6 +842,415 @@ public class EvSimulatorController {
         }
 
         throw new IllegalArgumentException("No active transaction. Provide transactionId or start one first.");
+    }
+
+    private String resolveSampleTransactionId(String transactionId) {
+        if (transactionId != null && !transactionId.isBlank()) {
+            return transactionId;
+        }
+        String active = getCurrentActiveTransactionId();
+        if (active != null && !active.isBlank()) {
+            return active;
+        }
+        return "SESSION-DEV-" + client.getStationId();
+    }
+
+    private MeterProcessingOutcome processMeterUpdate(String transactionId,
+                                                      double requestedKwh,
+                                                      boolean allowWarningUpdate,
+                                                      DigitalTwinSessionExpectation expectation) throws Exception {
+        double profileDefault = telemetryProfiles.resolveActiveProfile().getEnergyPerUpdateKwh();
+        double effectiveKwh = digitalTwinRuntimeState.resolveMeterStepKwh(requestedKwh, profileDefault);
+
+        client.sendMeterUpdate(transactionId, effectiveKwh);
+
+        int currentBattery = userJourneyState.snapshot().batteryPct();
+        int nextBattery = currentBattery;
+        if (effectiveKwh > 0.0d) {
+            int pctStep = Math.max(1, (int) Math.round(effectiveKwh));
+            nextBattery = Math.min(100, currentBattery + pctStep);
+            userJourneyState.setBatteryPct(nextBattery);
+        }
+
+        double telemetryEnergyKwh = Math.max(0.0d, effectiveKwh);
+        AutoChargeRuntime runtime = autoChargeRuntime.get();
+        if (runtime != null && runtime.isActive() && transactionId.equals(runtime.transactionId())) {
+            telemetryEnergyKwh = round3(runtime.actualEnergyKwh() + Math.max(0.0d, effectiveKwh));
+        }
+
+        EvTrustVerificationClient.WatchdogTelemetryResponse telemetry =
+            publishWatchdogTelemetry(transactionId, telemetryEnergyKwh, allowWarningUpdate, expectation);
+
+        updateAutoChargeProgress(transactionId, expectation, effectiveKwh);
+
+        return new MeterProcessingOutcome(effectiveKwh, nextBattery, telemetry);
+    }
+
+    private DigitalTwinSessionExpectation expectationForTransaction(String transactionId) {
+        AutoChargeRuntime runtime = autoChargeRuntime.get();
+        if (runtime == null || !runtime.isActive() || !transactionId.equals(runtime.transactionId())) {
+            return null;
+        }
+
+        double elapsedRatio = runtime.elapsedRatio(Instant.now());
+        double expectedEnergy = round3(runtime.targetEnergyKwh() * elapsedRatio);
+        double expectedSoc = clampDouble(
+            runtime.startBatteryPct() + ((runtime.targetSocPct() - runtime.startBatteryPct()) * elapsedRatio),
+            0.0d,
+            100.0d
+        );
+
+        return new DigitalTwinSessionExpectation(
+            expectedEnergy,
+            runtime.idealPowerKw(),
+            expectedSoc,
+            elapsedRatio,
+            autoChargeDriftThresholdPct
+        );
+    }
+
+    private void updateAutoChargeProgress(String transactionId,
+                                          DigitalTwinSessionExpectation expectation,
+                                          double actualDeltaKwh) {
+        autoChargeRuntime.updateAndGet(runtime -> {
+            if (runtime == null || !runtime.isActive() || !transactionId.equals(runtime.transactionId())) {
+                return runtime;
+            }
+
+            double expectedEnergy = expectation == null
+                ? runtime.expectedEnergyKwh()
+                : Math.max(0.0d, expectation.expectedEnergyDeliveredKwh());
+            double nextActual = round3(runtime.actualEnergyKwh() + Math.max(0.0d, actualDeltaKwh));
+            return runtime.withProgress(expectedEnergy, nextActual);
+        });
+    }
+
+    private AutoChargeRuntime startAutoChargeSession(String transactionId,
+                                                     EvUserJourneyState.ChargeIntent intent) {
+        stopAutoChargeLoop("Starting new user charging simulation");
+
+        long durationMs = Math.max(5000L, autoChargeDurationMs);
+        long tickMs = Math.max(250L, Math.min(durationMs, autoChargeTickMs));
+        double targetEnergyKwh = resolveTargetEnergyKwh(intent);
+        double idealPowerKw = round3(Math.max(0.0d, digitalTwinRuntimeState.controls().powerKw()));
+        int startBatteryPct = userJourneyState.snapshot().batteryPct();
+        int targetSocPct = intent == null
+            ? Math.min(100, startBatteryPct + 30)
+            : Math.max(startBatteryPct, Math.min(100, intent.targetSoc()));
+
+        Instant startedAt = Instant.now();
+        AutoChargeRuntime runtime = new AutoChargeRuntime(
+            transactionId,
+            startedAt,
+            startedAt.plusMillis(durationMs),
+            durationMs,
+            tickMs,
+            targetEnergyKwh,
+            idealPowerKw,
+            startBatteryPct,
+            targetSocPct,
+            0.0d,
+            0.0d,
+            "ACTIVE",
+            "User charging simulation started.",
+            startedAt,
+            null
+        );
+
+        autoChargeRuntime.set(runtime);
+
+        Thread thread = new Thread(() -> runAutoChargeSessionLoop(runtime),
+            "ev-user-charge-" + transactionId);
+        thread.setDaemon(true);
+        autoChargeThread.set(thread);
+        thread.start();
+
+        return runtime;
+    }
+
+    private void runAutoChargeSessionLoop(AutoChargeRuntime runtime) {
+        long tickCount = Math.max(1L, (long) Math.ceil((double) runtime.durationMs() / runtime.tickMs()));
+        double requestedStepKwh = runtime.targetEnergyKwh() / tickCount;
+
+        try {
+            while (true) {
+                AutoChargeRuntime current = autoChargeRuntime.get();
+                if (current == null || !current.isActive() || !runtime.transactionId().equals(current.transactionId())) {
+                    return;
+                }
+
+                if (Instant.now().isAfter(current.expectedEndAt())) {
+                    break;
+                }
+
+                sleepQuietly(current.tickMs());
+
+                current = autoChargeRuntime.get();
+                if (current == null || !current.isActive() || !runtime.transactionId().equals(current.transactionId())) {
+                    return;
+                }
+
+                if (!runtime.transactionId().equals(getCurrentActiveTransactionId())) {
+                    transitionAutoCharge(runtime.transactionId(), "STOPPED", "Active transaction changed.", true);
+                    return;
+                }
+
+                DigitalTwinSessionExpectation expectation = expectationForTransaction(runtime.transactionId());
+                MeterProcessingOutcome outcome = processMeterUpdate(
+                    runtime.transactionId(),
+                    requestedStepKwh,
+                    true,
+                    expectation
+                );
+
+                if (isRetractSeverity(outcome.telemetry())) {
+                    abortAutoChargeOnAnomaly(
+                        runtime.transactionId(),
+                        outcome.telemetry(),
+                        "Digital twin anomaly detected. Escrow retraction initiated."
+                    );
+                    return;
+                }
+            }
+
+            finalizeAutoChargeSuccess(runtime.transactionId());
+        } catch (Exception ex) {
+            log.warn("[EV SIM] Auto charge loop failed for tx={} reason={}", runtime.transactionId(), safeMessage(ex));
+            transitionAutoCharge(runtime.transactionId(), "FAILED", safeMessage(ex), true);
+        } finally {
+            autoChargeThread.compareAndSet(Thread.currentThread(), null);
+        }
+    }
+
+    private void finalizeAutoChargeSuccess(String transactionId) {
+        AutoChargeRuntime runtime = autoChargeRuntime.get();
+        if (runtime == null || !runtime.isActive() || !transactionId.equals(runtime.transactionId())) {
+            return;
+        }
+
+        transitionAutoCharge(transactionId, "SETTLING", "30-second charging window completed.", false);
+        try {
+            double totalKwh = Math.max(0.0d, autoChargeRuntime.get().actualEnergyKwh());
+            SettlementSummary settlement = settleAndCompleteSession(transactionId, totalKwh, true);
+            lastSettlement.set(settlement);
+            transitionAutoCharge(
+                transactionId,
+                "COMPLETED",
+                "Auto charging completed with escrow state " + settlement.finalContractState() + ".",
+                true
+            );
+        } catch (IllegalStateException ex) {
+            transitionAutoCharge(transactionId, "FAILED", safeMessage(ex), true);
+        } catch (Exception ex) {
+            transitionAutoCharge(transactionId, "FAILED", safeMessage(ex), true);
+        }
+    }
+
+    private void abortAutoChargeOnAnomaly(String transactionId,
+                                          EvTrustVerificationClient.WatchdogTelemetryResponse telemetry,
+                                          String reason) {
+        AutoChargeRuntime runtime = autoChargeRuntime.get();
+        if (runtime == null || !runtime.isActive() || !transactionId.equals(runtime.transactionId())) {
+            return;
+        }
+
+        transitionAutoCharge(transactionId, "ANOMALY_RETRACTING", reason, false);
+        activeTransactionId.compareAndSet(transactionId, null);
+
+        try {
+            EvTrustVerificationClient.EscrowActiveResponse refundedEscrow = trustVerificationClient.awaitEscrowLifecycle(
+                client.getStationId(),
+                "REFUNDED",
+                Math.max(1, releasePollMaxAttempts),
+                Math.max(100L, releasePollIntervalMs)
+            );
+            syncEscrowState(refundedEscrow);
+
+            String lifecycle = normalizeLifecycleState(refundedEscrow == null ? null : refundedEscrow.lifecycleState());
+            if (!"REFUNDED".equals(lifecycle)) {
+                throw new IllegalStateException(
+                    "Escrow lifecycle did not reach REFUNDED (current=" + lifecycle + ")"
+                );
+            }
+
+            EvUserJourneyState.Snapshot beforeSnapshot = userJourneyState.snapshot();
+            userJourneyState.updateTrustStatus("ANOMALY_FLAGGED");
+            userJourneyState.markComplete();
+
+            lastSettlement.set(new SettlementSummary(
+                transactionId,
+                Math.max(0.0d, runtime.actualEnergyKwh()),
+                refundedEscrow != null && refundedEscrow.heldAmountWei() != null
+                    ? refundedEscrow.heldAmountWei()
+                    : beforeSnapshot.heldAmountWei(),
+                0.0d,
+                0.0d,
+                beforeSnapshot.walletBalance(),
+                "REFUNDED",
+                refundedEscrow == null ? null : refundedEscrow.escrowAddress(),
+                Instant.now()
+            ));
+
+            String severity = telemetry == null || telemetry.severity() == null ? "UNKNOWN" : telemetry.severity();
+            transitionAutoCharge(
+                transactionId,
+                "ANOMALY_ABORTED",
+                "Charging stopped due to " + severity + " anomaly; escrow was retracted.",
+                true
+            );
+        } catch (Exception ex) {
+            transitionAutoCharge(
+                transactionId,
+                "ANOMALY_ABORTED",
+                "Anomaly detected but refund confirmation failed: " + safeMessage(ex),
+                true
+            );
+        }
+    }
+
+    private void stopAutoChargeLoop(String reason) {
+        AutoChargeRuntime runtime = autoChargeRuntime.get();
+        if (runtime != null && runtime.isActive()) {
+            transitionAutoCharge(runtime.transactionId(), "STOPPED", reason, true);
+        }
+
+        Thread thread = autoChargeThread.getAndSet(null);
+        if (thread != null && thread.isAlive()) {
+            thread.interrupt();
+        }
+    }
+
+    private AutoChargeRuntime transitionAutoCharge(String transactionId,
+                                                   String phase,
+                                                   String reason,
+                                                   boolean ended) {
+        return autoChargeRuntime.updateAndGet(runtime -> {
+            if (runtime == null || !transactionId.equals(runtime.transactionId())) {
+                return runtime;
+            }
+            return runtime.withPhase(phase, reason, ended);
+        });
+    }
+
+    private boolean isRetractSeverity(EvTrustVerificationClient.WatchdogTelemetryResponse telemetry) {
+        if (telemetry == null) {
+            return false;
+        }
+        if (telemetry.severity() == null || telemetry.severity().isBlank()) {
+            return false;
+        }
+
+        String severity = telemetry.severity().trim().toUpperCase(Locale.ROOT);
+        return "MEDIUM".equals(severity)
+            || "HIGH".equals(severity)
+            || "CRITICAL".equals(severity);
+    }
+
+    private double resolveTargetEnergyKwh(EvUserJourneyState.ChargeIntent intent) {
+        if (intent == null) {
+            return Math.max(0.1d, autoChargeMinTargetKwh);
+        }
+
+        double targetFromIntent = 0.0d;
+        if (intent.estimatedKwh() > 0.0d) {
+            targetFromIntent = intent.estimatedKwh();
+        } else if (intent.inputMode() == EvUserJourneyState.InputMode.VOLTS && intent.inputValue() > 0.0d) {
+            targetFromIntent = intent.inputValue();
+        } else if (intent.inputMode() == EvUserJourneyState.InputMode.MONEY
+            && intent.inputValue() > 0.0d
+            && userPricePerKwh > 0.0d) {
+            targetFromIntent = intent.inputValue() / userPricePerKwh;
+        }
+
+        return round3(Math.max(autoChargeMinTargetKwh, targetFromIntent));
+    }
+
+    private EvTrustVerificationClient.WatchdogTelemetryResponse publishWatchdogTelemetry(String transactionId,
+                                                                                          double effectiveKwh,
+                                                                                          boolean allowWarningUpdate,
+                                                                                          DigitalTwinSessionExpectation expectation) {
+        EvDigitalTwinRuntimeState.ControlState controls = digitalTwinRuntimeState.controls();
+        if (!controls.telemetryForwardingEnabled()) {
+            if (allowWarningUpdate) {
+                digitalTwinRuntimeState.setWarning("Watchdog telemetry forwarding is disabled in digital twin controls.");
+            }
+            return null;
+        }
+
+        EvTrustVerificationClient.WatchdogTelemetryRequest request = buildWatchdogTelemetryRequest(
+            transactionId,
+            effectiveKwh,
+            controls,
+            expectation
+        );
+
+        try {
+            EvTrustVerificationClient.WatchdogTelemetryResponse response = trustVerificationClient.watchdogTelemetry(request);
+            digitalTwinRuntimeState.setLastTelemetry(response);
+            if (allowWarningUpdate && response != null && response.message() != null && !response.message().isBlank()) {
+                digitalTwinRuntimeState.setWarning(response.message());
+            }
+            return response;
+        } catch (Exception ex) {
+            String warning = "Watchdog telemetry push failed: " + safeMessage(ex);
+            if (allowWarningUpdate) {
+                digitalTwinRuntimeState.setWarning(warning);
+            }
+            log.warn("[EV SIM] {}", warning);
+            return null;
+        }
+    }
+
+    private EvTrustVerificationClient.WatchdogTelemetryRequest buildWatchdogTelemetryRequest(
+        String transactionId,
+        double energyDeliveredKwh,
+        EvDigitalTwinRuntimeState.ControlState controls,
+        DigitalTwinSessionExpectation expectation
+    ) {
+        EvUserJourneyState.Snapshot userSnapshot = userJourneyState.snapshot();
+        double soc = clampDouble(userSnapshot.batteryPct() + controls.socBiasPct(), 0.0d, 100.0d);
+        double powerKw = controls.powerKw();
+        double voltageV = 400.0d;
+        Double currentA = powerKw <= 0.0d ? null : (powerKw * 1000.0d) / voltageV;
+
+        return new EvTrustVerificationClient.WatchdogTelemetryRequest(
+            client.getStationId(),
+            transactionId,
+            Instant.now(),
+            powerKw,
+            Math.max(0.0d, energyDeliveredKwh),
+            expectation == null ? null : expectation.expectedEnergyDeliveredKwh(),
+            expectation == null ? null : expectation.expectedPowerKw(),
+            expectation == null ? null : expectation.expectedSocPercent(),
+            expectation == null ? null : expectation.elapsedRatio(),
+            expectation == null ? null : expectation.driftThresholdPct(),
+            currentA,
+            voltageV,
+            controls.connectorTempC(),
+            null,
+            soc,
+            client.getLastFirmwareHash(),
+            "1"
+        );
+    }
+
+    private void syncGoldenHashToWatchdog(String stationId, String goldenHash) {
+        if (goldenHash == null || goldenHash.isBlank()) {
+            return;
+        }
+
+        try {
+            EvTrustVerificationClient.WatchdogGoldenHashSyncResponse sync =
+                trustVerificationClient.syncWatchdogGoldenHash(stationId, goldenHash);
+            if (sync != null) {
+                digitalTwinRuntimeState.setLastMetrics(sync.metrics());
+                if (sync.message() != null && !sync.message().isBlank()) {
+                    digitalTwinRuntimeState.setWarning(sync.message());
+                }
+            }
+        } catch (Exception ex) {
+            log.debug("[EV SIM] Watchdog golden-hash sync skipped: {}", safeMessage(ex));
+        }
     }
 
     private String getCurrentActiveTransactionId() {
@@ -829,8 +1389,57 @@ public class EvSimulatorController {
         return lifecycleState.trim().toUpperCase(Locale.ROOT);
     }
 
+    private SettlementSummary reconcileSettlementWithEscrow(SettlementSummary settlement,
+                                                            EvTrustVerificationClient.EscrowActiveResponse activeEscrow) {
+        if (settlement == null || activeEscrow == null) {
+            return settlement;
+        }
+
+        String escrowLifecycle = normalizeLifecycleState(activeEscrow.lifecycleState());
+        if (!isTerminalSettlementLifecycle(escrowLifecycle)) {
+            return settlement;
+        }
+
+        String settlementLifecycle = normalizeLifecycleState(settlement.finalContractState());
+        if (escrowLifecycle.equals(settlementLifecycle)) {
+            return settlement;
+        }
+
+        SettlementSummary reconciled = new SettlementSummary(
+            settlement.transactionId(),
+            settlement.totalEnergyKwh(),
+            activeEscrow.heldAmountWei() == null ? settlement.heldAmountWei() : activeEscrow.heldAmountWei(),
+            settlement.chargedAmount(),
+            settlement.debitedAmount(),
+            settlement.remainingWalletBalance(),
+            escrowLifecycle,
+            activeEscrow.escrowAddress() == null || activeEscrow.escrowAddress().isBlank()
+                ? settlement.escrowAddress()
+                : activeEscrow.escrowAddress(),
+            Instant.now()
+        );
+        lastSettlement.set(reconciled);
+        return reconciled;
+    }
+
+    private boolean isTerminalSettlementLifecycle(String lifecycleState) {
+        return "RELEASED".equals(lifecycleState)
+            || "REFUNDED".equals(lifecycleState);
+    }
+
     private double roundMoney(double value) {
         return Math.round(value * 100.0d) / 100.0d;
+    }
+
+    private double round3(double value) {
+        return Math.round(value * 1000.0d) / 1000.0d;
+    }
+
+    private double clampDouble(double value, double min, double max) {
+        if (!Double.isFinite(value)) {
+            return min;
+        }
+        return Math.min(max, Math.max(min, value));
     }
 
     private EvUserJourneyState.ChargeIntent buildChargeIntent(String inputMode,
@@ -927,6 +1536,95 @@ public class EvSimulatorController {
             return EvUserJourneyState.InputMode.valueOf(inputMode.trim().toUpperCase());
         } catch (IllegalArgumentException ignored) {
             return EvUserJourneyState.InputMode.MONEY;
+        }
+    }
+
+    private record DigitalTwinSessionExpectation(
+        double expectedEnergyDeliveredKwh,
+        double expectedPowerKw,
+        double expectedSocPercent,
+        double elapsedRatio,
+        double driftThresholdPct
+    ) {
+    }
+
+    private record MeterProcessingOutcome(
+        double effectiveKwh,
+        int batteryPct,
+        EvTrustVerificationClient.WatchdogTelemetryResponse telemetry
+    ) {
+    }
+
+    private record AutoChargeRuntime(
+        String transactionId,
+        Instant startedAt,
+        Instant expectedEndAt,
+        long durationMs,
+        long tickMs,
+        double targetEnergyKwh,
+        double idealPowerKw,
+        int startBatteryPct,
+        int targetSocPct,
+        double expectedEnergyKwh,
+        double actualEnergyKwh,
+        String phase,
+        String reason,
+        Instant updatedAt,
+        Instant endedAt
+    ) {
+        boolean isActive() {
+            return "ACTIVE".equalsIgnoreCase(phase);
+        }
+
+        double elapsedRatio(Instant now) {
+            long elapsedMs = Math.max(0L, now.toEpochMilli() - startedAt.toEpochMilli());
+            if (durationMs <= 0L) {
+                return 1.0d;
+            }
+            return Math.min(1.0d, Math.max(0.0d, (double) elapsedMs / (double) durationMs));
+        }
+
+        AutoChargeRuntime withProgress(double expectedEnergyKwh,
+                                       double actualEnergyKwh) {
+            return new AutoChargeRuntime(
+                transactionId,
+                startedAt,
+                expectedEndAt,
+                durationMs,
+                tickMs,
+                targetEnergyKwh,
+                idealPowerKw,
+                startBatteryPct,
+                targetSocPct,
+                expectedEnergyKwh,
+                actualEnergyKwh,
+                phase,
+                reason,
+                Instant.now(),
+                endedAt
+            );
+        }
+
+        AutoChargeRuntime withPhase(String nextPhase,
+                                    String nextReason,
+                                    boolean ended) {
+            return new AutoChargeRuntime(
+                transactionId,
+                startedAt,
+                expectedEndAt,
+                durationMs,
+                tickMs,
+                targetEnergyKwh,
+                idealPowerKw,
+                startBatteryPct,
+                targetSocPct,
+                expectedEnergyKwh,
+                actualEnergyKwh,
+                nextPhase,
+                nextReason,
+                Instant.now(),
+                ended ? Instant.now() : endedAt
+            );
         }
     }
 

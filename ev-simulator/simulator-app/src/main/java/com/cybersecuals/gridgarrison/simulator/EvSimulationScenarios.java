@@ -37,6 +37,9 @@ public class EvSimulationScenarios {
     private final EvWebSocketClient client;
     private final EvTelemetryProfileProperties telemetryProfiles;
     private final EvVerificationGateState verificationGateState;
+    private final EvTrustVerificationClient trustVerificationClient;
+    private final EvDigitalTwinRuntimeState digitalTwinRuntimeState;
+    private final EvUserJourneyState userJourneyState;
 
     @Value("${ev.simulator.auto-scenarios:false}")
     private boolean autoScenariosEnabled;
@@ -197,6 +200,7 @@ public class EvSimulationScenarios {
         if (goldenHash == null || goldenHash.isBlank()) {
             goldenHash = HEALTHY_BASELINE_HASH;
         }
+        syncWatchdogGoldenHash(goldenHash);
         client.sendFirmwareStatus("Downloaded", goldenHash);
         checkStopRequested();
 
@@ -207,8 +211,14 @@ public class EvSimulationScenarios {
         for (int i = 0; i < updateCount; i++) {
             Thread.sleep(meterUpdateIntervalMs);
             checkStopRequested();
-            currentMeterValue += profile.getEnergyPerUpdateKwh();
+            double effectiveStepKwh = digitalTwinRuntimeState.resolveMeterStepKwh(0.0d, profile.getEnergyPerUpdateKwh());
+            currentMeterValue += effectiveStepKwh;
             client.sendMeterUpdate(currentTransactionId, currentMeterValue);
+            if (effectiveStepKwh > 0.0d) {
+                int pctStep = Math.max(1, (int) Math.round(effectiveStepKwh));
+                userJourneyState.setBatteryPct(userJourneyState.snapshot().batteryPct() + pctStep);
+            }
+            publishScenarioTelemetry(currentTransactionId, currentMeterValue);
         }
 
         // End transaction
@@ -254,6 +264,7 @@ public class EvSimulationScenarios {
 
         // Send firmware with tampered hash
         String tamperedHash = "xxx999yyy888zzz777www666vvv555uuu";
+        syncWatchdogGoldenHash(HEALTHY_BASELINE_HASH);
         client.sendFirmwareStatus("DownloadFailed", tamperedHash);
         checkStopRequested();
 
@@ -264,8 +275,14 @@ public class EvSimulationScenarios {
         for (int i = 0; i < 2; i++) {
             Thread.sleep(meterUpdateIntervalMs);
             checkStopRequested();
-            currentMeterValue += profile.getEnergyPerUpdateKwh();
+            double effectiveStepKwh = digitalTwinRuntimeState.resolveMeterStepKwh(0.0d, profile.getEnergyPerUpdateKwh());
+            currentMeterValue += effectiveStepKwh;
             client.sendMeterUpdate(currentTransactionId, currentMeterValue);
+            if (effectiveStepKwh > 0.0d) {
+                int pctStep = Math.max(1, (int) Math.round(effectiveStepKwh));
+                userJourneyState.setBatteryPct(userJourneyState.snapshot().batteryPct() + pctStep);
+            }
+            publishScenarioTelemetry(currentTransactionId, currentMeterValue);
         }
 
         checkStopRequested();
@@ -332,6 +349,7 @@ public class EvSimulationScenarios {
         currentTransactionId = "TXN-ISO-PNC-" + UUID.randomUUID();
         currentMeterValue = 0.0;
 
+        syncWatchdogGoldenHash(HEALTHY_BASELINE_HASH);
         client.sendFirmwareStatus("Downloaded", "abc123def456ghi789jkl012mno345pqr");
         checkStopRequested();
         client.sendTransactionStart(currentTransactionId, "PlugAndCharge", "ISO15118-CERT-LOCAL-001");
@@ -339,8 +357,14 @@ public class EvSimulationScenarios {
         for (int i = 0; i < 3; i++) {
             Thread.sleep(meterUpdateIntervalMs);
             checkStopRequested();
-            currentMeterValue += profile.getEnergyPerUpdateKwh();
+            double effectiveStepKwh = digitalTwinRuntimeState.resolveMeterStepKwh(0.0d, profile.getEnergyPerUpdateKwh());
+            currentMeterValue += effectiveStepKwh;
             client.sendMeterUpdate(currentTransactionId, currentMeterValue);
+            if (effectiveStepKwh > 0.0d) {
+                int pctStep = Math.max(1, (int) Math.round(effectiveStepKwh));
+                userJourneyState.setBatteryPct(userJourneyState.snapshot().batteryPct() + pctStep);
+            }
+            publishScenarioTelemetry(currentTransactionId, currentMeterValue);
         }
 
         checkStopRequested();
@@ -361,12 +385,83 @@ public class EvSimulationScenarios {
         for (int i = 0; i < 2; i++) {
             Thread.sleep(meterUpdateIntervalMs);
             checkStopRequested();
-            currentMeterValue += profile.getEnergyPerUpdateKwh();
+            double effectiveStepKwh = digitalTwinRuntimeState.resolveMeterStepKwh(0.0d, profile.getEnergyPerUpdateKwh());
+            currentMeterValue += effectiveStepKwh;
             client.sendMeterUpdate(currentTransactionId, currentMeterValue);
+            if (effectiveStepKwh > 0.0d) {
+                int pctStep = Math.max(1, (int) Math.round(effectiveStepKwh));
+                userJourneyState.setBatteryPct(userJourneyState.snapshot().batteryPct() + pctStep);
+            }
+            publishScenarioTelemetry(currentTransactionId, currentMeterValue);
         }
 
         checkStopRequested();
         client.sendTransactionEnd(currentTransactionId, currentMeterValue);
+    }
+
+    private void publishScenarioTelemetry(String transactionId, double energyDeliveredKwh) {
+        EvDigitalTwinRuntimeState.ControlState controls = digitalTwinRuntimeState.controls();
+        if (!controls.telemetryForwardingEnabled()) {
+            return;
+        }
+
+        double soc = clamp(userJourneyState.snapshot().batteryPct() + controls.socBiasPct(), 0.0d, 100.0d);
+        double powerKw = controls.powerKw();
+        double voltageV = 400.0d;
+        Double currentA = powerKw <= 0.0d ? null : (powerKw * 1000.0d) / voltageV;
+
+        EvTrustVerificationClient.WatchdogTelemetryRequest request = new EvTrustVerificationClient.WatchdogTelemetryRequest(
+            client.getStationId(),
+            transactionId,
+            java.time.Instant.now(),
+            powerKw,
+            Math.max(0.0d, energyDeliveredKwh),
+            null,
+            null,
+            null,
+            null,
+            null,
+            currentA,
+            voltageV,
+            controls.connectorTempC(),
+            null,
+            soc,
+            client.getLastFirmwareHash(),
+            "1"
+        );
+
+        try {
+            EvTrustVerificationClient.WatchdogTelemetryResponse response = trustVerificationClient.watchdogTelemetry(request);
+            digitalTwinRuntimeState.setLastTelemetry(response);
+        } catch (Exception ex) {
+            String warning = "Scenario telemetry push failed: "
+                + (ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage());
+            digitalTwinRuntimeState.setWarning(warning);
+            log.debug("{}", warning);
+        }
+    }
+
+    private void syncWatchdogGoldenHash(String goldenHash) {
+        if (goldenHash == null || goldenHash.isBlank()) {
+            return;
+        }
+        try {
+            EvTrustVerificationClient.WatchdogGoldenHashSyncResponse response =
+                trustVerificationClient.syncWatchdogGoldenHash(client.getStationId(), goldenHash);
+            if (response != null) {
+                digitalTwinRuntimeState.setLastMetrics(response.metrics());
+            }
+        } catch (Exception ex) {
+            log.debug("Watchdog golden hash sync skipped: {}",
+                ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage());
+        }
+    }
+
+    private double clamp(double value, double min, double max) {
+        if (!Double.isFinite(value)) {
+            return min;
+        }
+        return Math.min(max, Math.max(min, value));
     }
 
     private static final class ScenarioStoppedException extends RuntimeException {

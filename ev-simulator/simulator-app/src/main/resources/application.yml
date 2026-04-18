@@ -52,6 +52,10 @@ ev:
       price-per-kwh: 0.25
       release-poll-max-attempts: 24
       release-poll-interval-ms: 500
+      auto-charge-duration-ms: 30000
+      auto-charge-tick-ms: 1000
+      auto-charge-min-target-kwh: 1.0
+      auto-charge-drift-threshold-pct: 25.0
 
     # Auto-scenarios (set to true to enable automated demo sequences)
     auto-scenarios: false
@@ -80,6 +84,9 @@ ev:
       latest-verdict-path: /trust/api/latest-verdict
       escrow-intent-path: /trust/api/escrow/intent
       escrow-active-path: /trust/api/escrow/active
+      watchdog-metrics-path: /watchdog/api/station-metrics
+      watchdog-telemetry-path: /watchdog/api/telemetry
+      watchdog-golden-hash-path: /watchdog/api/golden-hash
       connect-timeout-ms: 3000
       read-timeout-ms: 5000
       firmware-status: Downloaded

@@ -9,6 +9,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import jakarta.annotation.PostConstruct;
 import java.math.BigInteger;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -175,6 +176,47 @@ public class EvTrustVerificationClient {
         }
 
         return escrowActive(stationId);
+    }
+
+    public WatchdogStationMetricsResponse watchdogStationMetrics(String stationId) {
+        String resolvedStationId = stationId == null || stationId.isBlank() ? "CS-101" : stationId.trim();
+        String url = UriComponentsBuilder
+            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getWatchdogMetricsPath()))
+            .queryParam("stationId", resolvedStationId)
+            .toUriString();
+        return restTemplate.getForObject(url, WatchdogStationMetricsResponse.class);
+    }
+
+    public WatchdogTelemetryResponse watchdogTelemetry(WatchdogTelemetryRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("watchdog telemetry request is required");
+        }
+        String url = normalizeBaseUrl() + normalizePath(verificationProperties.getWatchdogTelemetryPath());
+        return restTemplate.postForObject(url, request, WatchdogTelemetryResponse.class);
+    }
+
+    public WatchdogGoldenHashSyncResponse syncWatchdogGoldenHash(String stationId, String goldenHash) {
+        if (goldenHash == null || goldenHash.isBlank()) {
+            return new WatchdogGoldenHashSyncResponse(false, stationId, null, null,
+                "Golden hash is empty. Skipping watchdog sync.");
+        }
+
+        String resolvedStationId = stationId == null || stationId.isBlank() ? "CS-101" : stationId.trim();
+        String url = UriComponentsBuilder
+            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getWatchdogGoldenHashPath()))
+            .queryParam("stationId", resolvedStationId)
+            .queryParam("goldenHash", goldenHash)
+            .toUriString();
+        return restTemplate.postForObject(url, null, WatchdogGoldenHashSyncResponse.class);
+    }
+
+    public WatchdogResetResponse resetWatchdogStation(String stationId) {
+        String resolvedStationId = stationId == null || stationId.isBlank() ? "CS-101" : stationId.trim();
+        String url = UriComponentsBuilder
+            .fromHttpUrl(normalizeBaseUrl() + normalizePath(verificationProperties.getWatchdogResetPath()))
+            .queryParam("stationId", resolvedStationId)
+            .toUriString();
+        return restTemplate.postForObject(url, null, WatchdogResetResponse.class);
     }
 
     private RequestHashVerificationResult verifyWithRetry(String stationId,
@@ -544,6 +586,89 @@ public class EvTrustVerificationClient {
         String createdAt,
         String lastUpdated,
         String message
+    ) {
+    }
+
+    public record WatchdogStationMetricsResponse(
+        Boolean ok,
+        String stationId,
+        WatchdogMetricsSnapshot metrics,
+        String message
+    ) {
+    }
+
+    public record WatchdogGoldenHashSyncResponse(
+        Boolean ok,
+        String stationId,
+        String goldenHash,
+        WatchdogMetricsSnapshot metrics,
+        String message
+    ) {
+    }
+
+    public record WatchdogResetResponse(
+        Boolean ok,
+        String stationId,
+        WatchdogMetricsSnapshot metrics,
+        String message
+    ) {
+    }
+
+    public record WatchdogTelemetryResponse(
+        Boolean ok,
+        String stationId,
+        String sessionId,
+        String sampledAt,
+        Boolean anomaliesDetected,
+        Integer anomalyCount,
+        List<String> anomalyTypes,
+        String severity,
+        WatchdogMetricsSnapshot metrics,
+        String message
+    ) {
+    }
+
+    public record WatchdogTelemetryRequest(
+        String stationId,
+        String sessionId,
+        Instant sampledAt,
+        Double powerKw,
+        Double energyDeliveredKwh,
+        Double expectedEnergyDeliveredKwh,
+        Double expectedPowerKw,
+        Double expectedSocPercent,
+        Double elapsedRatio,
+        Double driftThresholdPct,
+        Double currentA,
+        Double voltageV,
+        Double connectorTempC,
+        Double batteryTempC,
+        Double socPercent,
+        String reportedFirmwareHash,
+        String connectorId
+    ) {
+    }
+
+    public record WatchdogMetricsSnapshot(
+        String twinStatus,
+        Integer totalAnomalies,
+        Integer chargingAnomalyCount,
+        Integer powerAnomalyCount,
+        Integer temperatureAnomalyCount,
+        Integer socAnomalyCount,
+        Integer firmwareMismatchCount,
+        Boolean stationHashChanged,
+        Boolean powerSurgeDetected,
+        String lastSeverity,
+        List<String> lastAnomalyTypes,
+        String lastAnomalyAt,
+        String lastHeartbeat,
+        Double lastPowerKw,
+        Double lastTempC,
+        Double lastSocPercent,
+        String goldenHash,
+        Double avgEnergyPerSessionKwh,
+        Integer recentSessions
     ) {
     }
 }
