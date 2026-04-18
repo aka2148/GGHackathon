@@ -21,6 +21,11 @@ import static org.mockito.Mockito.when;
 
 class BlockchainServiceImplSignatureTest {
 
+    @SuppressWarnings("unchecked")
+    private static <T> RemoteCall<T> remoteCallMock() {
+        return (RemoteCall<T>) mock(RemoteCall.class);
+    }
+
     @Test
     void verifiesSignatureAndHashAsVerified() throws Exception {
         KeyPair keyPair = newRsaKeyPair();
@@ -30,8 +35,8 @@ class BlockchainServiceImplSignatureTest {
 
         BlockchainServiceImpl service = new BlockchainServiceImpl();
         FirmwareRegistryContract contract = mock(FirmwareRegistryContract.class);
-        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> call = mock(RemoteCall.class);
-        RemoteCall<TransactionReceipt> auditCall = mock(RemoteCall.class);
+        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> call = remoteCallMock();
+        RemoteCall<TransactionReceipt> auditCall = remoteCallMock();
         TransactionReceipt auditReceipt = mock(TransactionReceipt.class);
 
         when(contract.getSignedGoldenRecord("CS-101")).thenReturn(call);
@@ -75,8 +80,8 @@ class BlockchainServiceImplSignatureTest {
 
         BlockchainServiceImpl service = new BlockchainServiceImpl();
         FirmwareRegistryContract contract = mock(FirmwareRegistryContract.class);
-        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> call = mock(RemoteCall.class);
-        RemoteCall<TransactionReceipt> auditCall = mock(RemoteCall.class);
+        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> call = remoteCallMock();
+        RemoteCall<TransactionReceipt> auditCall = remoteCallMock();
         TransactionReceipt auditReceipt = mock(TransactionReceipt.class);
 
         when(contract.getSignedGoldenRecord("CS-101")).thenReturn(call);
@@ -115,9 +120,9 @@ class BlockchainServiceImplSignatureTest {
     void treatsEmptyLegacyContractValueAsMissingGoldenHash() throws Exception {
         BlockchainServiceImpl service = new BlockchainServiceImpl();
         FirmwareRegistryContract contract = mock(FirmwareRegistryContract.class);
-        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> signedCall = mock(RemoteCall.class);
-        RemoteCall<String> legacyCall = mock(RemoteCall.class);
-        RemoteCall<TransactionReceipt> auditCall = mock(RemoteCall.class);
+        RemoteCall<FirmwareRegistryContract.SignedGoldenRecord> signedCall = remoteCallMock();
+        RemoteCall<String> legacyCall = remoteCallMock();
+        RemoteCall<TransactionReceipt> auditCall = remoteCallMock();
         TransactionReceipt auditReceipt = mock(TransactionReceipt.class);
 
         when(contract.getSignedGoldenRecord("CS-101")).thenReturn(signedCall);

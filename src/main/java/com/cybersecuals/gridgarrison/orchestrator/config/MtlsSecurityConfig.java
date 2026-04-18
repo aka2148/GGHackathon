@@ -1,5 +1,6 @@
 package com.cybersecuals.gridgarrison.orchestrator.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -20,10 +21,43 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 class MtlsSecurityConfig {
 
+    @Value("${GG_SSL_ENABLED:false}")
+    private boolean sslEnabled;
+
+    @Value("${gridgarrison.security.visualizer.public:true}")
+    private boolean visualizerPublic;
+
     @Bean
     @SuppressWarnings("unused")
     SecurityFilterChain ocppSecurityFilterChain(HttpSecurity http) throws Exception {
         http
+            .authorizeHttpRequests(auth -> {
+                if (sslEnabled) {
+                    auth.requestMatchers("/ocpp/**").authenticated();
+                } else {
+                    auth.requestMatchers("/ocpp/**").permitAll();
+                }
+
+                auth.requestMatchers("/actuator/health").permitAll();
+
+                if (visualizerPublic) {
+                    auth.requestMatchers(
+                            "/visualizer", "/visualizer.html", "/visualizer/**",
+                            "/panel", "/panel.html",
+                            "/ev-control-panel", "/ev-control-panel.html",
+                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
+                        ).permitAll();
+                } else {
+                    auth.requestMatchers(
+                            "/visualizer", "/visualizer.html", "/visualizer/**",
+                            "/panel", "/panel.html",
+                            "/ev-control-panel", "/ev-control-panel.html",
+                            "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline"
+                        ).authenticated();
+                }
+
+                auth.anyRequest().denyAll();
+            })
             // x509 extracts the CN from the client cert as the principal
             .x509(x509 -> x509
                 .subjectPrincipalRegex("CN=(.*?)(?:,|$)")
@@ -33,23 +67,8 @@ class MtlsSecurityConfig {
                     .roles("STATION")
                     .build())
             )
-            // x509 extracts the CN from the client cert as the principal
             // Disable CSRF — stateless WebSocket sessions
             .csrf(csrf -> csrf.ignoringRequestMatchers("/ocpp/**", "/visualizer/**", "/trust/**"));
-
-        http.authorizeHttpRequests(auth -> {
-            auth.requestMatchers("/ocpp/**").authenticated();
-            auth.requestMatchers("/actuator/health").permitAll();
-            // Demo UI and supporting APIs must remain browser-accessible in local runs.
-            auth.requestMatchers(
-                "/visualizer", "/visualizer.html", "/visualizer/**",
-                "/panel", "/panel.html", "/panel/**",
-                "/ev-control-panel", "/ev-control-panel.html", "/ev-control-panel/**",
-                "/trust/api/golden-hash", "/trust/api/register-runtime-signed-baseline",
-                "/trust/api/escrow/**"
-            ).permitAll();
-            auth.anyRequest().denyAll();
-        });
 
         return http.build();
     }

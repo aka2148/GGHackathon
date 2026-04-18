@@ -62,6 +62,10 @@ spring.modulith:
 # ---------------------------------------------------------------------------
 gridgarrison:
 
+  security:
+    visualizer:
+      public: ${GG_VISUALIZER_PUBLIC:true}
+
   blockchain:
     rpc-url:          ${GG_RPC_URL:${WEB3J_CLIENT_ADDRESS:http://127.0.0.1:7545}}
     private-key:      ${GG_WALLET_KEY:0x0000000000000000000000000000000000000000000000000000000000000001}
@@ -111,3 +115,28 @@ logging:
     com.cybersecuals.gridgarrison: DEBUG
     org.web3j:                     INFO
     org.springframework.security:  INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev-ws
+  ssl:
+    enabled: false
+
+server:
+  ssl:
+    enabled: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: demo-mtls
+  ssl:
+    enabled: true
+
+server:
+  ssl:
+    enabled: true
+    client-auth: need

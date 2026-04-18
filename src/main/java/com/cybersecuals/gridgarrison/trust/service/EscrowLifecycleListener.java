@@ -267,6 +267,7 @@ class EscrowLifecycleListener {
         return null;
     }
 
+    @SuppressWarnings("unused")
     private static final class EscrowSessionBinding {
         private final String stationId;
         private final String escrowAddress;

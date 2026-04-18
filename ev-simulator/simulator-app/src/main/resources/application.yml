@@ -1,0 +1,84 @@
+spring:
+  application:
+    name: ggev-simulator
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.cybersecuals.gridgarrison.simulator: DEBUG
+
+# EV Simulator Configuration
+ev:
+  simulator:
+    enabled: true
+
+    # Station identity
+    station-id: CS-101-EV
+
+    # Gateway endpoint (replace {stationId} with actual station ID)
+    # GridGarrison default server.port is 8443 in this repo
+    # For dev without TLS: ws://localhost:8443/ocpp/{stationId}
+    # For production with TLS: wss://gridgarrison.example.com/ocpp/{stationId}
+    gateway-uri: ws://localhost:8443/ocpp/{stationId}
+
+    # Heartbeat interval (milliseconds)
+    heartbeat-interval-ms: 30000
+
+    active-profile: normal
+    profiles:
+      normal:
+        heartbeat-interval-ms: 30000
+        meter-update-interval-ms: 5000
+        session-duration-ms: 60000
+        energy-per-update-kwh: 1.5
+      fast:
+        heartbeat-interval-ms: 5000
+        meter-update-interval-ms: 1000
+        session-duration-ms: 15000
+        energy-per-update-kwh: 0.5
+
+    reconnect:
+      enabled: true
+      max-attempts: 5
+      initial-delay-ms: 1000
+      max-delay-ms: 30000
+
+    # Auto-scenarios (set to true to enable automated demo sequences)
+    auto-scenarios: false
+
+    # Certificate configuration (for wss + optional mTLS)
+    tls:
+      enabled: false
+      key-store-path: classpath:certs/client.p12
+      key-store-password: changeit
+      key-store-type: PKCS12
+      trust-store-path: classpath:certs/ca-trust.p12
+      trust-store-password: changeit
+      trust-store-type: PKCS12
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev-ws
+
+ev:
+  simulator:
+    gateway-uri: ws://localhost:8443/ocpp/{stationId}
+    tls:
+      enabled: false
+
+---
+spring:
+  config:
+    activate:
+      on-profile: demo-mtls
+
+ev:
+  simulator:
+    gateway-uri: wss://localhost:8443/ocpp/{stationId}
+    tls:
+      enabled: true

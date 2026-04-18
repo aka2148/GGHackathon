@@ -2,9 +2,13 @@ package com.cybersecuals.gridgarrison.orchestrator.config;
 
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.http.server.ServletServerHttpRequest;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
+import javax.naming.ldap.LdapName;
+import javax.naming.ldap.Rdn;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +43,19 @@ class OcppHandshakeInterceptor implements HandshakeInterceptor {
         String path = request.getURI().getPath();
         String stationId = path.substring(path.lastIndexOf('/') + 1);
         attributes.put("stationId", stationId);
+
+        X509Certificate[] certificates = extractCertificates(request);
+        if (certificates != null && certificates.length > 0) {
+            String certCn = extractCommonName(certificates[0]);
+            if (certCn == null || certCn.isBlank()) {
+                return false;
+            }
+            attributes.put("certCn", certCn);
+            if (!stationId.equals(certCn)) {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -48,5 +65,40 @@ class OcppHandshakeInterceptor implements HandshakeInterceptor {
                                 WebSocketHandler wsHandler,
                                 Exception exception) {
         // no-op
+    }
+
+    private X509Certificate[] extractCertificates(ServerHttpRequest request) {
+        if (!(request instanceof ServletServerHttpRequest servletRequest)) {
+            return null;
+        }
+
+        Object jakartaCertAttr = servletRequest.getServletRequest()
+            .getAttribute("jakarta.servlet.request.X509Certificate");
+        if (jakartaCertAttr instanceof X509Certificate[] jakartaCerts) {
+            return jakartaCerts;
+        }
+
+        Object javaxCertAttr = servletRequest.getServletRequest()
+            .getAttribute("javax.servlet.request.X509Certificate");
+        if (javaxCertAttr instanceof X509Certificate[] javaxCerts) {
+            return javaxCerts;
+        }
+
+        return null;
+    }
+
+    private String extractCommonName(X509Certificate certificate) {
+        try {
+            LdapName ldapName = new LdapName(certificate.getSubjectX500Principal().getName());
+            for (Rdn rdn : ldapName.getRdns()) {
+                if ("CN".equalsIgnoreCase(rdn.getType())) {
+                    Object value = rdn.getValue();
+                    return value == null ? null : value.toString();
+                }
+            }
+            return null;
+        } catch (Exception ex) {
+            return null;
+        }
     }
 }
