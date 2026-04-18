@@ -863,6 +863,55 @@
       word-break: break-word;
     }
 
+    .user-flow-alert {
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      border-radius: 2px;
+      padding: 10px;
+      background: rgba(15, 23, 42, 0.35);
+      margin-top: 10px;
+    }
+
+    .user-flow-alert .title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+
+    .user-flow-alert .detail {
+      font-size: 12px;
+      color: var(--text);
+      letter-spacing: 0.03em;
+    }
+
+    .user-flow-alert.is-danger {
+      border-color: rgba(239, 68, 68, 0.55);
+      background: rgba(127, 29, 29, 0.22);
+    }
+
+    .user-flow-alert.is-danger .title {
+      color: #fecaca;
+    }
+
+    .user-flow-alert.is-ok {
+      border-color: rgba(34, 197, 94, 0.6);
+      background: rgba(20, 83, 45, 0.2);
+    }
+
+    .user-flow-alert.is-ok .title {
+      color: #bbf7d0;
+    }
+
+    .user-flow-alert.is-warn {
+      border-color: rgba(250, 204, 21, 0.65);
+      background: rgba(113, 63, 18, 0.22);
+    }
+
+    .user-flow-alert.is-warn .title {
+      color: #fde68a;
+    }
+
     .ev-visual {
       display: grid;
       grid-template-columns: 1fr 220px;
@@ -2106,6 +2155,11 @@
                 <div class="hint" id="paymentMessage">No payment hold yet. Confirm a plan to open the payment window.</div>
               </div>
 
+              <div id="userFlowAlert" class="user-flow-alert hidden">
+                <div id="userFlowAlertTitle" class="title">Status update</div>
+                <div id="userFlowAlertDetail" class="detail">Waiting for charging events.</div>
+              </div>
+
               <div id="paymentWindow" class="payment-window hidden">
                 <h3 class="payment-title">Escrow Payment Window</h3>
                 <p class="secure-copy">Funds are held in contract until completion. Release happens only after charging settlement.</p>
@@ -2232,31 +2286,51 @@
             </div>
 
             <div class="panel span-4 dev-only">
-              <h3>Real-Time Twin Controls</h3>
-              <p class="hint" style="margin-top:6px;">Tune charge behavior and push live telemetry while charging.</p>
-              <div class="row twin-controls-row">
-                <div class="col-6">
-                  <label>Rate multiplier</label>
-                  <input id="dtRateMultiplier" type="number" min="0.1" max="5" step="0.1" value="1.0" />
-                </div>
-                <div class="col-6">
-                  <label>Power (kW)</label>
-                  <input id="dtPowerKw" type="number" min="0" max="350" step="1" value="46" />
-                </div>
-                <div class="col-6">
-                  <label>Connector temp (C)</label>
-                  <input id="dtConnectorTemp" type="number" min="-20" max="140" step="0.5" value="31" />
-                </div>
-                <div class="col-6"><button id="dtApplyControlsBtn" class="primary">Apply Controls</button></div>
-                <div class="col-6"><button id="dtResetControlsBtn" class="warn">Reset Defaults</button></div>
-                <div class="col-6"><button id="dtSendSampleBtn" class="ok">Send Twin Sample</button></div>
-                <div class="col-6"><button id="dtRefreshStatusBtn" class="primary">Refresh Twin Status</button></div>
-              </div>
-              <div id="dtControlSummary" class="twin-summary">Multiplier x1.00 | Power 46.0 kW | Temp 31.0 C</div>
-            </div>
-          </div>
-        </div>
+  <h3>Real-Time Twin Controls</h3>
+  <p class="hint" style="margin-top:6px;">
+    Tune charge behavior and push live telemetry while charging.
+  </p>
 
+  <div class="row twin-controls-row">
+    <div class="col-6">
+      <label>Rate multiplier</label>
+      <input id="dtRateMultiplier" type="number" min="0.1" max="5" step="0.1" value="1.0" />
+    </div>
+
+    <div class="col-6">
+      <label>Power (kW)</label>
+      <input id="dtPowerKw" type="number" min="0" max="350" step="1" value="46" />
+    </div>
+
+    <div class="col-6">
+      <label>Connector temp (C)</label>
+      <input id="dtConnectorTemp" type="number" min="-20" max="140" step="0.5" value="31" />
+    </div>
+
+    <!-- Buttons row (Apply + Reset side by side) -->
+    <div class="col-12" style="display:flex; gap:10px;">
+      <button id="dtApplyControlsBtn" class="primary" style="flex:1;">
+        Apply Controls
+      </button>
+      <button id="dtResetControlsBtn" class="warn" style="flex:1;">
+        Reset Defaults
+      </button>
+    </div>
+
+    <!-- Other buttons -->
+    <div class="col-6">
+      <button id="dtSendSampleBtn" class="ok">Send Twin Sample</button>
+    </div>
+
+    <div class="col-6">
+      <button id="dtRefreshStatusBtn" class="primary">Refresh Twin Status</button>
+    </div>
+  </div>
+
+  <div id="dtControlSummary" class="twin-summary">
+    Multiplier x1.00 | Power 46.0 kW | Temp 31.0 C
+  </div>
+</div>
         <div class="dashboard-view hidden" data-view="trust">
           <div class="grid">
             <div class="panel span-12">
@@ -3003,7 +3077,8 @@
       const hasIntent = !!(journey.chargeIntent || statusData.userChargeIntent);
       const hasEscrowAddress = !!((escrowActive.escrowAddress || journey.escrowAddress || statusData.escrowAddress || '').trim());
       const hasHeldAmount = hasPositiveWei(escrowActive.heldAmountWei || journey.heldAmountWei || statusData.heldAmountWei);
-      const settledBySummary = `${settlement?.finalContractState || ''}`.toUpperCase() === 'RELEASED';
+      const settlementState = `${settlement?.finalContractState || ''}`.toUpperCase();
+      const settledBySummary = ['RELEASED', 'REFUNDED'].includes(settlementState);
 
       const milestones = [
         { id: 'milestoneHold', done: hasIntent },
@@ -3018,16 +3093,16 @@
         },
         {
           id: 'milestoneFunded',
-          done: hasHeldAmount || ['FUNDED', 'AUTHORIZED', 'CHARGING', 'COMPLETED', 'RELEASED'].includes(escrowState)
+          done: hasHeldAmount || ['FUNDED', 'AUTHORIZED', 'CHARGING', 'COMPLETED', 'RELEASED', 'REFUNDED'].includes(escrowState)
         },
         {
           id: 'milestoneCharging',
           done: journeyState === 'CHARGING' || !!statusData.activeTransactionId
-            || ['CHARGING', 'COMPLETED', 'RELEASED'].includes(escrowState)
+            || ['CHARGING', 'COMPLETED', 'RELEASED', 'REFUNDED'].includes(escrowState)
         },
         {
           id: 'milestoneSettled',
-          done: journeyState === 'COMPLETE' || ['RELEASED'].includes(escrowState)
+          done: journeyState === 'COMPLETE' || ['RELEASED', 'REFUNDED'].includes(escrowState)
             || `${latestVerdict.resultStatus || ''}`.toUpperCase() === 'VERIFIED' && journeyState === 'COMPLETE'
             || settledBySummary
         }
@@ -3113,9 +3188,69 @@
       el('summarySettledAt').textContent = formatDateTime(settlement.settledAt);
 
       const finalState = `${settlement.finalContractState || ''}`.toUpperCase();
-      el('settlementMessage').textContent = finalState === 'RELEASED'
-        ? 'Settlement reached RELEASED and escrow funds were released.'
-        : `Settlement completed with state ${settlement.finalContractState || 'UNKNOWN'}.`;
+      if (finalState === 'RELEASED') {
+        el('settlementMessage').textContent = 'Contract ended with RELEASED. Escrow funds were transferred to charger wallet.';
+      } else if (finalState === 'REFUNDED') {
+        el('settlementMessage').textContent = 'Contract ended with REFUNDED after anomaly handling. Held funds were returned to the user wallet.';
+      } else {
+        el('settlementMessage').textContent = `Settlement completed with state ${settlement.finalContractState || 'UNKNOWN'}.`;
+      }
+    }
+
+    function updateUserFlowAlert(userFlow) {
+      const alertNode = el('userFlowAlert');
+      const titleNode = el('userFlowAlertTitle');
+      const detailNode = el('userFlowAlertDetail');
+      if (!alertNode || !titleNode || !detailNode) {
+        return;
+      }
+
+      const escrowState = `${userFlow?.escrowActive?.lifecycleState || userFlow?.journey?.escrowStatus || ''}`.toUpperCase();
+      const settlementState = `${userFlow?.settlement?.finalContractState || ''}`.toUpperCase();
+      const autoPhase = `${userFlow?.autoCharge?.phase || ''}`.toUpperCase();
+      const autoReason = userFlow?.autoCharge?.reason || '';
+      const activeTx = `${userFlow?.activeTransactionId || ''}`.trim();
+      const twinMetrics = userFlow?.twinMetrics || state.digitalTwinMetrics || null;
+      const twinStatus = `${twinMetrics?.twinStatus || ''}`.toUpperCase();
+      const severity = `${twinMetrics?.lastSeverity || 'NONE'}`.toUpperCase();
+      const contractEnded = ['REFUNDED', 'RELEASED'].includes(settlementState)
+        || ['REFUNDED', 'RELEASED'].includes(escrowState);
+      const unresolvedEscrow = ['FUNDED', 'AUTHORIZED', 'CHARGING', 'COMPLETED'].includes(escrowState);
+      const unresolvedAnomaly = autoPhase === 'ANOMALY_ABORTED'
+        && !contractEnded
+        && (twinStatus === 'QUARANTINED' || twinStatus === 'SUSPICIOUS' || unresolvedEscrow || !!activeTx);
+
+      alertNode.classList.remove('hidden', 'is-danger', 'is-ok', 'is-warn');
+
+      if (settlementState === 'REFUNDED' || escrowState === 'REFUNDED') {
+        alertNode.classList.add('is-ok');
+        titleNode.textContent = 'Contract ended and refunded';
+        detailNode.textContent = 'Anomaly response completed. Escrow lifecycle reached REFUNDED and the hold was returned to your wallet.';
+        return;
+      }
+
+      if (settlementState === 'RELEASED' || escrowState === 'RELEASED') {
+        alertNode.classList.add('is-ok');
+        titleNode.textContent = 'Contract ended successfully';
+        detailNode.textContent = 'Charging settlement reached RELEASED and escrow funds were released to the charger.';
+        return;
+      }
+
+      if (twinStatus === 'QUARANTINED' || unresolvedAnomaly) {
+        alertNode.classList.add('is-danger');
+        titleNode.textContent = 'Anomaly detected and station quarantined';
+        detailNode.textContent = autoReason || `Watchdog severity ${severity}. Escrow contract is being ended via anomaly workflow.`;
+        return;
+      }
+
+      if (twinStatus === 'SUSPICIOUS') {
+        alertNode.classList.add('is-warn');
+        titleNode.textContent = 'Anomaly warning in progress';
+        detailNode.textContent = `Watchdog reports ${severity}. Keep refreshing flow status for contract settlement state.`;
+        return;
+      }
+
+      alertNode.classList.add('hidden');
     }
 
     function clearUserFlowClientState() {
@@ -3162,6 +3297,7 @@
       }
 
       updateSettlementSummary(settlement);
+      updateUserFlowAlert(userFlow);
     }
 
     async function refreshProfiles() {
@@ -3552,7 +3688,7 @@
 
     el('dtRefreshStatusBtn').addEventListener('click', () =>
       runAction('Digital twin status refreshed', async () => {
-        const payload = await callApi('GET', '/api/ev/dev/digital-twin/status');
+        const payload = await callApi('GET', '/api/ev/dev/digital-twin/status', { resetTwin: true });
         updateDigitalTwinUi(payload);
         return payload;
       })

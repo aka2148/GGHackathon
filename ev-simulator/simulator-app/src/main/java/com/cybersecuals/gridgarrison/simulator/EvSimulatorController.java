@@ -127,15 +127,28 @@ public class EvSimulatorController {
     }
 
     @GetMapping("/dev/digital-twin/status")
-    public ResponseEntity<Map<String, Object>> digitalTwinStatus() {
+    public ResponseEntity<Map<String, Object>> digitalTwinStatus(
+        @RequestParam(defaultValue = "false") boolean resetTwin
+    ) {
         String stationId = client.getStationId();
         try {
-            EvTrustVerificationClient.WatchdogStationMetricsResponse response =
-                trustVerificationClient.watchdogStationMetrics(stationId);
-            if (response != null) {
-                digitalTwinRuntimeState.setLastMetrics(response.metrics());
-                if (response.message() != null && !response.message().isBlank()) {
-                    digitalTwinRuntimeState.setWarning(response.message());
+            if (resetTwin) {
+                EvTrustVerificationClient.WatchdogResetResponse resetResponse =
+                    trustVerificationClient.resetWatchdogStation(stationId);
+                if (resetResponse != null) {
+                    digitalTwinRuntimeState.setLastMetrics(resetResponse.metrics());
+                    if (resetResponse.message() != null && !resetResponse.message().isBlank()) {
+                        digitalTwinRuntimeState.setWarning(resetResponse.message());
+                    }
+                }
+            } else {
+                EvTrustVerificationClient.WatchdogStationMetricsResponse response =
+                    trustVerificationClient.watchdogStationMetrics(stationId);
+                if (response != null) {
+                    digitalTwinRuntimeState.setLastMetrics(response.metrics());
+                    if (response.message() != null && !response.message().isBlank()) {
+                        digitalTwinRuntimeState.setWarning(response.message());
+                    }
                 }
             }
         } catch (Exception ex) {
@@ -154,6 +167,7 @@ public class EvSimulatorController {
         body.put("telemetry", snapshot.telemetry());
         body.put("warning", snapshot.warning());
         body.put("autoCharge", autoChargeRuntime.get());
+        body.put("resetTwin", resetTwin);
         body.put("capturedAt", snapshot.capturedAt());
         return ResponseEntity.ok(body);
     }
@@ -552,6 +566,7 @@ public class EvSimulatorController {
 
         EvTrustVerificationClient.LatestVerdictResponse latestVerdict = null;
         EvTrustVerificationClient.EscrowActiveResponse activeEscrow = null;
+        EvTrustVerificationClient.WatchdogMetricsSnapshot twinMetrics = null;
 
         if (refreshTrust) {
             try {
@@ -571,6 +586,20 @@ public class EvSimulatorController {
                 syncEscrowState(activeEscrow);
             } catch (Exception ex) {
                 body.put("escrowRefreshError", safeMessage(ex));
+            }
+
+            try {
+                EvTrustVerificationClient.WatchdogStationMetricsResponse watchdogResponse =
+                    trustVerificationClient.watchdogStationMetrics(stationId);
+                if (watchdogResponse != null) {
+                    twinMetrics = watchdogResponse.metrics();
+                    digitalTwinRuntimeState.setLastMetrics(twinMetrics);
+                    if (watchdogResponse.message() != null && !watchdogResponse.message().isBlank()) {
+                        digitalTwinRuntimeState.setWarning(watchdogResponse.message());
+                    }
+                }
+            } catch (Exception ex) {
+                body.put("watchdogRefreshError", safeMessage(ex));
             }
         }
 
@@ -592,6 +621,8 @@ public class EvSimulatorController {
         body.put("escrowActive", activeEscrow);
         body.put("settlement", settlement);
         body.put("autoCharge", autoChargeRuntime.get());
+        body.put("twinMetrics", twinMetrics);
+        body.put("twinWarning", digitalTwinRuntimeState.snapshot().warning());
         return ResponseEntity.ok(body);
     }
 
