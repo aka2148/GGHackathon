@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class EvVerificationProperties {
 
     private boolean enabled = true;
-    private String backendBaseUrl = "http://localhost:8443";
+    private String backendBaseUrl = "https://localhost:8443";
     private String componentHashPath = "/visualizer/api/generate-hash";
     private String latestVerdictPath = "/trust/api/latest-verdict";
     private String escrowIntentPath = "/trust/api/escrow/intent";

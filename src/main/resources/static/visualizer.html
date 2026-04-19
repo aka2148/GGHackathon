@@ -1,27 +1,44 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>GridGarrison Runtime Visualizer</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Josefin+Sans:wght@300;400;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --gold:#D4AF37;--gold-lt:#F2E8C4;--gold-dim:rgba(212,175,55,0.18);
-  --obsidian:#0A0A0A;--charcoal:#141414;--charcoal2:#1a1a1a;
-  --cream:#F2F0E4;--pewter:#888888;--mid-blue:#1E3D59;
+  --obsidian:#0A0A0A;--charcoal:#121212;--charcoal2:#171717;
+  --cream:#F2F0E4;--pewter:#8f98a3;--mid-blue:#1E3D59;
+  --blue:#4f7cc8;--blue-lt:#bcd7ff;
   --red:#c0392b;--amber:#D4AF37;--cyan:#a0c4c0;
   --font-display:'Marcellus',serif;--font-body:'Josefin Sans',sans-serif;
-  --mono:'Josefin Sans',sans-serif;
-  --glow:0 0 15px rgba(212,175,55,0.22);--glow-sm:0 0 8px rgba(212,175,55,0.16);
+  --mono:Consolas,monospace;
+  --glow:0 0 10px rgba(212,175,55,0.16);--glow-sm:0 0 8px rgba(79,124,200,0.14);
+}
+body.light-mode{
+  --gold:#5f470d;--gold-lt:#7a5c14;--gold-dim:rgba(95,71,13,0.18);
+  --obsidian:#f5f1e6;--charcoal:#fffdfa;--charcoal2:#f7f2e8;
+  --cream:#161c28;--pewter:#36404b;--mid-blue:#d7e4f3;
+  --blue:#2c5ca5;--blue-lt:#204d90;
+  --red:#b93a2d;--amber:#8f6d17;--cyan:#2d7d88;
+  --glow:0 0 10px rgba(143,109,23,0.12);--glow-sm:0 0 8px rgba(44,92,165,0.12);
 }
 body{font-family:var(--font-body);background:var(--obsidian);color:var(--cream);min-height:100vh;
-  background-image:repeating-linear-gradient(45deg,rgba(212,175,55,0.025) 0,rgba(212,175,55,0.025) 1px,transparent 1px,transparent 12px),
-                   repeating-linear-gradient(-45deg,rgba(212,175,55,0.025) 0,rgba(212,175,55,0.025) 1px,transparent 1px,transparent 12px);
+  background-image:radial-gradient(circle at 24% 18%,rgba(79,124,200,.06) 0,transparent 32%),
+                   radial-gradient(circle at 80% 14%,rgba(109,71,184,.05) 0,transparent 30%),
+                   radial-gradient(circle at 62% 80%,rgba(42,143,99,.04) 0,transparent 26%),
+                   linear-gradient(180deg,#0a0a0a 0,#070707 100%);
 }
+body.light-mode{background-image:radial-gradient(circle at 24% 18%,rgba(79,124,200,.08) 0,transparent 34%),radial-gradient(circle at 80% 14%,rgba(44,92,165,.07) 0,transparent 30%),linear-gradient(180deg,#f7f3ea 0,#ece6d7 100%)}
 .app{max-width:1400px;margin:0 auto;padding:24px 20px;display:grid;gap:20px}
 
 /* ─── HEADER ─── */
 .header{background:var(--charcoal);border:1px solid var(--gold);padding:0;position:relative;overflow:hidden}
-.header-top-stripe{height:3px;background:linear-gradient(90deg,transparent,var(--gold),var(--gold-lt),var(--gold),transparent)}
+.header-top-stripe{height:1px;background:rgba(79,124,200,.55)}
 .header-inner{padding:24px 32px 20px}
-.header-bottom-stripe{height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.4),transparent)}
+.header-bottom-stripe{height:1px;background:rgba(212,175,55,0.3)}
 .header-foot{padding:14px 32px 18px;display:flex;gap:16px;flex-wrap:wrap;align-items:center}
 
 .logo{display:flex;align-items:center;gap:16px}
@@ -30,26 +47,44 @@ body{font-family:var(--font-body);background:var(--obsidian);color:var(--cream);
 .header-row{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px}
 h1{font-family:var(--font-display);font-size:clamp(1rem,2.2vw,1.5rem);color:var(--gold);letter-spacing:.15em;text-transform:uppercase}
 .subtitle{font-size:.68rem;color:var(--pewter);letter-spacing:.12em;text-transform:uppercase;margin-top:4px}
-.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
-input[type=text]{background:transparent;border:none;border-bottom:2px solid var(--gold);font-family:var(--font-body);font-size:.78rem;padding:8px 10px;color:var(--gold);outline:none;width:90px;letter-spacing:.06em;transition:border-color .3s,box-shadow .3s}
-input[type=text]:focus{border-bottom-color:var(--gold-lt);box-shadow:0 4px 10px rgba(212,175,55,0.15)}
+input[type=text]{background:transparent;border:none;border-bottom:2px solid rgba(212,175,55,.78);font-family:var(--font-body);font-size:15px;padding:10px 4px;color:var(--gold);outline:none;width:90px;letter-spacing:.06em;transition:border-color .3s,box-shadow .3s}
+input[type=text]:focus{border-bottom-color:var(--blue-lt);box-shadow:0 4px 10px rgba(79,124,200,0.24)}
 input[type=text]::placeholder{color:var(--pewter);font-size:.72rem}
 
-button{font-family:var(--font-body);font-size:.65rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;padding:10px 18px;background:transparent;border:1px solid rgba(212,175,55,0.4);color:var(--pewter);cursor:pointer;transition:all .3s}
-button:hover{color:var(--cream);border-color:var(--gold)}
-.btn-gold{border-color:var(--gold);color:var(--gold)}
-.btn-gold:hover{background:var(--gold);color:var(--obsidian);box-shadow:var(--glow)}
-.btn-danger{border-color:rgba(192,57,43,0.5);color:#e07a70}
-.btn-danger:hover{background:rgba(192,57,43,0.15);border-color:#c0392b;box-shadow:0 0 12px rgba(192,57,43,0.2)}
-.btn-cyan{border-color:rgba(160,196,192,0.4);color:var(--cyan)}
-.btn-cyan:hover{background:rgba(160,196,192,0.08);border-color:var(--cyan)}
+button{font-family:var(--font-body);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:6px 10px;background:radial-gradient(circle at 50% 45%,rgba(79,124,200,.18) 0,rgba(12,12,12,.95) 100%);border:1px solid rgba(79,124,200,0.58);color:var(--blue-lt);cursor:pointer;transition:transform .3s ease,filter .3s ease,box-shadow .3s ease,background .3s ease,color .3s ease;min-height:34px}
+button:hover{color:#06101f;border-color:rgba(127,179,255,.8);background:radial-gradient(circle at 50% 45%,rgba(182,213,255,.9) 0,rgba(79,124,200,.8) 58%,rgba(16,20,30,.95) 100%);box-shadow:0 0 8px rgba(212,175,55,.14);transform:translateY(-1px);filter:brightness(1.02)}
+.btn-gold{border-color:rgba(212,175,55,.62);color:var(--gold);background:radial-gradient(circle at 50% 45%,rgba(212,175,55,.16) 0,rgba(12,12,12,.95) 100%)}
+.btn-gold:hover{background:radial-gradient(circle at 50% 45%,rgba(242,232,196,.9) 0,rgba(212,175,55,.75) 58%,rgba(24,24,24,.95) 100%);color:#0a0a0a;box-shadow:var(--glow)}
+.btn-danger{border-color:rgba(192,57,43,0.55);color:#e79c95;background:radial-gradient(circle at 50% 45%,rgba(192,57,43,.16) 0,rgba(12,12,12,.95) 100%)}
+.btn-danger:hover{background:radial-gradient(circle at 50% 45%,rgba(255,196,188,.9) 0,rgba(192,57,43,.75) 58%,rgba(24,24,24,.95) 100%);color:#240504;box-shadow:0 0 10px rgba(192,57,43,.2)}
+.btn-cyan{border-color:rgba(79,124,200,0.65);color:var(--blue-lt);background:radial-gradient(circle at 50% 45%,rgba(79,124,200,.2) 0,rgba(12,12,12,.95) 100%)}
+.btn-cyan:hover{background:radial-gradient(circle at 50% 45%,rgba(182,213,255,.9) 0,rgba(79,124,200,.8) 58%,rgba(16,20,30,.95) 100%)}
+body.light-mode button{background:#eef3fb;border-color:rgba(44,92,165,.45);color:#173f78;box-shadow:none}
+body.light-mode button:hover{background:#dbe8f8;color:#0f325f;border-color:rgba(44,92,165,.75)}
+body.light-mode .btn-gold{background:#f8efda;border-color:rgba(143,109,23,.55);color:#6f5412}
+body.light-mode .btn-gold:hover{background:#f3e1bc;color:#4f3b0d}
+body.light-mode .btn-danger{background:#f8e4e2;border-color:rgba(185,58,45,.55);color:#8f2319}
+body.light-mode .btn-danger:hover{background:#f3d1cc;color:#6f150f}
+body.light-mode .btn-cyan{background:#e2edf9;border-color:rgba(44,92,165,.55);color:#184983}
+body.light-mode .btn-cyan:hover{background:#cfdef3;color:#123a68}
+
+.theme-switch-float{position:relative;z-index:20;display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid rgba(212,175,55,0.35);background:rgba(18,18,18,0.92);color:var(--cream);border-radius:999px;backdrop-filter:blur(6px);width:fit-content;margin:10px 14px 0 auto}
+body.light-mode .theme-switch-float{background:rgba(255,253,248,0.95);border-color:rgba(143,109,23,0.35)}
+.theme-switch-float .mode-label{font-size:11px;letter-spacing:.08em;line-height:1;font-weight:600;text-transform:uppercase;color:var(--pewter);margin:0}
+.theme-switch{position:relative;display:inline-block;width:44px;height:24px}
+.theme-switch input{opacity:0;width:0;height:0}
+.theme-slider{position:absolute;inset:0;background:rgba(79,124,200,0.32);border:1px solid rgba(79,124,200,0.58);border-radius:999px;transition:.25s}
+.theme-slider:before{content:'';position:absolute;height:18px;width:18px;left:2px;top:2px;background:#f8fafc;border-radius:50%;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+.theme-switch input:checked + .theme-slider{background:rgba(212,175,55,0.45);border-color:rgba(212,175,55,0.65)}
+.theme-switch input:checked + .theme-slider:before{transform:translateX(20px);background:#fff7dc}
 
 /* KPIs */
 .kpis{display:grid;grid-template-columns:repeat(4,minmax(90px,1fr));gap:12px;margin-bottom:16px}
 .kpi{background:var(--charcoal2);border:1px solid rgba(212,175,55,0.2);padding:14px 18px;position:relative}
-.kpi::before{content:'';position:absolute;top:0;left:0;width:2px;height:100%;background:var(--gold);opacity:.5}
-.kpi::after{content:'';position:absolute;top:4px;right:4px;width:10px;height:10px;border-top:1px solid var(--gold);border-right:1px solid var(--gold);opacity:.4}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:2px;height:100%;background:var(--blue);opacity:.55}
+.kpi::after{content:none}
 .kpi-lbl{font-size:.6rem;color:var(--pewter);letter-spacing:.14em;text-transform:uppercase}
 .kpi-val{font-family:var(--font-display);font-size:1.7rem;color:var(--gold);margin-top:4px;text-shadow:var(--glow-sm)}
 
@@ -66,11 +101,10 @@ button:hover{color:var(--cream);border-color:var(--gold)}
 .panel:hover{border-color:rgba(212,175,55,0.55)}
 
 .panel-header{padding:14px 20px 10px;border-bottom:1px solid rgba(212,175,55,0.15);position:relative;display:flex;justify-content:space-between;align-items:center}
-.panel-header::before{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(212,175,55,0.3),transparent)}
+.panel-header::before{content:none}
 .panel-title{font-family:var(--font-display);font-size:.72rem;color:var(--gold);letter-spacing:.18em;text-transform:uppercase}
 
-.panel-corner-tl{position:absolute;top:0;left:0;width:20px;height:20px;border-top:2px solid var(--gold);border-left:2px solid var(--gold);opacity:.35}
-.panel-corner-br{position:absolute;bottom:0;right:0;width:20px;height:20px;border-bottom:2px solid var(--gold);border-right:2px solid var(--gold);opacity:.35}
+.panel-corner-tl,.panel-corner-br{display:none}
 .panel-body{padding:16px 20px}
 
 /* Signal Path */
@@ -86,22 +120,25 @@ button:hover{color:var(--cream);border-color:var(--gold)}
 
 /* Golden Flow */
 .golden-flow{grid-column:span 12}
-.gflow-grid{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:8px}
-.flow-step{background:var(--charcoal2);border:1px solid rgba(212,175,55,0.18);padding:14px 12px;transition:all .3s;position:relative}
+.gflow-row{margin-top:8px}
+.gflow-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 20px;position:relative}
+.flow-step{background:var(--charcoal2);border:1px solid rgba(212,175,55,0.18);padding:14px 12px;transition:all .3s;position:relative;min-width:0;height:164px;display:flex;flex-direction:column}
 .flow-step::before{content:'';position:absolute;top:0;left:0;width:1px;height:0;background:var(--gold);transition:height .4s;opacity:.7}
 .flow-step:hover::before{height:100%}
 .flow-step.active{border-color:rgba(212,175,55,0.55);box-shadow:var(--glow-sm)}
+.gflow-grid .flow-step:not(:last-child)::after{content:'→';position:absolute;right:-15px;top:50%;transform:translateY(-50%);font-size:.95rem;color:rgba(212,175,55,0.55);pointer-events:none;z-index:2}
 .fchip{font-size:.58rem;padding:3px 8px;border:1px solid rgba(212,175,55,0.3);color:var(--gold);letter-spacing:.08em;text-transform:uppercase;display:inline-block;margin-bottom:7px}
 .fchip.done{border-color:rgba(212,175,55,0.5);background:rgba(212,175,55,0.08);color:var(--gold)}
 .fchip.failed{border-color:rgba(192,57,43,0.5);background:rgba(192,57,43,0.07);color:#e07a70}
 .fchip.active-chip{border-color:rgba(160,196,192,0.5);background:rgba(160,196,192,0.06);color:var(--cyan);animation:chipblink 1.1s step-end infinite}
 @keyframes chipblink{0%,100%{opacity:1}50%{opacity:.25}}
-.flow-step h4{font-size:.74rem;color:var(--cream);line-height:1.4;letter-spacing:.04em}
-.flow-step .det{font-size:.68rem;color:var(--pewter);line-height:1.4;margin-top:4px}
+.flow-step h4{font-size:.74rem;color:var(--cream);line-height:1.4;letter-spacing:.04em;overflow-wrap:anywhere;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.flow-step .det{font-size:.68rem;color:var(--pewter);line-height:1.4;margin-top:6px;overflow-wrap:anywhere;word-break:break-word;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 .prog-wrap{margin:10px 0 14px}
 .prog-meta{font-size:.65rem;color:var(--pewter);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
-.prog-track{width:100%;height:1px;background:rgba(212,175,55,0.18);overflow:hidden}
+.prog-track{width:100%;height:4px;background:rgba(212,175,55,0.18);overflow:hidden}
 .prog-fill{height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--gold-lt));transition:width .25s;box-shadow:0 0 6px rgba(212,175,55,0.4)}
+.gflow-row-gap{margin:26px 0 16px;height:1px;background:rgba(212,175,55,0.12)}
 
 /* Decorative section divider */
 .section-divider{display:flex;align-items:center;gap:12px;margin-bottom:14px}
@@ -114,7 +151,7 @@ button:hover{color:var(--cream);border-color:var(--gold)}
 .evidence{grid-column:span 12}
 
 select{background:var(--charcoal2);border:1px solid rgba(212,175,55,0.3);color:var(--cream);padding:6px 10px;font-family:var(--font-body);font-size:.72rem;outline:none;letter-spacing:.05em;transition:border-color .3s}
-select:focus{border-color:var(--gold)}
+select:focus{border-color:var(--blue)}
 .tool-label{font-size:.6rem;color:var(--pewter);text-transform:uppercase;letter-spacing:.14em}
 
 /* Table */
@@ -130,7 +167,7 @@ select:focus{border-color:var(--gold)}
 
 /* Tags */
 .tag{padding:2px 9px;font-size:.6rem;border:1px solid;display:inline-block;letter-spacing:.07em;text-transform:uppercase}
-.tag-orchestrator{border-color:rgba(160,196,192,0.4);background:rgba(160,196,192,0.06);color:var(--cyan)}
+.tag-orchestrator{border-color:rgba(79,124,200,0.5);background:rgba(79,124,200,0.12);color:var(--blue-lt)}
 .tag-watchdog{border-color:rgba(212,175,55,0.35);background:rgba(212,175,55,0.06);color:var(--gold)}
 .tag-trust{border-color:rgba(212,175,55,0.5);background:rgba(212,175,55,0.09);color:var(--gold-lt)}
 .tag-app{border-color:rgba(136,136,136,0.3);color:var(--pewter)}
@@ -167,19 +204,31 @@ select:focus{border-color:var(--gold)}
 
 .status-muted{font-size:.72rem;color:var(--pewter);letter-spacing:.05em}
 
-/* Scanlines */
-body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;
-  background:repeating-linear-gradient(0deg,transparent,transparent 4px,rgba(0,0,0,0.06) 4px,rgba(0,0,0,0.06) 5px)}
+/* intentionally no scanline overlay to keep clean tech visual */
 
 @media(max-width:900px){
   .kpis{grid-template-columns:repeat(2,1fr)}
   .flow-track{grid-template-columns:repeat(2,1fr)}
   .gflow-grid{grid-template-columns:repeat(2,minmax(120px,1fr))}
+  .gflow-grid .flow-step::after{display:none}
+  .flow-step{height:auto;min-height:150px}
+  .flow-step h4,.flow-step .det{display:block;-webkit-line-clamp:unset;-webkit-box-orient:unset;overflow:visible}
+  .gflow-row-gap{display:none}
   .timeline,.stations{grid-column:span 12}
   .header-inner{padding:16px}
   .header-foot{padding:10px 16px 14px}
 }
 </style>
+</head>
+<body>
+
+<div class="theme-switch-float">
+  <span class="mode-label">Theme</span>
+  <label class="theme-switch" for="themeToggleInput">
+    <input id="themeToggleInput" type="checkbox" aria-label="Toggle light mode">
+    <span class="theme-slider"></span>
+  </label>
+</div>
 
 <div class="app">
 
@@ -194,18 +243,18 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;
         </div>
         <div>
           <h1>GridGarrison Runtime Visualizer</h1>
-          <p class="subtitle">Live View · Orchestrator · Trust · Watchdog</p>
+          <p class="subtitle">Live View | Orchestrator | Trust | Watchdog</p>
         </div>
       </div>
       <div class="controls">
         <input type="text" value="CS-101" placeholder="CS-101"/>
-        <a href="/panel.html"><button type="button">◧ Panel</button></a>
-        <button id="simulateNormalBtn" class="btn-gold">▶ Normal</button>
-        <button id="simulateVerifyBtn" class="btn-cyan">⬡ Verify</button>
-        <button id="simulateTamperBtn" class="btn-danger">⚠ Tamper</button>
-        <button id="toggleTimelineBtn">◫ Timeline</button>
-        <button id="clearBtn">✕ Clear</button>
-        <button id="refreshBtn">↺ Refresh</button>
+        <a href="/panel.html"><button type="button">Panel</button></a>
+        <button id="simulateNormalBtn" class="btn-gold">Normal</button>
+        <button id="simulateVerifyBtn" class="btn-cyan">Verify</button>
+        <button id="simulateTamperBtn" class="btn-danger">Tamper</button>
+        <button id="toggleTimelineBtn">Timeline</button>
+        <button id="clearBtn">Clear</button>
+        <button id="refreshBtn">Refresh</button>
       </div>
     </div>
     <div class="kpis" id="kpis">
@@ -234,7 +283,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;
     </div>
     <div class="panel-body">
       <div class="flow-track">
-        <div class="node"><div class="node-num">I</div><h3>Station</h3><p>Boot · heartbeat · transaction frames</p></div>
+        <div class="node"><div class="node-num">I</div><h3>Station</h3><p>Boot | heartbeat | transaction frames</p></div>
         <div class="node"><div class="node-num">II</div><h3>Orchestrator</h3><p>WSS + OCPP parse + event publish</p></div>
         <div class="node"><div class="node-num">III</div><h3>Trust</h3><p>Golden-hash via Web3j</p></div>
         <div class="node"><div class="node-num">IV</div><h3>Watchdog</h3><p>Twin state + anomaly sweep</p></div>
@@ -316,11 +365,30 @@ const mainGridEl=document.getElementById("mainGrid");
 const timelinePanelEl=document.getElementById("timelinePanel");
 const toggleTimelineBtnEl=document.getElementById("toggleTimelineBtn");
 const timelineDensitySelectEl=document.getElementById("timelineDensitySelect");
+const themeToggleInputEl=document.getElementById("themeToggleInput");
+const THEME_KEY="gg.theme.mode";
 
 const FLOW_PLAYBACK_DURATION_MS=2400;
 const flowPlayback={key:null,running:false,progressPercent:0,activeStepIndex:-1,selected:null,stagedSteps:[],timers:[]};
 const UI_PREFS_KEY="gg-visualizer-artdeco-v1";
 const uiPrefs={timelineVisible:true,timelineDensity:"comfortable"};
+
+function applyTheme(mode){
+  const light=mode==="light";
+  document.body.classList.toggle("light-mode",light);
+  themeToggleInputEl.checked=light;
+}
+
+function getSavedTheme(){
+  const saved=(localStorage.getItem(THEME_KEY)||"").toLowerCase();
+  return saved==="light"?"light":"dark";
+}
+
+function toggleTheme(){
+  const next=document.body.classList.contains("light-mode")?"dark":"light";
+  localStorage.setItem(THEME_KEY,next);
+  applyTheme(next);
+}
 
 function loadUiPrefs(){try{const raw=localStorage.getItem(UI_PREFS_KEY);if(!raw)return;const p=JSON.parse(raw);if(typeof p.timelineVisible==="boolean")uiPrefs.timelineVisible=p.timelineVisible;if(["compact","comfortable","spacious"].includes(p.timelineDensity))uiPrefs.timelineDensity=p.timelineDensity;}catch(_){}}
 function saveUiPrefs(){localStorage.setItem(UI_PREFS_KEY,JSON.stringify(uiPrefs))}
@@ -331,7 +399,7 @@ function applyUiPrefs(){
   timelineDensitySelectEl.value=uiPrefs.timelineDensity;
   mainGridEl.classList.toggle("timeline-hidden",!uiPrefs.timelineVisible);
   if(!uiPrefs.timelineVisible){timelinePanelEl.style.display="none";}else{timelinePanelEl.style.display="";}
-  toggleTimelineBtnEl.textContent=uiPrefs.timelineVisible?"◫ Hide TL":"◫ Show TL";
+  toggleTimelineBtnEl.textContent=uiPrefs.timelineVisible?"Hide Timeline":"Show Timeline";
 }
 
 function formatInstant(v){if(!v)return"-";const d=new Date(v);if(Number.isNaN(d.getTime()))return"-";return d.toLocaleTimeString()}
@@ -361,12 +429,18 @@ function renderEvents(events){
 
 function renderStations(stations){
   if(!stations.length){stationsListEl.innerHTML='<div class="status-muted">// No stations observed yet.</div>';return}
-  stationsListEl.innerHTML=stations.map(s=>`<div class="station-card"><div class="sh"><strong class="smono">${esc(s.stationId)}</strong><span class="state ${stateClass(s.operationalState)}">${esc(s.operationalState)}</span></div><div class="sinfo">Last seen: <span style="color:var(--cream)">${esc(formatInstant(s.lastSeen))}</span></div><div class="sinfo">Boots:<span style="color:var(--cream)"> ${esc(s.bootCount)}</span> · Tx:<span style="color:var(--cream)"> ${esc(s.transactionCount)}</span></div><div class="sinfo">FW Events:<span style="color:var(--cream)"> ${esc(s.firmwareEventCount)}</span> · Alerts:<span style="color:${s.securityAlertCount>0?'#e07a70':'var(--cream)'}"> ${esc(s.securityAlertCount)}</span></div><div class="sinfo">Auth mode: <span style="color:var(--gold)">${esc(s.lastAuthorizationMode||"UNKNOWN")}</span></div><div class="sinfo">Last: <span style="color:var(--cyan)">${esc(s.lastEventType)}</span></div></div>`).join("");
+  stationsListEl.innerHTML=stations.map(s=>`<div class="station-card"><div class="sh"><strong class="smono">${esc(s.stationId)}</strong><span class="state ${stateClass(s.operationalState)}">${esc(s.operationalState)}</span></div><div class="sinfo">Last seen: <span style="color:var(--cream)">${esc(formatInstant(s.lastSeen))}</span></div><div class="sinfo">Boots:<span style="color:var(--cream)"> ${esc(s.bootCount)}</span> | Tx:<span style="color:var(--cream)"> ${esc(s.transactionCount)}</span></div><div class="sinfo">FW Events:<span style="color:var(--cream)"> ${esc(s.firmwareEventCount)}</span> | Alerts:<span style="color:${s.securityAlertCount>0?'#e07a70':'var(--cream)'}"> ${esc(s.securityAlertCount)}</span></div><div class="sinfo">Auth mode: <span style="color:var(--gold)">${esc(s.lastAuthorizationMode||"UNKNOWN")}</span></div><div class="sinfo">Last: <span style="color:var(--cyan)">${esc(s.lastEventType)}</span></div></div>`).join("");
 }
 
 function healthBadge(t,ok,neutral){return`<span class="hbadge ${neutral?'neutral':ok?'ok':'bad'}">${esc(t)}</span>`}
 function flowChipClass(s){const k=(s||"").toLowerCase();if(k==="done")return"fchip done";if(k==="failed")return"fchip failed";if(k==="in_progress")return"fchip active-chip";return"fchip"}
-function normalizeFlowStatus(s){const k=(s||"").toUpperCase();if(k==="FAILED")return"FAILED";if(k==="DONE")return"DONE";return"PENDING"}
+function normalizeFlowStatus(s){
+  const k=(`${s||""}`).trim().toUpperCase();
+  if(["FAILED","ERROR"].includes(k))return"FAILED";
+  if(["DONE","COMPLETED","SUCCESS","VERIFIED"].includes(k))return"DONE";
+  if(["IN_PROGRESS","RUNNING","ACTIVE"].includes(k))return"IN_PROGRESS";
+  return"PENDING";
+}
 function flowPlaybackKey(f){const steps=(f?.steps||[]).map(s=>`${s.step}:${s.status}:${s.detail||""}`).join("|");return[f?.stationId||"UNKNOWN",f?.lastUpdated||"0",f?.finalVerdict||"PENDING",steps].join("::")}
 
 function clearFlowPlaybackTimers(){flowPlayback.timers.forEach(t=>clearTimeout(t));flowPlayback.timers=[]}
@@ -375,6 +449,45 @@ function resetFlowPlayback(){clearFlowPlaybackTimers();flowPlayback.key=null;flo
 function renderGoldenFlowPanel(selected,steps,progressPercent,activeStepIndex,isAnimating){
   const progressLabel=isAnimating?`Replay: ${progressPercent}%`:`Replay Complete: ${progressPercent}%`;
   const isTampered=selected.finalVerdict==='TAMPERED';
+  const firstRowSteps=steps.slice(0,4);
+  const secondRowSteps=steps.slice(4,8);
+
+  const computeRowProgress=(start,end)=>{
+    const total=Math.max(0,Math.min(steps.length,end+1)-start);
+    if(!total)return 0;
+
+    let reached=0;
+    for(let i=start;i<start+total;i++){
+      const status=normalizeFlowStatus(steps[i]?.status);
+      if(status==="DONE"||status==="FAILED")reached+=1;
+      if(status==="IN_PROGRESS")reached=Math.max(reached,(i-start)+0.5);
+    }
+
+    if(activeStepIndex>=start&&activeStepIndex<start+total){
+      reached=Math.max(reached,(activeStepIndex-start)+0.5);
+    }else if(activeStepIndex>=start+total){
+      reached=total;
+    }
+
+    return Math.max(0,Math.min(100,Math.round((reached/total)*100)));
+  };
+
+  const row1Progress=computeRowProgress(0,3);
+  const row2Progress=computeRowProgress(4,7);
+
+  const rowCurrentStepLabel=(start,end)=>{
+    if(activeStepIndex>=start&&activeStepIndex<=end)return `Current: S${activeStepIndex+1}`;
+    for(let i=end;i>=start;i--){
+      const status=`${steps[i]?.status||"PENDING"}`.toUpperCase();
+      if(status==="DONE"||status==="FAILED")return `Current: S${i+1}`;
+    }
+    return "Current: -";
+  };
+
+  const row1Current=rowCurrentStepLabel(0,3);
+  const row2Current=rowCurrentStepLabel(4,7);
+
+  const renderStepCard=(step,i,baseIndex)=>{const ss=i===activeStepIndex?"IN_PROGRESS":(step.status||"PENDING");return`<div class="flow-step ${i===activeStepIndex?"active":""}"><span class="${flowChipClass(ss)}">S${esc(step.step??(baseIndex+1))} | ${esc(ss)}</span><h4>${esc(step.title||"-")}</h4><div class="det">${esc(step.detail||"-")}</div></div>`};
   goldenFlowPanelEl.innerHTML=`
     <div class="status-muted" style="margin-bottom:8px;font-size:.7rem">
       Station: <span style="color:var(--gold);margin:0 4px">${esc(selected.stationId||"UNKNOWN")}</span>
@@ -382,10 +495,16 @@ function renderGoldenFlowPanel(selected,steps,progressPercent,activeStepIndex,is
       Updated: <span style="color:var(--cream);margin:0 4px">${esc(formatInstant(selected.lastUpdated))}</span>
     </div>
     <div class="prog-wrap">
-      <div class="prog-meta">${esc(progressLabel)}</div>
-      <div class="prog-track"><div class="prog-fill" style="width:${esc(progressPercent)}%"></div></div>
+      <div class="prog-meta">${esc(progressLabel)} | Steps 1-4 | ${esc(row1Current)}</div>
+      <div class="prog-track"><div class="prog-fill" style="width:${esc(row1Progress)}%"></div></div>
     </div>
-    <div class="gflow-grid">${steps.map((step,i)=>{const ss=i===activeStepIndex?"IN_PROGRESS":(step.status||"PENDING");return`<div class="flow-step ${i===activeStepIndex?"active":""}"><span class="${flowChipClass(ss)}">S${esc(step.step)} · ${esc(ss)}</span><h4>${esc(step.title||"-")}</h4><div class="det">${esc(step.detail||"-")}</div></div>`}).join("")}</div>`;
+    <div class="gflow-row"><div class="gflow-grid">${firstRowSteps.map((step,i)=>renderStepCard(step,i,0)).join("")}</div></div>
+    ${secondRowSteps.length?`<div class="gflow-row-gap" title="Flow continues from Step 4 to Step 5"></div>
+    <div class="prog-wrap" style="margin-top:0">
+      <div class="prog-meta">Steps 5-8 | ${esc(row2Current)}</div>
+      <div class="prog-track"><div class="prog-fill" style="width:${esc(row2Progress)}%"></div></div>
+    </div>
+    <div class="gflow-row"><div class="gflow-grid">${secondRowSteps.map((step,i)=>renderStepCard(step,i+4,4)).join("")}</div></div>`:""}`;
 }
 
 function startGoldenFlowPlayback(selected,playbackKey){
@@ -418,7 +537,10 @@ function renderGoldenFlow(snapshot){
   const pk=flowPlaybackKey(selected);
   if(flowPlayback.key!==pk){startGoldenFlowPlayback(selected,pk);return}
   if(flowPlayback.running){renderGoldenFlowPanel(flowPlayback.selected||selected,flowPlayback.stagedSteps.length?flowPlayback.stagedSteps:(selected.steps||[]),flowPlayback.progressPercent,flowPlayback.activeStepIndex,true);return}
-  renderGoldenFlowPanel(selected,(selected.steps||[]).map(s=>({...s,status:normalizeFlowStatus(s.status)})),100,-1,false);
+  const backendSteps=(selected.steps||[]).map(s=>({...s,status:normalizeFlowStatus(s.status)}));
+  const completedStaged=(flowPlayback.stagedSteps||[]).map(s=>({...s,status:normalizeFlowStatus(s.status)}));
+  const hasCompletedStaged=completedStaged.length===backendSteps.length&&completedStaged.every(s=>s.status==="DONE"||s.status==="FAILED");
+  renderGoldenFlowPanel(selected,hasCompletedStaged?completedStaged:backendSteps,100,-1,false);
 }
 
 function renderHealth(snapshot){
@@ -450,10 +572,10 @@ function renderEvidence(snapshot){
       <div class="eline">Blockchain Baseline: <span>${esc(item.expectedHash||"-")}</span></div>
       <div class="eline">Generated Hash: <span>${esc(generated?.hash||"N/A")}</span></div>
       <div class="eline">Verdict: <span>${esc(compare?`${compare.verdict} (${compare.mode})`:"N/A")}</span></div>
-      <div class="eline">Manufacturer: <span>${esc(item.manufacturerId||"-")}</span> · Sig Verified: <span style="color:${item.signatureVerified?'var(--gold)':'#e07a70'}">${esc(item.signatureVerified==null?"Unknown":item.signatureVerified?"Yes":"No")}</span></div>
+      <div class="eline">Manufacturer: <span>${esc(item.manufacturerId||"-")}</span> | Sig Verified: <span style="color:${item.signatureVerified?'var(--gold)':'#e07a70'}">${esc(item.signatureVerified==null?"Unknown":item.signatureVerified?"Yes":"No")}</span></div>
       <div class="eline">Contract: <span>${esc(item.contractAddress||"-")}</span></div>
       <div class="eline">TX Hash: <span>${esc(item.txHash||"N/A")}</span></div>
-      <div class="eline">RPC: <span>${esc(item.rpcStatus||"Unknown")}</span> · Latency: <span>${esc(item.latencyBand||"Unknown")}</span></div>
+      <div class="eline">RPC: <span>${esc(item.rpcStatus||"Unknown")}</span> | Latency: <span>${esc(item.latencyBand||"Unknown")}</span></div>
       <div class="eline">Observed: <span>${esc(formatInstant(item.observedAt))}</span></div>
     </div>`}).join("");
 }
@@ -463,16 +585,16 @@ async function refresh(){
   try{
     const[snapshot,events]=await Promise.all([fetchJson("/visualizer/api/snapshot"),fetchJson("/visualizer/api/events?limit=80")]);
     renderKpis(snapshot);renderEvents(events);renderStations(snapshot.stations||[]);renderEvidence(snapshot);renderHealth(snapshot);renderGoldenFlow(snapshot);
-    statusLineEl.innerHTML=`Live at: ${new Date().toLocaleTimeString()} · Events: ${snapshot.totalEvents}<span class="cursor"></span>`;
+    statusLineEl.innerHTML=`Live at: ${new Date().toLocaleTimeString()} | Events: ${snapshot.totalEvents}<span class="cursor"></span>`;
   }catch(e){statusLineEl.innerHTML=`API Error: ${e.message}<span class="cursor"></span>`}
 }
 async function simulate(path,label){
   const sid=stationInputEl.value.trim()||"CS-101";
   try{
-    statusLineEl.innerHTML=`${label} scenario → ${sid}...<span class="cursor"></span>`;
+    statusLineEl.innerHTML=`${label} scenario -> ${sid}...<span class="cursor"></span>`;
     await fetchJson(`/visualizer/api/${path}?stationId=${encodeURIComponent(sid)}`,{method:"POST"});
     await refresh();
-    statusLineEl.innerHTML=`${label} complete → ${sid} · Playback ~2.4s<span class="cursor"></span>`;
+    statusLineEl.innerHTML=`${label} complete -> ${sid} | Playback ~2.4s<span class="cursor"></span>`;
   }catch(e){statusLineEl.innerHTML=`${label} failed: ${e.message}<span class="cursor"></span>`}
 }
 async function clearTimeline(){
@@ -485,8 +607,12 @@ document.getElementById("simulateVerifyBtn").addEventListener("click",()=>simula
 document.getElementById("simulateTamperBtn").addEventListener("click",()=>simulate("simulate-tamper","Tamper"));
 document.getElementById("refreshBtn").addEventListener("click",refresh);
 document.getElementById("clearBtn").addEventListener("click",clearTimeline);
+themeToggleInputEl.addEventListener("change",toggleTheme);
 toggleTimelineBtnEl.addEventListener("click",()=>{uiPrefs.timelineVisible=!uiPrefs.timelineVisible;applyUiPrefs();saveUiPrefs()});
 timelineDensitySelectEl.addEventListener("change",()=>{uiPrefs.timelineDensity=timelineDensitySelectEl.value;applyUiPrefs();saveUiPrefs()});
 
+applyTheme(getSavedTheme());
 loadUiPrefs();applyUiPrefs();refresh();setInterval(refresh,2500);
 </script>
+</body>
+</html>

@@ -21,12 +21,31 @@
       --accent: #d4af37;
       --accent-2: #1e3d59;
       --accent-blue: #4f7cc8;
+      --accent-blue-bright: #7fb3ff;
       --accent-purple: #6d47b8;
       --accent-green: #2a8f63;
       --gold: #d4af37;
       --gold-bright: #f2e8c4;
       --rose: #fb7185;
       --deco-glow: 0 0 10px rgba(212, 175, 55, 0.14);
+      --tech-glow: 0 0 10px rgba(79, 124, 200, 0.18);
+    }
+
+    body.light-mode {
+      --bg: #f5f1e6;
+      --bg-glow: #efe7d7;
+      --panel: rgba(255, 253, 248, 0.96);
+      --panel-2: rgba(247, 241, 232, 0.94);
+      --line: rgba(143, 109, 23, 0.34);
+      --text: #1c2330;
+      --muted: #36404b;
+      --accent: #8f6d17;
+      --accent-blue: #2c5ca5;
+      --accent-blue-bright: #204d90;
+      --gold: #5f470d;
+      --gold-bright: #7a5c14;
+      --deco-glow: 0 0 8px rgba(143, 109, 23, 0.12);
+      --tech-glow: 0 0 8px rgba(44, 92, 165, 0.12);
     }
 
     * { box-sizing: border-box; }
@@ -37,14 +56,200 @@
       color: var(--text);
       font-family: "Josefin Sans", Segoe UI, Arial, sans-serif;
       background:
-        radial-gradient(circle at 50% -8%, rgba(212, 175, 55, 0.1) 0%, transparent 34%),
-        radial-gradient(circle at 18% 18%, rgba(79, 124, 200, 0.08) 0%, transparent 32%),
-        radial-gradient(circle at 82% 16%, rgba(109, 71, 184, 0.075) 0%, transparent 30%),
-        radial-gradient(circle at 64% 78%, rgba(42, 143, 99, 0.06) 0%, transparent 28%),
-        repeating-linear-gradient(45deg, rgba(212, 175, 55, 0.03) 0 1px, transparent 1px 16px),
-        repeating-linear-gradient(-45deg, rgba(212, 175, 55, 0.025) 0 1px, transparent 1px 16px),
-        linear-gradient(160deg, #0a0a0a 0%, #080808 52%, #040404 100%);
+        radial-gradient(circle at 24% 18%, rgba(79, 124, 200, 0.05) 0%, transparent 30%),
+        radial-gradient(circle at 80% 14%, rgba(109, 71, 184, 0.045) 0%, transparent 28%),
+        radial-gradient(circle at 62% 80%, rgba(42, 143, 99, 0.04) 0%, transparent 24%),
+        linear-gradient(180deg, #0a0a0a 0%, #070707 100%);
       min-height: 100vh;
+    }
+
+    body.light-mode {
+      background:
+        radial-gradient(circle at 24% 18%, rgba(79, 124, 200, 0.08) 0%, transparent 34%),
+        radial-gradient(circle at 80% 14%, rgba(44, 92, 165, 0.07) 0%, transparent 30%),
+        linear-gradient(180deg, #f7f3ea 0%, #ece6d7 100%);
+    }
+
+    body.light-mode .sidebar,
+    body.light-mode .panel,
+    body.light-mode .overview-card,
+    body.light-mode .user-card,
+    body.light-mode .sidebar-card,
+    body.light-mode .flow-step,
+    body.light-mode .state-card,
+    body.light-mode .charge-target-shell,
+    body.light-mode .charge-target-badge,
+    body.light-mode .charge-plan-card,
+    body.light-mode .payment-window,
+    body.light-mode .summary-chip,
+    body.light-mode .vehicle-chip,
+    body.light-mode .milestone,
+    body.light-mode .progress-wrap,
+    body.light-mode .log,
+    body.light-mode .ev-model-wrap,
+    body.light-mode .wallet-trust-panel {
+      background: rgba(255, 253, 248, 0.96) !important;
+      color: var(--text);
+    }
+
+    body.light-mode .sidebar-link .icon {
+      background: rgba(230, 237, 246, 0.95);
+      border-color: rgba(44, 92, 165, 0.58);
+    }
+
+    body.light-mode .sidebar-link {
+      color: #173f78;
+    }
+
+    body.light-mode .mode-btn {
+      background: rgba(237, 231, 218, 0.95);
+      color: #334155;
+    }
+
+    body.light-mode input:not([type="range"]):not([type="hidden"]),
+    body.light-mode select {
+      color: var(--text);
+      background: transparent;
+    }
+
+    body.light-mode .hint,
+    body.light-mode .title p,
+    body.light-mode .sidebar-note,
+    body.light-mode .state-card .label,
+    body.light-mode .vehicle-chip .chip-label,
+    body.light-mode .summary-chip .label,
+    body.light-mode .progress-label,
+    body.light-mode .milestone .state {
+      color: #3f4752;
+    }
+
+    body.light-mode button,
+    body.light-mode button.ok,
+    body.light-mode button.warn,
+    body.light-mode button.danger,
+    body.light-mode button.primary {
+      background: #eef3fb;
+      border-color: rgba(44, 92, 165, 0.45);
+      color: #173f78;
+      box-shadow: none;
+    }
+
+    body.light-mode button:hover,
+    body.light-mode button.ok:hover,
+    body.light-mode button.warn:hover,
+    body.light-mode button.danger:hover,
+    body.light-mode button.primary:hover {
+      background: #dbe8f8;
+      color: #0f325f;
+      border-color: rgba(44, 92, 165, 0.75);
+      box-shadow: none;
+    }
+
+    body.light-mode .road {
+      background: linear-gradient(180deg, #ebe3d2 0%, #dfd4bc 100%);
+      border-color: rgba(143, 109, 23, 0.38);
+      box-shadow: inset 0 0 0 1px rgba(143, 109, 23, 0.12);
+    }
+
+    body.light-mode .car-body {
+      background: linear-gradient(135deg, #c7ab63 0%, #ddc588 48%, #f3e6c8 100%);
+      border-color: rgba(92, 77, 31, 0.22);
+      box-shadow: inset 0 -8px 18px rgba(124, 97, 37, 0.14);
+    }
+
+    body.light-mode .car-roof,
+    body.light-mode .car-window {
+      background: linear-gradient(180deg, rgba(244, 249, 255, 0.92), rgba(197, 218, 246, 0.58));
+    }
+
+    body.light-mode .wheel {
+      border-color: #5e6570;
+      background: radial-gradient(circle, #e4e9f1 0%, #b9c2cf 62%, #8f98a6 100%);
+    }
+
+    body.light-mode .battery-icon {
+      background: rgba(230, 237, 246, 0.95);
+      border-color: rgba(76, 85, 97, 0.85);
+    }
+
+    body.light-mode .battery-icon::after {
+      background: rgba(76, 85, 97, 0.85);
+    }
+
+    .theme-switch-float {
+      position: relative;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border: 1px solid rgba(212, 175, 55, 0.35);
+      background: rgba(18, 18, 18, 0.92);
+      border-radius: 999px;
+      color: var(--text);
+      backdrop-filter: blur(6px);
+      width: fit-content;
+      margin: 10px 14px 0 auto;
+    }
+
+    body.light-mode .theme-switch-float {
+      background: rgba(255, 253, 248, 0.95);
+      border-color: rgba(143, 109, 23, 0.35);
+    }
+
+    .theme-switch-float .mode-label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0;
+    }
+
+    .theme-switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .theme-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .theme-slider {
+      position: absolute;
+      inset: 0;
+      background: rgba(79, 124, 200, 0.32);
+      border: 1px solid rgba(79, 124, 200, 0.58);
+      border-radius: 999px;
+      transition: .25s;
+    }
+
+    .theme-slider::before {
+      content: '';
+      position: absolute;
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      top: 2px;
+      background: #f8fafc;
+      border-radius: 50%;
+      transition: .25s;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .theme-switch input:checked + .theme-slider {
+      background: rgba(212, 175, 55, 0.45);
+      border-color: rgba(212, 175, 55, 0.65);
+    }
+
+    .theme-switch input:checked + .theme-slider::before {
+      transform: translateX(20px);
+      background: #fff7dc;
     }
 
     * {
@@ -132,14 +337,25 @@
       font-family: "Marcellus", serif;
       letter-spacing: 0.13em;
       text-transform: uppercase;
+      text-shadow: 0 0 8px rgba(79, 124, 200, 0.22);
+    }
+
+    .mode-label,
+    .sidebar-kicker,
+    .sidebar-label,
+    .state-card .label,
+    .vehicle-chip .chip-label,
+    label {
+      font-family: Consolas, "Courier New", monospace;
     }
 
     .status-pill {
       border-radius: 999px;
-      padding: 10px 14px;
+      padding: 6px 10px;
       border: 1px solid var(--line);
-      background: rgba(10, 16, 30, 0.8);
+      background: rgba(14, 14, 14, 0.92);
       font-weight: 700;
+      font-size: 12px;
       box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
     }
 
@@ -163,40 +379,41 @@
 
     .mode-buttons {
       display: inline-flex;
-      background: rgba(20, 20, 20, 0.84);
-      border: 1px solid var(--line);
+      background: rgba(16, 16, 16, 0.92);
+      border: 1px solid rgba(79, 124, 200, 0.45);
       border-radius: 2px;
-      padding: 4px;
-      gap: 4px;
+      padding: 3px;
+      gap: 8px;
     }
 
     .mode-btn {
       width: auto;
       border: none;
       border-radius: 2px;
-      background: transparent;
+      background: rgba(12, 18, 30, 0.9);
       color: var(--muted);
-      padding: 6px 12px;
+      padding: 5px 10px;
       font-weight: 700;
       letter-spacing: 0.1em;
       text-transform: uppercase;
+      font-size: 12px;
       transition: background .25s ease, color .25s ease;
     }
 
     .mode-btn.active {
       color: #0a0a0a;
-      background: radial-gradient(circle at 50% 42%, #f2e8c4 0%, #d4af37 46%, #7a6324 100%);
+      background: radial-gradient(circle at 50% 45%, rgba(242, 232, 196, 0.95) 0%, rgba(212, 175, 55, 0.82) 55%, rgba(122, 99, 36, 0.65) 100%);
       box-shadow: var(--deco-glow);
     }
 
     .mode-btn:not(.active):hover {
-      color: #cbd5e1;
-      background: rgba(51, 65, 85, 0.45);
+      color: #dbeafe;
+      background: rgba(30, 58, 110, 0.55);
     }
 
     .flow-track {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin-bottom: 12px;
       position: relative;
@@ -286,10 +503,7 @@
     }
 
     .panel {
-      background:
-        radial-gradient(circle at 14% 12%, rgba(79, 124, 200, 0.08) 0%, transparent 30%),
-        radial-gradient(circle at 86% 84%, rgba(109, 71, 184, 0.07) 0%, transparent 32%),
-        linear-gradient(180deg, var(--panel) 0%, rgba(10, 10, 10, 0.96) 100%);
+      background: rgba(18, 18, 18, 0.94);
       border: 1px solid var(--line);
       border-radius: 2px;
       padding: 14px;
@@ -328,15 +542,7 @@
     }
 
     .hero::before {
-      content: '';
-      position: absolute;
-      width: 360px;
-      height: 360px;
-      border-radius: 50%;
-      right: -140px;
-      top: -180px;
-      background: radial-gradient(circle, rgba(66, 212, 255, 0.22) 0%, transparent 68%);
-      pointer-events: none;
+      content: none;
     }
 
     .span-12 { grid-column: span 12; }
@@ -399,7 +605,7 @@
       border: 1px solid rgba(212, 175, 55, 0.46);
       border-radius: 2px;
       padding: 10px;
-      background: linear-gradient(180deg, rgba(18, 18, 18, 0.9) 0%, rgba(10, 10, 10, 0.96) 100%);
+      background: rgba(16, 16, 16, 0.94);
       box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.2), 0 0 15px rgba(212, 175, 55, 0.16);
     }
 
@@ -498,6 +704,7 @@
       grid-template-columns: repeat(12, 1fr);
       gap: 10px;
       margin-top: 10px;
+      align-items: stretch;
     }
 
     .user-card {
@@ -545,6 +752,60 @@
       text-transform: uppercase;
       letter-spacing: 0.13em;
       color: var(--gold);
+    }
+
+    .wallet-trust-panel {
+      margin-top: 12px;
+      padding: 10px;
+      border: 1px solid rgba(212, 175, 55, 0.32);
+      border-radius: 2px;
+      background: rgba(13, 13, 13, 0.92);
+    }
+
+    .wallet-trust-panel .panel-title {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .wallet-trust-grid {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .wallet-trust-list {
+      display: grid;
+      gap: 5px;
+    }
+
+    .wallet-trust-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #c8d0db;
+      border-bottom: 1px solid rgba(212, 175, 55, 0.14);
+      padding-bottom: 4px;
+    }
+
+    .wallet-trust-item .value {
+      color: var(--text);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      text-align: right;
+    }
+
+    .wallet-signal-svg {
+      width: 88px;
+      height: 52px;
+      display: block;
     }
 
     .user-key {
@@ -976,7 +1237,7 @@
     .row {
       display: grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
-      gap: 8px;
+      gap: 12px;
       margin-top: 8px;
     }
 
@@ -1023,8 +1284,8 @@
     input:not([type="range"]):not([type="hidden"]):focus,
     select:focus {
       outline: none;
-      border-bottom-color: var(--gold-bright);
-      box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
+      border-bottom-color: var(--accent-blue-bright);
+      box-shadow: 0 4px 10px rgba(79, 124, 200, 0.24);
     }
 
     button {
@@ -1032,32 +1293,43 @@
       text-transform: uppercase;
       letter-spacing: 0.1em;
       cursor: pointer;
-      min-height: 40px;
-      padding: 7px 10px;
+      min-height: 34px;
+      padding: 6px 10px;
+      font-size: 12px;
       transition: transform 0.3s ease, filter 0.3s ease, box-shadow 0.3s ease, background 0.3s ease, color 0.3s ease;
     }
 
     button:hover {
       transform: translateY(-1px);
-      filter: brightness(1.03);
-      box-shadow: 0 0 12px rgba(212, 175, 55, 0.18);
+      filter: brightness(1.02);
+      box-shadow: 0 0 8px rgba(212, 175, 55, 0.14);
     }
 
-    button.primary,
+    button.primary {
+      background: radial-gradient(circle at 50% 45%, rgba(212, 175, 55, 0.16) 0%, rgba(12, 12, 12, 0.95) 100%);
+      color: var(--gold);
+      border: 1px solid rgba(212, 175, 55, 0.55);
+    }
+
     button.ok,
     button.warn,
     button.danger {
-      background: radial-gradient(circle at 50% 40%, rgba(212, 175, 55, 0.24) 0%, rgba(212, 175, 55, 0.14) 35%, rgba(10, 10, 10, 0.96) 100%);
-      color: var(--gold);
-      border: 1px solid rgba(212, 175, 55, 0.75);
+      background: radial-gradient(circle at 50% 45%, rgba(79, 124, 200, 0.2) 0%, rgba(12, 12, 12, 0.95) 100%);
+      color: #bcd7ff;
+      border: 1px solid rgba(79, 124, 200, 0.68);
     }
 
-    button.primary:hover,
+    button.primary:hover {
+      background: radial-gradient(circle at 50% 45%, rgba(242, 232, 196, 0.9) 0%, rgba(212, 175, 55, 0.75) 58%, rgba(24, 24, 24, 0.95) 100%);
+      color: #0a0a0a;
+    }
+
     button.ok:hover,
     button.warn:hover,
     button.danger:hover {
-      background: radial-gradient(circle at 50% 42%, #f2e8c4 0%, #d4af37 45%, #7a6324 100%);
-      color: #0a0a0a;
+      background: radial-gradient(circle at 50% 45%, rgba(182, 213, 255, 0.9) 0%, rgba(79, 124, 200, 0.8) 58%, rgba(16, 20, 30, 0.95) 100%);
+      color: #06101f;
+      box-shadow: var(--tech-glow);
     }
 
     .hint {
@@ -1099,9 +1371,9 @@
 
     .badge {
       display: inline-block;
-      padding: 3px 8px;
+      padding: 2px 6px;
       border-radius: 999px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
     }
 
@@ -1148,7 +1420,7 @@
       height: 100vh;
       padding: 20px 18px;
       border-right: 1px solid rgba(212, 175, 55, 0.38);
-      background: linear-gradient(180deg, rgba(8, 8, 8, 0.98) 0%, rgba(15, 12, 7, 0.94) 100%);
+      background: rgba(11, 11, 11, 0.95);
       backdrop-filter: blur(12px);
       box-shadow: 12px 0 24px rgba(0, 0, 0, 0.4), inset -1px 0 0 rgba(212, 175, 55, 0.25);
       overflow: auto;
@@ -1212,7 +1484,7 @@
       font-weight: 800;
       letter-spacing: 0.04em;
       color: #0a0a0a;
-      background: linear-gradient(140deg, #d4af37 0%, #f2e8c4 100%);
+      background: #d4af37;
       box-shadow: var(--deco-glow);
       margin-bottom: 10px;
       transition: transform 0.25s ease;
@@ -1328,8 +1600,8 @@
       justify-content: center;
       color: currentColor;
       flex-shrink: 0;
-      border: 1px solid rgba(212, 175, 55, 0.5);
-      background: rgba(8, 8, 8, 0.8);
+      border: 1px solid rgba(79, 124, 200, 0.58);
+      background: rgba(9, 14, 24, 0.88);
       transform: rotate(45deg);
     }
 
@@ -1361,11 +1633,11 @@
       align-items: center;
       column-gap: 10px;
       width: 100%;
-      min-height: 44px;
+      min-height: 38px;
       overflow: hidden;
       border: 1px solid rgba(212, 175, 55, 0.25);
       border-radius: 2px;
-      padding: 11px 12px;
+      padding: 8px 10px;
       background: rgba(14, 14, 14, 0.82);
       color: var(--text);
       text-align: left;
@@ -1385,7 +1657,7 @@
     .sidebar-link.active {
       color: #0a0a0a;
       border-color: rgba(212, 175, 55, 0.95);
-      background: linear-gradient(110deg, #8a6d25 0%, #f0e3bc 56%, #5f4db0 100%);
+      background: rgba(79, 124, 200, 0.86);
       box-shadow: var(--deco-glow);
     }
 
@@ -1463,9 +1735,7 @@
       border: 1px solid rgba(212, 175, 55, 0.5);
       border-radius: 2px;
       padding: 12px;
-      background:
-        radial-gradient(circle at 80% 20%, rgba(212, 175, 55, 0.22) 0%, transparent 40%),
-        linear-gradient(180deg, rgba(20, 20, 20, 0.9) 0%, rgba(10, 10, 10, 0.98) 100%);
+      background: rgba(16, 16, 16, 0.94);
       box-shadow: inset 0 0 0 1px rgba(212, 175, 55, 0.15), 0 0 20px rgba(212, 175, 55, 0.15);
     }
 
@@ -1804,6 +2074,14 @@
   </style>
 </head>
 <body>
+  <div class="theme-switch-float">
+    <span class="mode-label">Theme</span>
+    <label class="theme-switch" for="themeToggleInput">
+      <input id="themeToggleInput" type="checkbox" aria-label="Toggle light mode" />
+      <span class="theme-slider"></span>
+    </label>
+  </div>
+
   <div class="dashboard-shell">
     <aside class="sidebar">
       <div class="sidebar-brand">
@@ -1839,7 +2117,7 @@
         <div class="header">
           <div class="title">
             <h1>EV Dynamic Cockpit</h1>
-            <p>Clear demo flow + dynamic EV visuals: connect, profile, charge, monitor telemetry, and close session.</p>
+            <p>Clear demo flow + dynamic EV visuals: connect, verify, charge, monitor telemetry, and close session.</p>
           </div>
           <div class="mode-switch">
             <span class="mode-label">Dashboard mode</span>
@@ -1856,20 +2134,16 @@
             <div class="num">I</div>
             <div class="name">Connect EV</div>
           </div>
-          <div id="stepProfile" class="flow-step">
-            <div class="num">II</div>
-            <div class="name">Pick Profile</div>
-          </div>
           <div id="stepStart" class="flow-step">
-            <div class="num">III</div>
+            <div class="num">II</div>
             <div class="name">Start Charging</div>
           </div>
           <div id="stepMeter" class="flow-step">
-            <div class="num">IV</div>
+            <div class="num">III</div>
             <div class="name">Stream Energy</div>
           </div>
           <div id="stepEnd" class="flow-step">
-            <div class="num">V</div>
+            <div class="num">IV</div>
             <div class="name">End Session</div>
           </div>
         </div>
@@ -1985,6 +2259,24 @@
                       <input id="walletTopupAmount" type="number" min="0.01" step="0.01" value="5.00" />
                     </div>
                     <div class="col-4"><label>&nbsp;</label><button id="walletTopupBtn" class="warn">Top Up</button></div>
+                  </div>
+
+                  <div class="wallet-trust-panel">
+                    <div class="panel-title">Trust Session Snapshot</div>
+                    <div class="wallet-trust-grid">
+                      <div class="wallet-trust-list">
+                        <div class="wallet-trust-item"><span>Gate</span><span id="walletPanelGate" class="value">UNVERIFIED</span></div>
+                        <div class="wallet-trust-item"><span>Tx</span><span id="walletPanelTx" class="value mono">-</span></div>
+                        <div class="wallet-trust-item"><span>Vehicle mode</span><span id="walletPanelMode" class="value">PARKED</span></div>
+                      </div>
+                      <svg class="wallet-signal-svg" viewBox="0 0 88 52" aria-hidden="true" focusable="false">
+                        <rect x="1" y="1" width="86" height="50" rx="1" ry="1" fill="rgba(10,10,10,0.75)" stroke="rgba(212,175,55,0.45)"/>
+                        <path d="M8 40 L24 26 L38 30 L54 16 L70 20 L80 12" fill="none" stroke="rgba(79,124,200,0.8)" stroke-width="2"/>
+                        <path d="M8 44 H80" stroke="rgba(212,175,55,0.35)" stroke-width="1"/>
+                        <circle cx="54" cy="16" r="2.5" fill="rgba(109,71,184,0.85)"/>
+                        <circle cx="70" cy="20" r="2.5" fill="rgba(42,143,99,0.85)"/>
+                      </svg>
+                    </div>
                   </div>
                 </div>
 
@@ -2232,6 +2524,7 @@
     const MODE_KEY = 'gridgarrison.ev.dashboard.mode';
     const VIEW_KEY = 'gridgarrison.ev.dashboard.view';
     const SIDEBAR_KEY = 'gridgarrison.ev.dashboard.sidebarCollapsed';
+    const THEME_KEY = 'gg.theme.mode';
     const SIDEBAR_ANIMATION_MS = 320;
     const BATTERY_CAPACITY_KWH = 60;
     const CHARGE_RATE_PER_KWH = 0.25;
@@ -2261,6 +2554,26 @@
     };
 
     const el = (id) => document.getElementById(id);
+
+    function applyTheme(mode) {
+      const light = mode === 'light';
+      document.body.classList.toggle('light-mode', light);
+      const toggle = el('themeToggleInput');
+      if (toggle) {
+        toggle.checked = light;
+      }
+    }
+
+    function getSavedTheme() {
+      const saved = (localStorage.getItem(THEME_KEY) || '').toLowerCase();
+      return saved === 'light' ? 'light' : 'dark';
+    }
+
+    function toggleTheme() {
+      const next = document.body.classList.contains('light-mode') ? 'dark' : 'light';
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+    }
 
     function apiBase() {
       const configured = el('apiBase').value.trim();
@@ -2377,13 +2690,11 @@
 
     function setJourneyStep(status, hasTx, meterEvents, completedSessions) {
       const connect = el('stepConnect');
-      const profile = el('stepProfile');
       const start = el('stepStart');
       const meter = el('stepMeter');
       const end = el('stepEnd');
-      const profileReady = !!(state.lastStatus?.activeProfile && state.lastStatus.activeProfile !== '-');
 
-      [connect, profile, start, meter, end].filter(Boolean).forEach((stepNode) => {
+      [connect, start, meter, end].filter(Boolean).forEach((stepNode) => {
         const baseClass = stepNode.dataset.baseClass
           || (stepNode.classList.contains('flow-step') ? 'flow-step' : 'step');
         stepNode.dataset.baseClass = baseClass;
@@ -2393,13 +2704,8 @@
       if (status) connect.classList.add('done');
       else connect.classList.add('active');
 
-      if (profile) {
-        if (profileReady) profile.classList.add('done');
-        else if (status) profile.classList.add('active');
-      }
-
       if (hasTx) start.classList.add('done');
-      else if (status && (!profile || profileReady)) start.classList.add('active');
+      else if (status) start.classList.add('active');
 
       if (meterEvents > 0) meter.classList.add('done');
       else if (hasTx) meter.classList.add('active');
@@ -2771,6 +3077,21 @@
         walletNode.textContent = formatMoney(statusData.walletBalance);
       }
 
+      const walletPanelGate = el('walletPanelGate');
+      if (walletPanelGate) {
+        walletPanelGate.textContent = verificationGate;
+      }
+
+      const walletPanelTx = el('walletPanelTx');
+      if (walletPanelTx) {
+        walletPanelTx.textContent = tx || '-';
+      }
+
+      const walletPanelMode = el('walletPanelMode');
+      if (walletPanelMode) {
+        walletPanelMode.textContent = !connected ? 'PARKED' : (tx ? 'CHARGING' : 'READY');
+      }
+
       if (!el('txId').value && tx) {
         el('txId').value = tx;
       }
@@ -2940,6 +3261,21 @@
       el('userTrustValue').textContent = trustStatus;
       el('userEscrowValue').textContent = escrowStatus;
 
+      const walletPanelGate = el('walletPanelGate');
+      if (walletPanelGate) {
+        walletPanelGate.textContent = trustStatus;
+      }
+
+      const walletPanelTx = el('walletPanelTx');
+      if (walletPanelTx) {
+        walletPanelTx.textContent = statusData.activeTransactionId || '-';
+      }
+
+      const walletPanelMode = el('walletPanelMode');
+      if (walletPanelMode) {
+        walletPanelMode.textContent = statusData.activeTransactionId ? 'CHARGING' : (statusData.connected ? 'READY' : 'PARKED');
+      }
+
       el('paymentEscrowAddress').textContent = shortAddress(escrowAddress);
       el('paymentHeldAmount').textContent = `${heldAmount}`;
       el('paymentLifecycle').textContent = escrowStatus;
@@ -3079,6 +3415,7 @@
 
     el('modeUserBtn').addEventListener('click', () => setMode('user'));
     el('modeDevBtn').addEventListener('click', () => setMode('dev'));
+    el('themeToggleInput').addEventListener('change', toggleTheme);
 
     el('sidebarCollapseBtn').addEventListener('click', () => {
       state.sidebarCollapsed = !state.sidebarCollapsed;
@@ -3296,6 +3633,7 @@
     }
 
     async function initializeDashboard() {
+      applyTheme(getSavedTheme());
       applyMode();
       applySidebarState();
       applyView();
