@@ -1,176 +1,168 @@
-# GridGarrison 🔒⚡
+# GridGarrison
 
-**EV Charging Trust & Identity Platform** — OCPP 2.0.1 · Blockchain · Digital Twin
+EV charging trust and anomaly demo platform built with Spring Boot, Spring Modulith, Web3j, and a separate EV simulator app.
 
----
+## What this repository contains
 
-## Architecture
+The workspace has two runnable applications:
 
-```
+1. Backend (this root Maven project)
+    - OCPP WebSocket ingress at `/ocpp/{stationId}`
+    - mTLS-aware handshake and station identity checks
+    - trust verification and escrow lifecycle integration
+    - digital twin + anomaly detection
+    - visualizer and operator control pages
+
+2. EV simulator (`ev-simulator/simulator-app`)
+    - persistent OCPP client (ws/wss)
+    - guided user charging flow and payment/escrow window
+    - firmware verification and watchdog telemetry forwarding
+    - dashboard UI at `/ev-dashboard.html`
+
+## Architecture summary
+
+```text
 com.cybersecuals.gridgarrison
-├── orchestrator/          ← OCPP 2.0.1 WSS gateway + mTLS enforcement
-│   ├── config/
-│   │   ├── WebSocketConfig.java        (public)  OCPP WS endpoint registration
-│   │   ├── MtlsSecurityConfig.java     (pkg-priv) Spring Security x509 config
-│   │   └── OcppHandshakeInterceptor.java (pkg-priv) Sub-protocol + stationId check
-│   └── websocket/
-│       ├── OcppWebSocketHandler.java   (public)  Message dispatcher
-│       └── OcppMessage.java            (pkg-priv) SRPC frame model + domain events
-│
-├── trust/                 ← Golden Hash verification via Web3j
-│   ├── service/
-│   │   ├── BlockchainService.java      (public)  API interface
-│   │   └── BlockchainServiceImpl.java  (pkg-priv) Web3j implementation
-│   └── contract/
-│       └── FirmwareRegistryContract.java (pkg-priv) Web3j contract wrapper
-│
-├── watchdog/              ← Digital Twin + behavioural anomaly detection
-│   └── service/
-│       ├── DigitalTwinService.java     (public)  API interface
-│       ├── StationTwin.java            (public)  Value objects
-│       └── DigitalTwinServiceImpl.java (pkg-priv) In-memory twin engine
-│
-└── shared/                ← Cross-module DTOs (declared as sharedModule)
-    └── dto/
-        ├── ChargingSession.java
-        └── FirmwareHash.java
+├── orchestrator  (OCPP gateway, WebSocket security, event publishing)
+├── trust         (golden hash verification, blockchain, escrow APIs)
+├── watchdog      (digital twin + anomaly detection)
+├── visualizer    (runtime timeline, station snapshots, panel controls)
+└── shared        (minimal DTOs)
 ```
 
-## Module Communication
+Modules communicate through Spring application events rather than direct cross-module implementation calls.
 
-Modules communicate exclusively via **Spring application events** — no direct
-compile-time imports across module boundaries.
+## Current demo flows
 
-```
-orchestrator  ──[StationBootEvent]──►  watchdog  (registers twin)
-orchestrator  ──[FirmwareStatusEvent]► trust     (triggers hash verification)
-orchestrator  ──[TransactionEvent]───► watchdog  (updates session state)
-```
+1. OCPP connect and telemetry
+    - simulator connects over `ws://` (dev-ws) or `wss://` (demo-mtls)
+    - boot, heartbeat, transaction, firmware events stream into backend
 
-## Key Technologies
+2. Firmware trust verification
+    - backend compares reported/generate hash to on-chain or signed baseline
+    - verdicts: `VERIFIED`, `TAMPERED`, or unresolved failure states
 
-| Concern | Technology |
-|---|---|
-| Transport | Spring WebSocket (WSS / OCPP 2.0.1) |
-| Auth | Spring Security x.509 mTLS |
-| Blockchain | Web3j → Ethereum smart contract |
-| Anomaly Detection | Digital Twin in-memory engine |
-| Module Isolation | Spring Modulith |
+3. User charging + escrow lifecycle
+    - simulator guided flow creates intent, verifies trust, waits for escrow `AUTHORIZED`, starts charging, then settles
+    - escrow terminal outcomes include `RELEASED` and `REFUNDED`
 
-## Quick Start
+4. Digital twin response
+    - watchdog consumes telemetry and station state
+    - anomalies can quarantine/retract sessions and drive refund workflows
 
-```bash
-# Build
-./mvnw clean package -DskipTests
+## Quick start (Windows, current workspace)
 
-# Run with H2 (dev mode, no certs required*)
-./mvnw spring-boot:run
-
-# Verify module boundaries
-./mvnw test -Dtest=ModularityVerificationTest
-```
-
-\* For full mTLS, generate certs and place in `src/main/resources/certs/`.
-
-## demo-mtls profile behavior
-
-When running with `SPRING_PROFILES_ACTIVE=demo-mtls`:
-
-- Backend HTTPS still runs on `https://localhost:8443`
-- Default TLS client auth is `want` (optional cert at connector level)
-- OCPP endpoint `/ocpp/**` still enforces station auth and CN/stationId checks
-- Visualizer/UI can open without browser client certificate
-
-To force strict connector-level client certs for all HTTPS requests, set:
-
-```powershell
-$env:GG_CLIENT_AUTH = "need"
-```
-
-For demo-friendly behavior, keep:
-
-```powershell
-$env:GG_CLIENT_AUTH = "want"
-```
-
-## mTLS handshake tests
-
-Automated handshake verification lives in:
-
-- `src/test/java/com/cybersecuals/gridgarrison/orchestrator/config/OcppHandshakeInterceptorTest.java`
-
-Covered scenarios:
-
-- accepts when `Sec-WebSocket-Protocol` includes `ocpp2.0.1` and certificate CN matches `/ocpp/{stationId}`
-- rejects when CN and `stationId` mismatch
-- rejects when required OCPP subprotocol is missing
-- rejects when client certificate subject has no CN
-
-Run only this test class:
-
-```powershell
-mvn -Dtest=OcppHandshakeInterceptorTest test
-```
-
-## Local Env Setup
-
-If you do not want to retype Ganache variables every session, use the helper files under `scripts/`:
+### 1) One-time local env setup
 
 ```powershell
 Copy-Item scripts/local-env.ps1.example scripts/local-env.ps1
 ```
 
-Edit `scripts/local-env.ps1` once, then start the app with:
+Edit `scripts/local-env.ps1` with your Ganache key/address values.
+
+### 2) Start backend with env loaded
+
+Recommended local run:
 
 ```powershell
-.
-scripts\start-local.ps1
+. .\scripts\local-env.ps1
+mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls"
 ```
 
-Use `-Bootstrap` the first time if you want the app to deploy and seed the contract automatically:
+Backend URL:
+
+- `https://localhost:8443`
+
+### 3) Start simulator
 
 ```powershell
-.
-scripts\start-local.ps1 -Bootstrap
+mvn -f ev-simulator/simulator-app/pom.xml spring-boot:run "-Dspring-boot.run.profiles=demo-mtls"
 ```
 
-## Environment Variables
+Simulator URL:
 
-| Variable | Description | Default |
+- `http://localhost:8082/ev-dashboard.html`
+
+## Profiles and identity behavior
+
+### `dev-ws`
+
+- backend SSL disabled
+- simulator gateway uses `ws://localhost:8443/ocpp/{stationId}`
+
+### `demo-mtls`
+
+- backend SSL enabled at `8443`
+- simulator gateway uses `wss://localhost:8443/ocpp/{stationId}`
+- simulator verify API base URL must be `https://localhost:8443`
+- current demo certificate flow expects station ID `EV-Simulator-001`
+
+Important: OCPP handshake enforces station identity with certificate CN matching station ID in demo-mtls.
+
+## Trust and escrow prerequisites
+
+For guided charging flows to work reliably:
+
+1. Ganache RPC must be reachable.
+2. `GG_WALLET_KEY` must be set in `scripts/local-env.ps1`.
+3. `GG_CONTRACT_ADDR` must point to a deployed contract.
+
+If these are missing, verification may fail with contract/RPC errors and user flow start will be blocked.
+
+## Useful commands
+
+Build backend:
+
+```powershell
+mvn -DskipTests compile
+```
+
+Build simulator:
+
+```powershell
+mvn -f ev-simulator/simulator-app/pom.xml -DskipTests compile
+```
+
+Simulator controller tests:
+
+```powershell
+mvn -f ev-simulator/simulator-app/pom.xml -Dtest=EvSimulatorControllerTest test
+```
+
+## Common pitfalls
+
+1. Port conflicts on `8443` or `8082`
+    - stale Java processes can make startup look flaky.
+
+2. Wrong Maven working directory
+    - `mvn spring-boot:run` from repo root starts backend, not simulator.
+    - use `-f ev-simulator/simulator-app/pom.xml` for simulator commands.
+
+3. Protocol mismatch in demo-mtls
+    - simulator verification against `http://localhost:8443` fails; use `https://localhost:8443`.
+
+4. Station mismatch across tools
+    - panel tamper/verify actions must target the same station ID as simulator (demo-mtls station is `EV-Simulator-001`).
+
+## Environment variables (backend)
+
+| Variable | Purpose | Default |
 |---|---|---|
-| `GG_RPC_URL` | Ethereum JSON-RPC endpoint | `http://localhost:8545` |
-| `GG_WALLET_KEY` | Admin wallet private key | `0x000...1` |
-| `GG_CONTRACT_ADDR` | FirmwareRegistry contract address | `0x000...0` |
-| `GG_BOOTSTRAP_ENABLED` | Deploy and seed contract at startup | `false` |
-| `GG_SEED_GOLDEN_HASHES` | Seed station hashes map | `{}` |
-| `GG_DB_URL` | JDBC URL | H2 in-memory |
-| `GG_SERVER_KS_PASSWORD` | Server keystore password | `changeit` |
-| `GG_CA_TS_PASSWORD` | CA truststore password | `changeit` |
-| `GG_CLIENT_AUTH` | TLS client-auth mode (`want` or `need`) | `want` |
+| `GG_RPC_URL` | Ethereum RPC endpoint | `http://127.0.0.1:7545` |
+| `GG_WALLET_KEY` | EOA private key used for chain writes | `0x000...001` |
+| `GG_CONTRACT_ADDR` | Firmware/trust contract address | zero address |
+| `GG_BOOTSTRAP_ENABLED` | deploy/seed on startup | `false` |
+| `GG_SSL_ENABLED` | backend SSL toggle | `false` |
+| `GG_CLIENT_AUTH` | TLS client auth mode (`want`/`need`) | `want` |
+| `GG_VISUALIZER_PUBLIC` | public access to visualizer pages | `true` |
 
-## Ganache Bootstrap (Deploy + Seed)
+## UI pages
 
-Use this once after Ganache starts to deploy `FirmwareRegistry` and seed known station hashes.
+Backend-served pages:
 
-PowerShell example:
+- `https://localhost:8443/visualizer.html`
+- `https://localhost:8443/panel.html`
 
-```powershell
-$env:GG_RPC_URL = "http://127.0.0.1:7545"
-$env:GG_WALLET_KEY = "<private-key-of-ganache-account-0>"
-$env:GG_BOOTSTRAP_ENABLED = "true"
-$env:GG_SEED_GOLDEN_HASHES = "{'CS-101':'0xabc123','CS-102':'0xdef456'}"
-$env:GG_CONTRACT_ADDR = "0x0000000000000000000000000000000000000000"
-mvn spring-boot:run
-```
+Simulator-served page:
 
-Startup logs will print the deployed contract address:
-
-```text
-[Bootstrap] Deployed contract address=0x...
-[Bootstrap] Set GG_CONTRACT_ADDR=0x... for future runs
-```
-
-For normal runs after bootstrap, set:
-
-- `GG_BOOTSTRAP_ENABLED=false`
-- `GG_CONTRACT_ADDR=<deployed-address>`
+- `http://localhost:8082/ev-dashboard.html`

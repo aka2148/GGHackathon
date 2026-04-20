@@ -1,50 +1,64 @@
-# PERSON 1 WORK SUMMARY (Current)
+# PERSON 1 WORK SUMMARY
 
 ## Scope owned
 
-- Backend ingress files:
+1. Backend ingress/security integration
   - `src/main/java/com/cybersecuals/gridgarrison/orchestrator/config/WebSocketConfig.java`
   - `src/main/java/com/cybersecuals/gridgarrison/orchestrator/config/OcppHandshakeInterceptor.java`
   - `src/main/java/com/cybersecuals/gridgarrison/orchestrator/websocket/OcppWebSocketHandler.java`
-- Simulator module:
+
+2. Simulator module
   - `ev-simulator/simulator-app/**`
 
-## Completed
+## Completed work
 
-- WebSocket ingress endpoint and OCPP subprotocol validation are active.
-- EV simulator is built and integrated in-repo.
-- Core event flow implemented: Boot, Heartbeat, Transaction start/update/end, Firmware status.
-- Reconnect with backoff implemented.
-- Manual simulator REST controls implemented (`/api/ev/**`).
-- Telemetry profiles and runtime profile switching implemented.
-- Scenario orchestration implemented: run/status/stop.
-- Optional TLS/mTLS wiring implemented for simulator `wss://` mode.
-- Local dev cert artifacts generated for backend and simulator resource paths.
+1. OCPP simulator capabilities
+  - boot, heartbeat, transaction lifecycle, firmware status
+  - reconnect with bounded backoff
+  - profile switching (`normal`, `fast`)
 
-## Verified runtime outcomes
+2. Security/profile support
+  - `dev-ws` and `demo-mtls` profile paths maintained
+  - station identity alignment for mTLS handshake checks
 
-- Backend starts on `8443`.
-- Simulator API runs on `8080` (or `8082` override).
-- Simulator connects to backend and exchanges OCPP messages.
-- Scenario `reconnectLoop` can be started and stopped via API.
+3. User charging flow
+  - user intent + guided start/complete/reset APIs
+  - trust verification gate integration before charging
+  - escrow lifecycle polling integration
 
-## Remaining gaps
+4. Dashboard and UX hardening
+  - user/dev mode control set
+  - payment window + milestones
+  - dirty-input protection for twin controls during polling
+  - startup reset and stale-state cleanup
 
-1. **Production certificate lifecycle**
-   - Current certs are local self-signed dev artifacts only.
-   - Production requires managed CA process, rotation, secret storage, and non-default passwords.
-2. **Demo hardening (optional)**
-   - Multi-EV concurrency and scripted rehearsal bundle can be improved further.
+5. Diagnostics improvements
+  - runtime profile fields exposed in simulator status
+  - clearer trust failure reasons in start responses
+  - actionable contract/RPC guidance surfaced in dashboard copy
 
-## Current defaults to remember
+6. Consistency fixes
+  - demo-mtls verify backend URL corrected to HTTPS
+  - zero-address escrow normalization in backend + UI
+  - panel station targeting aligned to dynamic simulator station
 
-- Backend port: `8443`
-- Simulator default app port: `8080`
-- Common local override: simulator on `8082`
-- Default non-TLS gateway URI in simulator config: `ws://localhost:8443/ocpp/{stationId}`
+## Verified outcomes
 
-## Why certs were placeholders initially
+1. simulator compile and tests pass (`EvSimulatorControllerTest`).
+2. demo-mtls startup works with correct backend env and station identity.
+3. first-launch user flow now resets cleanly and starts on first confirm.
+4. flow status after reset shows escrow `NOT_CREATED` instead of stale bindings.
 
-- Safe default avoids committing private key material and fixed passwords.
-- Team environments usually require each developer to generate local dev certs independently.
-- This has now been addressed for your local workspace with generated dev certs and ignore rules.
+## Open gaps
+
+1. Production certificate lifecycle and secure secret handling are still pending.
+2. Broader end-to-end automated smoke coverage is still limited.
+3. Multi-instance stress validation can be expanded for final rehearsal confidence.
+
+## Current runtime defaults
+
+1. Backend port: `8443`
+2. Simulator port: `8082`
+3. demo-mtls station ID: `EV-Simulator-001`
+4. dev-ws gateway: `ws://localhost:8443/ocpp/{stationId}`
+5. demo-mtls gateway: `wss://localhost:8443/ocpp/{stationId}`

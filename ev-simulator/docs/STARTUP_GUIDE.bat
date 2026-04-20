@@ -4,22 +4,27 @@ setlocal
 echo GridGarrison Person 1 Startup (current)
 echo.
 echo 1) Build
-echo   cd c:\Users\jujhar\Videos\GGHackathon
-echo   mvn -DskipTests clean compile
-echo   cd ev-simulator\simulator-app
-echo   mvn -DskipTests clean compile
+echo   cd ^<repo-root^>
+echo   mvn -DskipTests compile
+echo   mvn -f ev-simulator/simulator-app/pom.xml -DskipTests compile
 echo.
-echo 2) Run backend (port 8443)
-echo   cd c:\Users\jujhar\Videos\GGHackathon
-echo   mvn spring-boot:run
+echo 2) Run backend (demo-mtls, port 8443)
+echo   cd ^<repo-root^>
+echo   . .\scripts\local-env.ps1
+echo   mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls"
 echo.
-echo 3) Run simulator (default 8080; use 8082 if 8080 busy)
-echo   cd c:\Users\jujhar\Videos\GGHackathon\ev-simulator\simulator-app
-echo   mvn spring-boot:run
+echo 3) Run simulator (port 8082)
+echo   cd ^<repo-root^>
+echo   mvn -f ev-simulator/simulator-app/pom.xml spring-boot:run "-Dspring-boot.run.profiles=demo-mtls"
 echo.
 echo 4) Smoke test
-echo   Invoke-RestMethod -Uri "http://localhost:8080/api/ev/status" -Method Get
-echo   Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/run?name=reconnectLoop" -Method Post
-echo   Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/stop" -Method Post
+echo   Invoke-RestMethod -Method Get  -Uri "http://localhost:8082/api/ev/status"
+echo   Invoke-RestMethod -Method Post -Uri "http://localhost:8082/api/ev/user/flow/reset?clearIntent=true^&resetWallet=false^&resetBattery=false"
+echo   Invoke-RestMethod -Method Get  -Uri "http://localhost:8082/api/ev/user/flow/status?refreshTrust=true"
+echo.
+echo 5) Open dashboards
+echo   https://localhost:8443/visualizer.html
+echo   https://localhost:8443/panel.html
+echo   http://localhost:8082/ev-dashboard.html
 
 endlocal

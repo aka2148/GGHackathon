@@ -126,7 +126,7 @@ body.light-mode .theme-switch-float{background:rgba(255,253,248,0.95);border-col
         <p>Toggle real station modules, fetch live on-chain baseline, and generate faulty hash for demo verification.</p>
       </div>
       <div class="controls">
-        <input id="stationId" type="text" value="CS-101" aria-label="Station ID" readonly>
+        <input id="stationId" type="text" value="CS-101" aria-label="Station ID">
         <button id="refreshBtn">Refresh Modules</button>
         <button id="loadBaselineBtn" class="btn-warn">Load Live Baseline</button>
         <button id="generateBtn" class="btn-warn">Generate Faulty Hash</button>
@@ -173,6 +173,8 @@ const registrationTxEl=document.getElementById("registrationTx");
 const statusLineEl=document.getElementById("statusLine");
 const themeToggleInputEl=document.getElementById("themeToggleInput");
 const THEME_KEY="gg.theme.mode";
+const STATION_KEY="gg.panel.stationId";
+const DEFAULT_STATION_ID="CS-101";
 
 let currentPanel=null;
 let currentBaseline=null;
@@ -200,12 +202,81 @@ function esc(v){return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").
 function fmt(v){if(!v)return"-";const d=new Date(v);if(Number.isNaN(d.getTime()))return"-";return d.toLocaleTimeString()}
 async function fetchJson(url,opts={}){const r=await fetch(url,opts);if(!r.ok)throw new Error(`HTTP ${r.status}`);return r.json()}
 
-function stationId(){return "CS-101"}
+function normalizeStationId(value,fallback=DEFAULT_STATION_ID){
+  const normalized=(value||"").trim();
+  return normalized||fallback;
+}
+
+function setStationId(value,{persist=true}={}){
+  const normalized=normalizeStationId(value);
+  stationIdEl.value=normalized;
+  if(persist){
+    localStorage.setItem(STATION_KEY,normalized);
+  }
+  return normalized;
+}
+
+function stationId(){
+  return setStationId(stationIdEl.value);
+}
+
+function toMillis(value){
+  const parsed=Date.parse(value||"");
+  return Number.isFinite(parsed)?parsed:0;
+}
+
+function preferredStationIdFromSnapshot(snapshot){
+  const stations=Array.isArray(snapshot?.stations)?snapshot.stations:[];
+  const ranked=[...stations]
+    .map(s=>({id:normalizeStationId(s?.stationId,""),seen:toMillis(s?.lastSeen)}))
+    .filter(s=>Boolean(s.id))
+    .sort((a,b)=>b.seen-a.seen);
+
+  if(ranked.length){
+    return ranked[0].id;
+  }
+
+  const panelMap=snapshot?.componentPanelsByStation||{};
+  const firstPanelStation=Object.keys(panelMap).find(Boolean);
+  return normalizeStationId(firstPanelStation,"");
+}
+
+async function initializeStationId(){
+  const params=new URLSearchParams(window.location.search);
+  const fromQuery=normalizeStationId(params.get("stationId"),"");
+  if(fromQuery){
+    return setStationId(fromQuery);
+  }
+
+  const saved=normalizeStationId(localStorage.getItem(STATION_KEY),"");
+  if(saved){
+    setStationId(saved);
+  }
+
+  try{
+    const snapshot=await fetchJson("/visualizer/api/snapshot");
+    const preferred=preferredStationIdFromSnapshot(snapshot);
+    if(preferred){
+      return setStationId(preferred);
+    }
+  }catch(_){
+    // Keep current station selection when snapshot is unavailable.
+  }
+
+  if(saved){
+    return saved;
+  }
+
+  return setStationId(DEFAULT_STATION_ID);
+}
 
 async function loadModules(){
   const sid=stationId();
   const panel=await fetchJson(`/visualizer/api/components?stationId=${encodeURIComponent(sid)}`);
   currentPanel=panel;
+  if(panel?.stationId){
+    setStationId(panel.stationId);
+  }
   renderModules();
 }
 
@@ -342,9 +413,22 @@ moduleGridEl.addEventListener("click",async(event)=>{
   }
 });
 
+stationIdEl.addEventListener("change",async()=>{
+  const sid=setStationId(stationIdEl.value);
+  statusLineEl.textContent=`Switched station to ${sid}. Reloading...`;
+  try{
+    await loadModules();
+    await loadLiveBaseline();
+    statusLineEl.textContent=`Station switched to ${sid}.`;
+  }catch(e){
+    statusLineEl.textContent=`Station switch failed: ${e.message}`;
+  }
+});
+
 (async()=>{
   try{
     applyTheme(getSavedTheme());
+    await initializeStationId();
     await loadModules();
     await loadLiveBaseline();
   }catch(e){

@@ -1,32 +1,33 @@
-# PERSON 1 DOCUMENTATION INDEX (Current)
+# PERSON 1 DOCUMENTATION INDEX
 
-## Read first
+## Read order
 
-1. `PERSON_1_WORK_SUMMARY.md` — what is completed and what remains
-2. `VERIFY_SETUP.md` — current build/run/test checklist
-3. `PERSON_1_CHECKLIST.md` — action checklist and mTLS run commands
+1. `PERSON_1_WORK_SUMMARY.md`
+   - scope, delivered work, and outstanding items
+2. `VERIFY_SETUP.md`
+   - repeatable verification checklist and smoke tests
+3. `PERSON_1_CHECKLIST.md`
+   - quick command set and ownership checklist
 
-## Current status snapshot
+## Related docs in workspace
 
-### Completed
-- EV simulator in-repo under `ev-simulator/simulator-app`
-- Boot/heartbeat/transaction/firmware OCPP events
-- Reconnect backoff
-- Manual control APIs
-- Telemetry profiles
-- Scenario run/status/stop
-- Local dev cert generation completed
+1. `ev-simulator/simulator-app/README.md`
+   - simulator capabilities, profiles, APIs, dashboard behavior
+2. `README.md` (repo root)
+   - full-stack startup sequence and environment assumptions
+3. `HACKATHON_SYSTEM_GUIDE.md`
+   - judge/demo narrative and fallback runbook
 
-### Remaining
-- Production-grade certificate lifecycle and secret management
+## Helper startup guides
 
-## Helper scripts
-
-- `STARTUP_GUIDE.bat` (Windows)
-- `STARTUP_GUIDE.sh` (Mac/Linux)
+1. `STARTUP_GUIDE.bat` (Windows)
+2. `STARTUP_GUIDE.sh` (Linux/macOS)
 
 ## Canonical runtime defaults
 
-- Backend: `8443`
-- Simulator app: `8080` (use `8082` when needed)
-- Simulator gateway (non-TLS): `ws://localhost:8443/ocpp/{stationId}`
+1. Backend URL: `https://localhost:8443`
+2. Simulator URL: `http://localhost:8082`
+3. Simulator dashboard: `http://localhost:8082/ev-dashboard.html`
+4. `demo-mtls` station ID: `EV-Simulator-001`
+5. Non-TLS gateway: `ws://localhost:8443/ocpp/{stationId}`
+6. TLS gateway: `wss://localhost:8443/ocpp/{stationId}`

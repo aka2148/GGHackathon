@@ -2,6 +2,7 @@ package com.cybersecuals.gridgarrison.simulator;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +32,7 @@ public class EvSimulatorController {
     private final EvVerificationGateState verificationGateState;
     private final EvUserJourneyState userJourneyState;
     private final EvDigitalTwinRuntimeState digitalTwinRuntimeState;
+    private final Environment environment;
     private final AtomicReference<String> activeTransactionId = new AtomicReference<>();
     private final AtomicReference<String> settlingTransactionId = new AtomicReference<>();
     private final AtomicReference<SettlementSummary> lastSettlement = new AtomicReference<>();
@@ -68,12 +70,17 @@ public class EvSimulatorController {
     public ResponseEntity<Map<String, Object>> status() {
         Map<String, Object> body = new LinkedHashMap<>();
         String resolvedActiveTransactionId = getCurrentActiveTransactionId();
+        String[] springProfiles = environment.getActiveProfiles();
+        String runtimeProfile = springProfiles.length == 0 ? "default" : springProfiles[0];
+        String telemetryProfile = telemetryProfiles.getActiveProfile();
         body.put("stationId", client.getStationId());
         body.put("connected", client.isConnected());
-        body.put("stationId", client.getStationId());
         body.put("lastFirmwareHash", client.getLastFirmwareHash());
         body.put("activeTransactionId", resolvedActiveTransactionId);
-        body.put("activeProfile", telemetryProfiles.getActiveProfile());
+        body.put("activeProfile", telemetryProfile);
+        body.put("telemetryProfile", telemetryProfile);
+        body.put("runtimeProfile", runtimeProfile);
+        body.put("springProfiles", springProfiles);
         EvVerificationGateState.Snapshot verificationSnapshot = verificationGateState.snapshot();
         body.put("verificationGateStatus", verificationSnapshot.gateStatus().name());
         body.put("chargingAllowed", verificationSnapshot.chargingAllowed());
@@ -103,9 +110,13 @@ public class EvSimulatorController {
     @GetMapping("/profiles")
     public ResponseEntity<Map<String, Object>> profiles() {
         Map<String, Object> body = new LinkedHashMap<>();
+        String[] springProfiles = environment.getActiveProfiles();
+        String runtimeProfile = springProfiles.length == 0 ? "default" : springProfiles[0];
         body.put("activeProfile", telemetryProfiles.getActiveProfile());
         body.put("availableProfiles", telemetryProfiles.getAvailableProfileNames());
         body.put("profiles", telemetryProfiles.getProfiles());
+        body.put("runtimeProfile", runtimeProfile);
+        body.put("springProfiles", springProfiles);
         return ResponseEntity.ok(body);
     }
 
@@ -503,8 +514,14 @@ public class EvSimulatorController {
         body.put("verificationUpdatedAt", verificationSnapshot.updatedAt());
 
         if (verificationSnapshot.gateStatus() != EvVerificationGateState.GateStatus.VERIFIED) {
+            String verifyReason = verificationSnapshot.message();
             body.put("ok", false);
-            body.put("message", "User flow stopped because firmware trust verification did not pass.");
+            body.put(
+                "message",
+                (verifyReason == null || verifyReason.isBlank())
+                    ? "User flow stopped because firmware trust verification did not pass."
+                    : "User flow stopped because firmware trust verification did not pass: " + verifyReason
+            );
             body.put("userJourneyState", userJourneyState.snapshot().journeyState().name());
             return ResponseEntity.status(409).body(body);
         }
@@ -521,7 +538,7 @@ public class EvSimulatorController {
 
         syncEscrowState(activeEscrow);
 
-        if (activeEscrow == null || activeEscrow.escrowAddress() == null || activeEscrow.escrowAddress().isBlank()) {
+        if (activeEscrow == null || isUnusableEscrowAddress(activeEscrow.escrowAddress())) {
             body.put("ok", false);
             body.put("message", "Escrow contract is not ready yet. Try polling /api/ev/user/flow/status.");
             body.put("userJourneyState", userJourneyState.snapshot().journeyState().name());
@@ -1458,7 +1475,7 @@ public class EvSimulatorController {
             settlement.debitedAmount(),
             settlement.remainingWalletBalance(),
             escrowLifecycle,
-            activeEscrow.escrowAddress() == null || activeEscrow.escrowAddress().isBlank()
+            isUnusableEscrowAddress(activeEscrow.escrowAddress())
                 ? settlement.escrowAddress()
                 : activeEscrow.escrowAddress(),
             Instant.now()
@@ -1517,14 +1534,18 @@ public class EvSimulatorController {
             return;
         }
 
+        String normalizedEscrowAddress = isUnusableEscrowAddress(activeEscrow.escrowAddress())
+            ? null
+            : activeEscrow.escrowAddress();
+
         userJourneyState.updateEscrowStatus(
             activeEscrow.lifecycleState(),
-            activeEscrow.escrowAddress(),
+            normalizedEscrowAddress,
             activeEscrow.heldAmountWei()
         );
 
         EvUserJourneyState.Snapshot snapshot = userJourneyState.snapshot();
-        if (activeEscrow.escrowAddress() == null || activeEscrow.escrowAddress().isBlank()) {
+        if (normalizedEscrowAddress == null) {
             return;
         }
 
@@ -1533,10 +1554,17 @@ public class EvSimulatorController {
             || snapshot.journeyState() == EvUserJourneyState.JourneyState.HANDSHAKING) {
             userJourneyState.markContractCreated(
                 activeEscrow.lifecycleState(),
-                activeEscrow.escrowAddress(),
+                normalizedEscrowAddress,
                 activeEscrow.heldAmountWei()
             );
         }
+    }
+
+    private boolean isUnusableEscrowAddress(String escrowAddress) {
+        if (escrowAddress == null || escrowAddress.isBlank()) {
+            return true;
+        }
+        return "0x0000000000000000000000000000000000000000".equalsIgnoreCase(escrowAddress.trim());
     }
 
     private String safeMessage(Exception exception) {

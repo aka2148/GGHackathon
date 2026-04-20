@@ -1,159 +1,114 @@
-# GridGarrison Team Plan and Checklist (3-Person, No-Conflict Split)
+# GridGarrison Team Plan and Checklist
+
+This plan captures ownership, integration boundaries, and current acceptance criteria for the demo codebase.
 
 ## Objective
-Build a live demo where:
-1. A separate dummy EV app connects with its own cert.
-2. Charging is simulated over a persistent live connection.
-3. Anomalies are detected and responded to in near real time.
-4. Trust decisions are anchored to Ganache-backed on-chain data.
 
----
+Deliver a repeatable demo where:
 
-## Working Rules (to avoid merge conflicts)
-1. Each engineer owns separate modules and files.
-2. No one edits another owner's files without explicit handoff.
-3. Shared contracts are updated only during integration windows.
-4. Use one branch per owner:
-   - feature/p1-ingress-ev
-   - feature/p2-trust-ganache
-   - feature/p3-watchdog-ui
-5. Integration happens in short, planned merges:
-   - Merge Window A: API contracts only
-   - Merge Window B: event contracts only
-   - Merge Window C: final demo polish
+1. EV simulator connects over OCPP with profile-appropriate security.
+2. Trust verification gates charging behavior.
+3. Escrow lifecycle is visible and deterministic.
+4. Digital twin anomaly paths produce clear operator outcomes.
 
----
+## Team split and ownership
 
-## Ownership Matrix
+### Person 1: Ingress + Simulator
 
-## Person 1: Ingress + EV Simulator (Connection Owner)
 Scope:
-1. Build separate dummy EV simulator app with cert-based connection.
-2. Keep persistent websocket connection alive.
-3. Stream charging lifecycle and meter updates.
 
-Owns files:
-1. src/main/java/com/cybersecuals/gridgarrison/orchestrator/config/WebSocketConfig.java
-2. src/main/java/com/cybersecuals/gridgarrison/orchestrator/config/OcppHandshakeInterceptor.java
-3. src/main/java/com/cybersecuals/gridgarrison/orchestrator/websocket/OcppWebSocketHandler.java
-4. EV simulator repo/app (separate project)
+1. OCPP ingress/handshake path.
+2. simulator connection lifecycle and dashboard flow.
+3. guided user charging APIs and UX state consistency.
 
-Deliverables:
-1. EV simulator connects and reconnects automatically.
-2. Sends events: boot, heartbeat, tx start, meter update, tx end.
-3. Connection identity is mapped to station/EV id.
+Primary files:
 
-Checklist:
-1. Cert handshake works with dummy EV cert.
-2. Heartbeat every fixed interval.
-3. Meter updates every 2-5 seconds.
-4. Disconnect/reconnect test passes.
+1. `src/main/java/com/cybersecuals/gridgarrison/orchestrator/config/WebSocketConfig.java`
+2. `src/main/java/com/cybersecuals/gridgarrison/orchestrator/config/OcppHandshakeInterceptor.java`
+3. `src/main/java/com/cybersecuals/gridgarrison/orchestrator/websocket/OcppWebSocketHandler.java`
+4. `ev-simulator/simulator-app/**`
 
----
+Current status:
 
-## Person 2: Trust + Blockchain (Ganache Owner)
+- [x] simulator stable connect/reconnect
+- [x] guided user flow endpoints and dashboard
+- [x] demo-mtls station identity alignment
+- [x] startup/reset consistency fixes for user charging
+
+### Person 2: Trust + Blockchain + Escrow
+
 Scope:
-1. Deploy and maintain FirmwareRegistry on Ganache.
-2. Register golden hashes.
-3. Verify firmware hashes against chain in live flow.
 
-Owns files:
-1. src/main/resources/solidity/FirmwareRegistry.sol
-2. src/main/java/com/cybersecuals/gridgarrison/trust/service/BlockchainService.java
-3. src/main/java/com/cybersecuals/gridgarrison/trust/service/BlockchainServiceImpl.java
-4. src/main/java/com/cybersecuals/gridgarrison/trust/service/BlockchainTrustService.java
-5. src/main/resources/application.yml (blockchain config keys only)
-6. pom.xml (web3j plugin/dependency section only)
+1. blockchain verification path and evidence.
+2. escrow intent/active lifecycle and settlement transitions.
+3. local Ganache bootstrap compatibility.
 
-Deliverables:
-1. Contract deployed and address configured.
-2. Golden hash registration flow works.
-3. Verified/tampered outcomes emitted clearly.
+Primary files:
 
-Checklist:
-1. mvn web3j:generate-sources works.
-2. Normal hash returns verified.
-3. Mismatch hash returns tampered.
-4. Unknown station returns unknown-risk path.
+1. `src/main/resources/solidity/FirmwareRegistry.sol`
+2. `src/main/java/com/cybersecuals/gridgarrison/trust/**`
+3. trust-related configuration sections in `src/main/resources/application.yml`
 
----
+Current status:
 
-## Person 3: Digital Twin + Detection + Visualizer (Response Owner)
+- [x] contract-backed trust verification route active
+- [x] escrow lifecycle integrated into user flow
+- [x] retry hardening for common Ganache transient failures
+- [ ] production-grade key/cert/secret lifecycle
+
+### Person 3: Watchdog + Visualizer + Panel
+
 Scope:
-1. Real-time anomaly logic and scoring.
-2. Response policy mapping to station state.
-3. Visualizer timeline and control UX.
 
-Owns files:
-1. src/main/java/com/cybersecuals/gridgarrison/watchdog/service/DigitalTwinService.java
-2. src/main/java/com/cybersecuals/gridgarrison/watchdog/service/DigitalTwinServiceImpl.java
-3. src/main/java/com/cybersecuals/gridgarrison/watchdog/service/StationTwin.java
-4. src/main/java/com/cybersecuals/gridgarrison/visualizer/RuntimeTraceService.java
-5. src/main/java/com/cybersecuals/gridgarrison/visualizer/RuntimeTraceController.java
-6. src/main/resources/static/visualizer.html
+1. digital twin telemetry and anomaly severity logic.
+2. visualizer timeline/snapshot clarity.
+3. panel component tamper/hash interactions.
 
-Deliverables:
-1. Rules for energy spike, heartbeat missed, reconnect loop, firmware mismatch correlation.
-2. State transitions: MONITORING, SUSPICIOUS, ALERT.
-3. One-click scenarios and auto-demo path.
+Primary files:
 
-Checklist:
-1. Anomaly triggers within a few seconds of event.
-2. Response event emitted for each major anomaly.
-3. UI reflects trust + watchdog outcomes.
-4. Clear/reset/replay path works reliably.
+1. `src/main/java/com/cybersecuals/gridgarrison/watchdog/**`
+2. `src/main/java/com/cybersecuals/gridgarrison/visualizer/**`
+3. `src/main/resources/static/visualizer.html`
+4. `src/main/resources/static/panel.html`
 
----
+Current status:
 
-## Integration Contracts (shared, edit only in merge windows)
+- [x] anomaly/twin metrics integrated into demo paths
+- [x] panel station selection made dynamic for demo-mtls consistency
+- [ ] richer anomaly confidence explainability in UI
 
-Shared event contracts:
-1. Event names and payload schema from orchestrator to trust/watchdog.
-2. Trust verdict event structure consumed by watchdog/UI.
-3. ActionTaken response format consumed by UI.
+## Working rules to prevent merge conflicts
 
-Freeze points:
-1. Freeze event names before deep implementation.
-2. Freeze station state enum before final UI polish.
+1. Keep module ownership boundaries unless handoff is explicit.
+2. Merge in small windows when shared contracts change.
+3. Prefer adding tests with behavior changes in owned modules.
+4. Avoid broad formatting-only diffs across owner boundaries.
 
----
+## Integration freeze points
 
-## Timeline Plan
+1. Shared event names and payload schema between orchestrator/trust/watchdog/visualizer.
+2. User-flow API contracts used by `ev-dashboard.html`.
+3. Station identity assumptions used across simulator, panel, and handshake security.
 
-## Day 1
-1. P1: EV simulator connection baseline.
-2. P2: Ganache deploy + register + verify script.
-3. P3: anomaly pipeline baseline + visual timeline validation.
+## Current acceptance checklist
 
-## Day 2
-1. P1: robust reconnect + telemetry cadence.
-2. P2: live trust integration with simulator input.
-3. P3: response policy + station state transitions.
+1. simulator connects and boot/heartbeat works in both `dev-ws` and `demo-mtls`.
+2. `POST /api/ev/user/flow/start` succeeds on first attempt when backend env is loaded.
+3. post-reset flow status reports `NOT_CREATED` cleanly before first confirm.
+4. panel tamper actions affect the same station used by simulator verify flow.
+5. anomaly path can surface non-happy terminal state (`REFUNDED`) when triggered.
+6. demo can be restarted quickly without stale UI state carrying over.
 
-## Day 3
-1. End-to-end integration.
-2. Auto-demo button/flow.
-3. Demo rehearsal and fallback capture.
+## Demo rehearsal sequence
 
----
+1. start backend with local env + `demo-mtls` profile.
+2. start simulator with `demo-mtls` profile.
+3. run healthy guided charge to `RELEASED`.
+4. run tamper/anomaly path and show blocked or refund behavior.
+5. show visual evidence across dashboard, panel, and visualizer snapshots.
 
-## End-to-End Acceptance Checklist
+## Remaining work (team-level)
 
-1. Dummy EV with cert connects and streams continuously.
-2. On-chain trust check executes in live path.
-3. At least 3 anomaly types trigger expected outcomes.
-4. Response action appears in timeline with rationale.
-5. Visualizer clearly shows module evidence and station state.
-6. Entire demo can be reset and rerun in under 30 seconds.
-
----
-
-## Demo Sequence (Judge-Friendly)
-
-1. Normal session on station A -> MONITORING.
-2. Firmware tamper on station B -> ALERT.
-3. Energy anomaly on station C -> SUSPICIOUS (or ALERT if repeated).
-4. Show snapshot JSON proving module-by-module evidence.
-
-Outcome statement:
-GridGarrison ingests live charging telemetry, verifies trust on-chain, detects anomalies in real time, and emits actionable responses.
+1. add end-to-end smoke scripts for repeated demo warmup checks.
+2. expand cross-module automated tests for trust + escrow + watchdog interplay.
+3. harden production security posture (cert lifecycle, secrets, stricter authz).

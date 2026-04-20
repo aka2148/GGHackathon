@@ -42,6 +42,9 @@ class EvSimulatorControllerTest {
     @MockBean
     private EvUserJourneyState userJourneyState;
 
+    @MockBean
+    private EvDigitalTwinRuntimeState digitalTwinRuntimeState;
+
     private EvVerificationGateState.Snapshot verifiedSnapshot() {
         return new EvVerificationGateState.Snapshot(
             EvVerificationGateState.GateStatus.VERIFIED,

@@ -2745,7 +2745,8 @@
       userFlowAutoResetDone: false,
       digitalTwinMetrics: null,
       digitalTwinControls: null,
-      digitalTwinWarning: null
+      digitalTwinWarning: null,
+      digitalTwinControlsDirty: false
     };
 
     const el = (id) => document.getElementById(id);
@@ -3209,7 +3210,7 @@
       summaryNode.textContent = `Multiplier x${rate.toFixed(2)} | Power ${power} kW | Temp ${temp} C${warning}`;
     }
 
-    function updateDigitalTwinUi(payload) {
+    function updateDigitalTwinUi(payload, options = {}) {
       if (payload?.metrics) {
         state.digitalTwinMetrics = payload.metrics;
       }
@@ -3222,11 +3223,16 @@
 
       const metrics = state.digitalTwinMetrics;
       const controls = state.digitalTwinControls;
+      const forceControlsSync = options.forceControlsSync === true;
+      const shouldSyncControlsForm = forceControlsSync || !state.digitalTwinControlsDirty;
 
       if (controls) {
-        if (el('dtRateMultiplier')) el('dtRateMultiplier').value = Number(controls.rateMultiplier ?? 1).toFixed(2);
-        if (el('dtPowerKw')) el('dtPowerKw').value = controls.powerKw ?? 0;
-        if (el('dtConnectorTemp')) el('dtConnectorTemp').value = controls.connectorTempC ?? 0;
+        if (shouldSyncControlsForm) {
+          if (el('dtRateMultiplier')) el('dtRateMultiplier').value = Number(controls.rateMultiplier ?? 1).toFixed(2);
+          if (el('dtPowerKw')) el('dtPowerKw').value = controls.powerKw ?? 0;
+          if (el('dtConnectorTemp')) el('dtConnectorTemp').value = controls.connectorTempC ?? 0;
+          state.digitalTwinControlsDirty = false;
+        }
         if (el('manualBatteryPct')) el('manualBatteryPct').value = Number(state.batteryPct ?? 50);
       }
 
@@ -3274,13 +3280,21 @@
 
     function shortAddress(value) {
       const text = `${value || ''}`.trim();
-      if (!text) {
+      if (!text || isZeroAddress(text)) {
         return '-';
       }
       if (text.length <= 16) {
         return text;
       }
       return `${text.slice(0, 8)}...${text.slice(-4)}`;
+    }
+
+    function isZeroAddress(value) {
+      const text = `${value || ''}`.trim();
+      if (!text) {
+        return false;
+      }
+      return /^0x0{40}$/i.test(text);
     }
 
     function formatDateTime(value) {
@@ -3312,6 +3326,12 @@
 
       if (/bad request/i.test(compact) && /verification failed/i.test(compact)) {
         return 'Verification request rejected by endpoint. Check API base and protocol.';
+      }
+
+      if (/empty value \(0x\) returned from contract/i.test(compact)
+        || /contract is not configured/i.test(compact)
+        || /blockchain rpc error/i.test(compact)) {
+        return 'Trust chain contract is unavailable. Start backend with scripts/local-env.ps1 so GG_CONTRACT_ADDR and RPC settings are loaded.';
       }
 
       return compact.length > 120 ? `${compact.slice(0, 117)}...` : compact;
@@ -3588,6 +3608,13 @@
       state.energySentKwh = 0;
       state.completedSessions = 0;
       el('txId').value = '';
+      el('paymentEscrowAddress').textContent = '-';
+      el('paymentHeldAmount').textContent = '0';
+      el('paymentLifecycle').textContent = 'NOT_CREATED';
+      el('paymentVerdict').textContent = '-';
+      el('paymentMessage').textContent = 'No payment hold yet. Confirm a plan to open the payment window.';
+      el('paymentWindow').classList.add('hidden');
+      el('userFlowAlert').classList.add('hidden');
       updateSettlementSummary(null);
     }
 
@@ -3601,8 +3628,11 @@
       const batteryPct = journey.batteryPct ?? statusData.batteryPct ?? state.batteryPct;
       const trustStatus = journey.trustStatus || latestVerdict.verificationStatus || statusData.verificationStatus || 'UNVERIFIED';
       const escrowStatus = journey.escrowStatus || escrowActive.lifecycleState || statusData.escrowStatus || 'NOT_CREATED';
-      const escrowAddress = escrowActive.escrowAddress || journey.escrowAddress || statusData.escrowAddress || '';
+      const rawEscrowAddress = escrowActive.escrowAddress || journey.escrowAddress || statusData.escrowAddress || '';
+      const escrowAddress = isZeroAddress(rawEscrowAddress) ? '' : rawEscrowAddress;
       const heldAmount = escrowActive.heldAmountWei || journey.heldAmountWei || statusData.heldAmountWei || '0';
+      const hasIntent = !!(journey.chargeIntent || statusData.userChargeIntent);
+      const hasEscrowBinding = !!escrowAddress;
 
       el('userWalletBalance').textContent = formatMoney(walletBalance);
       el('userBatteryValue').textContent = `${Math.max(0, Math.min(100, Number(batteryPct || 0)))}%`;
@@ -3628,9 +3658,11 @@
       el('paymentHeldAmount').textContent = `${heldAmount}`;
       el('paymentLifecycle').textContent = escrowStatus;
       el('paymentVerdict').textContent = latestVerdict.resultStatus || latestVerdict.verificationStatus || '-';
-      el('paymentMessage').textContent = latestVerdict.message || escrowActive.message || 'Payment window waiting for next step.';
+      el('paymentMessage').textContent = (!hasIntent && !hasEscrowBinding)
+        ? 'No payment hold yet. Confirm a plan to open the payment window.'
+        : (latestVerdict.message || escrowActive.message || 'Payment window waiting for next step.');
 
-      const shouldShowPaymentWindow = state.paymentWindowVisible || !!(journey.chargeIntent || statusData.userChargeIntent);
+      const shouldShowPaymentWindow = state.paymentWindowVisible || hasIntent;
       el('paymentWindow').classList.toggle('hidden', !shouldShowPaymentWindow);
 
       if (shouldShowPaymentWindow) {
@@ -3714,20 +3746,31 @@
       }
 
       state.userFlowAutoResetDone = true;
-      try {
-        await callApi('POST', '/api/ev/user/flow/reset', {
-          clearIntent: true,
-          resetWallet: false,
-          resetBattery: false
-        }, {
-          recordResponse: false,
-          silent: true,
-          timeoutMs: 20000
-        });
-        clearUserFlowClientState();
-        logLine('info', 'User flow reset on dashboard load for a clean session.');
-      } catch (error) {
-        logLine('err', `User flow reset on load failed: ${error.message}`);
+      clearUserFlowClientState();
+
+      let lastError = null;
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          await callApi('POST', '/api/ev/user/flow/reset', {
+            clearIntent: true,
+            resetWallet: false,
+            resetBattery: false
+          }, {
+            recordResponse: false,
+            silent: true,
+            timeoutMs: 20000
+          });
+          clearUserFlowClientState();
+          logLine('info', 'User flow reset on dashboard load for a clean session.');
+          return;
+        } catch (error) {
+          lastError = error;
+          await new Promise((resolve) => setTimeout(resolve, 350));
+        }
+      }
+
+      if (lastError) {
+        logLine('err', `User flow reset on load failed: ${lastError.message}`);
       }
     }
 
@@ -3791,6 +3834,10 @@
       return query;
     }
 
+    function markDigitalTwinControlsDirty() {
+      state.digitalTwinControlsDirty = true;
+    }
+
     el('modeUserBtn').addEventListener('click', () => setMode('user'));
     el('modeDevBtn').addEventListener('click', () => setMode('dev'));
     el('themeToggleInput').addEventListener('change', toggleTheme);
@@ -3814,6 +3861,15 @@
       setupPolling();
     });
     el('pollSec').addEventListener('change', setupPolling);
+
+    ['dtRateMultiplier', 'dtPowerKw', 'dtConnectorTemp'].forEach((inputId) => {
+      const input = el(inputId);
+      if (!input) {
+        return;
+      }
+      input.addEventListener('input', markDigitalTwinControlsDirty);
+      input.addEventListener('change', markDigitalTwinControlsDirty);
+    });
 
     el('connectBtn').addEventListener('click', () =>
       runAction('EV connected', () => callApi('POST', '/api/ev/connect'))
@@ -4008,7 +4064,7 @@
     el('dtApplyControlsBtn').addEventListener('click', () =>
       runAction('Digital twin controls applied', async () => {
         const payload = await callApi('POST', '/api/ev/dev/digital-twin/controls', readDigitalTwinControlInput());
-        updateDigitalTwinUi(payload);
+        updateDigitalTwinUi(payload, { forceControlsSync: true });
         return payload;
       })
     );
@@ -4016,7 +4072,7 @@
     el('dtResetControlsBtn').addEventListener('click', () =>
       runAction('Digital twin controls reset', async () => {
         const payload = await callApi('POST', '/api/ev/dev/digital-twin/controls', { reset: true });
-        updateDigitalTwinUi(payload);
+        updateDigitalTwinUi(payload, { forceControlsSync: true });
         return payload;
       })
     );
@@ -4036,7 +4092,7 @@
     el('dtRefreshStatusBtn').addEventListener('click', () =>
       runAction('Digital twin status refreshed', async () => {
         const payload = await callApi('GET', '/api/ev/dev/digital-twin/status', { resetTwin: true });
-        updateDigitalTwinUi(payload);
+        updateDigitalTwinUi(payload, { forceControlsSync: true });
         return payload;
       })
     );

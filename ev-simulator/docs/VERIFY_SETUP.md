@@ -1,6 +1,6 @@
 # VERIFY SETUP (Person 1)
 
-Use this checklist to validate the current GridGarrison + EV simulator integration.
+Use this checklist to validate current backend + simulator integration.
 
 ## 1) Pre-flight
 
@@ -10,94 +10,106 @@ mvn -version
 ```
 
 Expected:
-- Java 17+
-- Maven 3.8+
+
+1. Java 17+
+2. Maven 3.8+
 
 ## 2) Build verification
 
-```powershell
-cd c:\Users\jujhar\Videos\GGHackathon
-mvn -DskipTests clean compile
+From repo root:
 
-cd c:\Users\jujhar\Videos\GGHackathon\ev-simulator\simulator-app
-mvn -DskipTests clean compile
+```powershell
+mvn -DskipTests compile
+mvn -f ev-simulator/simulator-app/pom.xml -DskipTests compile
 ```
 
 Expected: both commands end with `BUILD SUCCESS`.
 
-## 3) Runtime verification (non-TLS dev path)
+## 3) Runtime verification (recommended demo-mtls path)
 
 ### Terminal 1 — backend
 
 ```powershell
-cd c:\Users\jujhar\Videos\GGHackathon
-mvn spring-boot:run -Dspring-boot.run.profiles=dev-ws
+. .\scripts\local-env.ps1
+mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls"
 ```
 
 Expected logs include:
-- `Tomcat started on port 8443`
-- `Started GridGarrisonApplication`
 
-### Terminal 2 — simulator (default 8080; use 8082 if 8080 is busy)
+1. `Tomcat started on port 8443 (https)`
+2. trust/blockchain initialization without fatal contract errors
+
+### Terminal 2 — simulator
 
 ```powershell
-cd c:\Users\jujhar\Videos\GGHackathon\ev-simulator\simulator-app
-mvn spring-boot:run "-Dspring-boot.run.profiles=dev-ws -Dspring-boot.run.arguments=--server.port=8082"
+mvn -f ev-simulator/simulator-app/pom.xml spring-boot:run "-Dspring-boot.run.profiles=demo-mtls"
 ```
 
 Expected logs include:
-- `Connected to GridGarrison`
-- Boot accepted and heartbeat loop
+
+1. `Connecting to wss://localhost:8443/ocpp/EV-Simulator-001`
+2. `WebSocket opened`
+3. boot accepted and heartbeat activity
 
 ### Terminal 3 — API smoke
 
 ```powershell
-Invoke-RestMethod -Uri "http://localhost:8080/api/ev/status" -Method Get | ConvertTo-Json -Depth 8
-Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/run?name=reconnectLoop" -Method Post | ConvertTo-Json -Depth 8
-Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/stop" -Method Post | ConvertTo-Json -Depth 8
-Invoke-RestMethod -Uri "http://localhost:8080/api/ev/scenario/status" -Method Get | ConvertTo-Json -Depth 8
+Invoke-RestMethod -Method Get  -Uri "http://localhost:8082/api/ev/status" | ConvertTo-Json -Depth 8
+Invoke-RestMethod -Method Post -Uri "http://localhost:8082/api/ev/user/flow/reset?clearIntent=true&resetWallet=false&resetBattery=false" | ConvertTo-Json -Depth 8
+Invoke-RestMethod -Method Get  -Uri "http://localhost:8082/api/ev/user/flow/status?refreshTrust=true" | ConvertTo-Json -Depth 8
+Invoke-RestMethod -Method Post -Uri "http://localhost:8082/api/ev/user/flow/start?inputMode=MONEY&inputValue=20&targetSoc=80" | ConvertTo-Json -Depth 8
 ```
 
 Expected:
-- status shows `connected: true`
-- run returns `ok: true`
-- stop returns `ok: true` when active, `400` if already finished
 
-## 4) Optional mTLS verification
+1. status shows simulator connected and runtime profile details.
+2. flow status after reset reports escrow `NOT_CREATED`.
+3. flow start returns `ok: true`, trust gate `VERIFIED`, and a non-empty escrow address.
 
-Generated local dev cert artifacts:
-- Backend: `src/main/resources/certs/gridgarrison-server.p12`, `src/main/resources/certs/gridgarrison-ca-trust.p12`
-- Simulator: `ev-simulator/simulator-app/src/main/resources/certs/client.p12`, `ev-simulator/simulator-app/src/main/resources/certs/ca-trust.p12`
+## 4) Optional dev-ws verification
 
-Enable mTLS at runtime (deterministic local flow):
+Backend:
 
 ```powershell
-# backend
-mvn spring-boot:run -Dspring-boot.run.profiles=demo-mtls
-
-# simulator terminal
-mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls -Dspring-boot.run.arguments=--server.port=8082 --ev.simulator.station-id=CS-101-EV"
+mvn spring-boot:run "-Dspring-boot.run.profiles=dev-ws"
 ```
 
-### Identity-mapping checks (CN to stationId)
-
-Positive case (should connect):
-- Keep station ID `CS-101-EV` (matches current client cert CN).
-- Expected backend logs include `Station connected` and `BootNotification` for `CS-101-EV`.
-
-Negative case (should be rejected during handshake):
+Simulator:
 
 ```powershell
-mvn spring-boot:run "-Dspring-boot.run.profiles=demo-mtls -Dspring-boot.run.arguments=--server.port=8090 --ev.simulator.station-id=CS-999-EV"
+mvn -f ev-simulator/simulator-app/pom.xml spring-boot:run "-Dspring-boot.run.profiles=dev-ws"
+```
+
+This path is useful for websocket-only debugging without TLS cert concerns.
+
+## 5) Identity mapping checks (demo-mtls)
+
+Positive case:
+
+1. station ID remains `EV-Simulator-001`
+2. websocket connects successfully
+
+Negative case:
+
+```powershell
+mvn -f ev-simulator/simulator-app/pom.xml spring-boot:run "-Dspring-boot.run.profiles=demo-mtls -Dspring-boot.run.arguments=--server.port=8090 --ev.simulator.station-id=CS-999"
 ```
 
 Expected:
-- simulator shows handshake failure (`Response code was not 101`).
-- no WebSocket upgrade for `CS-999-EV`.
 
-## Troubleshooting
+1. simulator handshake fails (`Response code was not 101`).
+2. backend does not accept upgrade for mismatched station ID.
 
-- `keytool not recognized`: ensure Java 17 `bin` is on PATH.
-- Port conflict on 8080: run simulator on 8082.
-- Backend run shows exit code `1` in one terminal while app still works elsewhere: check active listener process and endpoint probes instead of relying only on terminal status.
-- If `wss://` fails with trust errors, verify `JAVA_TOOL_OPTIONS` truststore path points to `ev-simulator/simulator-app/src/main/resources/certs/ca-trust.p12`.
+## 6) Troubleshooting
+
+1. Port conflict on `8443` or `8082`
+	- stop stale Java processes before rerun.
+
+2. Guided flow blocked with contract/RPC errors
+	- ensure backend started after sourcing `scripts/local-env.ps1`.
+
+3. Panel tamper not affecting simulator
+	- align panel station selection with simulator station.
+
+4. `wss://` trust failures
+	- verify simulator `demo-mtls` cert/truststore settings in `application.yml`.

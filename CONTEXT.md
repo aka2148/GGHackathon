@@ -1,147 +1,125 @@
 # GridGarrison Context
 
-Last updated: 2026-04-14
+Last updated: 2026-04-19
 
 ## 1) Project Purpose
 
-GridGarrison is a Spring Boot backend for EV charging station trust monitoring. It ingests OCPP-style station traffic over WebSocket, publishes internal events, verifies firmware integrity against on-chain "golden hashes," tracks digital twin health/anomalies, and exposes runtime trace APIs plus a simple UI dashboard.
+GridGarrison is a demo-first EV charging security platform. It ingests OCPP-style station activity, verifies firmware trust using on-chain/signed baselines, tracks digital twin anomaly signals, and presents a narrative-ready visual state for judges and operators.
 
-Core workflow:
-- Station connects to `/ocpp/{stationId}`.
-- OCPP frames are parsed in the orchestrator and mapped to internal events.
-- Trust listeners verify firmware hashes and optionally interact with blockchain.
-- Watchdog updates in-memory twins and anomaly counters.
-- Visualizer module taps events and serves trace/snapshot endpoints.
+The current demo includes a separate EV simulator app with guided user charging and escrow-aware flows.
 
-## 2) Tech Stack
+## 2) Current Runtime Topology
 
-- Language/runtime: Java 17, Spring Boot 3.3.x.
-- Architecture: Spring Modulith (event-driven module boundaries).
-- Core Spring starters: Web, WebSocket, Security, Actuator, Data JPA.
-- Blockchain: Web3j 4.10.x + Solidity contract (`FirmwareRegistry.sol`).
-- Build/tooling: Maven, `web3j-maven-plugin`, Lombok.
-- Testing: JUnit 5, Spring Boot Test, Spring Modulith Test, Mockito.
-- Databases: H2 (default/dev), PostgreSQL dependency available.
-- Frontend (minimal): static `visualizer.html` with polling JS.
+Two applications run together:
 
-## 3) Repository Structure
+1. Backend (root Maven project)
+  - HTTPS endpoint on `8443`
+  - OCPP WebSocket endpoint `/ocpp/{stationId}`
+  - trust, watchdog, visualizer, and panel APIs
 
-Top-level:
-- `src/main/java/com/cybersecuals/gridgarrison/`
-  - `GridGarrisonApplication.java`: entry point + Modulith root.
-  - `orchestrator/`: OCPP WebSocket ingestion, message parsing, security/config.
-  - `trust/`: blockchain contract wrapper, trust services, listeners/bootstrap.
-  - `watchdog/`: digital twin state and anomaly evaluation.
-  - `visualizer/`: runtime trace event tap/service/controller.
-  - `shared/`: cross-module DTO/support packages.
-- `src/main/resources/`
-  - `application.yml`: runtime config, SSL, actuator, blockchain properties.
-  - `solidity/FirmwareRegistry.sol`: smart contract source.
-  - `static/visualizer.html`: lightweight runtime dashboard.
-- `src/test/java/...`
-  - Modulith boundary test and trust listener tests.
-- `target/`
-  - Build outputs, generated classes, reports, and generated docs/artifacts.
+2. EV simulator (`ev-simulator/simulator-app`)
+  - HTTP dashboard/API on `8082`
+  - OCPP client to backend (`ws://` in `dev-ws`, `wss://` in `demo-mtls`)
 
-## 4) Already Implemented
+Typical demo profile pairing is `demo-mtls` on both applications.
 
-- OCPP WebSocket endpoint `/ocpp/{stationId}` with handshake/subprotocol checks.
-- OCPP message parsing and event publication for:
-  - Boot notifications
-  - Heartbeats
-  - Transaction events
-  - Firmware status notifications
-  - Security event notifications
-- mTLS/x509-based security path for OCPP routes.
-- Trust services:
-  - Retrieve/register golden hashes
-  - Verify incoming firmware hash against chain value
-  - Session-related on-chain recording path
-  - Optional bootstrap/deploy flow for Ganache-style local chain
-- Solidity contract and generated Java wrapper (`FirmwareRegistryContract`).
-- Watchdog digital twin in-memory lifecycle and anomaly sweep.
-- Visualizer event capture with APIs for events/snapshots/simulations.
-- Basic tests:
-  - Modulith structure verification
-  - Trust listener behavior branches (verified/tampered/failure)
+## 3) Architecture and Module Boundaries
 
-## 5) Missing, Incomplete, or Risk Areas
+Backend modules remain event-driven under Spring Modulith:
 
-- Security hardening gaps:
-  - WebSocket allowed origins configured broadly (`*`).
-  - CN-to-`stationId` binding TODO appears not fully enforced.
-  - Visualizer endpoints are broadly accessible.
-- Watchdog TODOs:
-  - Some anomaly rules declared but not fully implemented.
-- Trust design inconsistency risk:
-  - Session-event recording path may not align cleanly with Solidity contract intent.
-- Potentially overlapping trust services:
-  - Multiple service paths for firmware verification suggest transitional design.
-- Test coverage gaps:
-  - Limited tests for WebSocket handshake/security, watchdog logic, visualizer endpoints, and full E2E flow.
-- Persistence gap:
-  - Data JPA dependency exists, but little/no entity-repository persistence usage identified.
-- Build/documentation mismatch risk:
-  - Docs mention Maven wrapper commands; wrapper files may be absent.
+- `orchestrator`: OCPP ingest + handshake/security checks
+- `trust`: blockchain verification + escrow endpoints
+- `watchdog`: digital twin metrics, anomaly state, telemetry evaluation
+- `visualizer`: runtime trace timeline, snapshot APIs, panel controls
+- `shared`: DTOs only
 
-## 6) Main Entry Points and Interfaces
+Cross-module behavior is coordinated by events and DTO APIs, not ad-hoc direct service coupling.
 
-- Main app: `src/main/java/com/cybersecuals/gridgarrison/GridGarrisonApplication.java`
-- WebSocket ingestion: `src/main/java/com/cybersecuals/gridgarrison/orchestrator/websocket/OcppWebSocketHandler.java`
-- Message codec/helpers: `src/main/java/com/cybersecuals/gridgarrison/orchestrator/websocket/OcppMessage.java`
-- Security config: `src/main/java/com/cybersecuals/gridgarrison/orchestrator/config/MtlsSecurityConfig.java`
-- Trust listener: `src/main/java/com/cybersecuals/gridgarrison/trust/service/FirmwareStatusVerificationListener.java`
-- Blockchain service: `src/main/java/com/cybersecuals/gridgarrison/trust/service/BlockchainServiceImpl.java`
-- Visualizer API: `src/main/java/com/cybersecuals/gridgarrison/visualizer/RuntimeTraceController.java`
+## 4) Core Flows Implemented
 
-## 7) Working Assumptions For Next Changes
+1. Station connect and OCPP lifecycle
+  - Boot, heartbeat, transaction start/update/end, firmware status
 
-- Keep module boundaries explicit (orchestrator -> events -> trust/watchdog/visualizer).
-- Prefer incremental hardening before broad refactors.
-- Preserve existing event contracts where possible to avoid breaking visualizer flows.
-- Add focused tests for any behavior change in trust/security/watchdog paths.
+2. Trust verification gate
+  - simulator requests verify path
+  - backend returns gate status and verdict details
+  - charging/sim scenarios are blocked until verified
 
-## 8) Suggested Next Priorities (if aligned with your goals)
+3. User charging + escrow lifecycle
+  - intent capture
+  - escrow create/fund/authorize polling
+  - charging run and settlement
+  - terminal outcomes: `RELEASED` or `REFUNDED`
 
-1. Security hardening for OCPP + visualizer access controls.
-2. Resolve trust/session contract alignment and consolidate duplicate verification paths.
-3. Implement remaining anomaly rules and watchdog confidence scoring.
-4. Expand automated tests (WebSocket, trust integration, watchdog unit tests, API slices).
+4. Watchdog telemetry integration
+  - simulator publishes digital twin telemetry
+  - anomaly severity may quarantine/retract and trigger refund-oriented paths
 
-## 9) Prioritized Backlog (Demo Grade)
+5. Operator pages
+  - `visualizer.html`: station/event narrative
+  - `panel.html`: component tamper/hash controls
+  - `ev-dashboard.html`: simulator user/dev controls
 
-### Now
+## 5) Recent Stability Fixes Reflected in Code
 
-1. Security hardening with demo-safe defaults:
-   - Restrict OCPP WebSocket origins via config (no wildcard by default).
-   - Add optional CN-to-stationId enforcement (`off` by default for demo flexibility).
-   - Make visualizer exposure config-driven (`public` by default for demo UX).
-2. Blockchain correctness:
-   - Record session transitions using Solidity `recordSessionEvent(...)` instead of overloading golden-hash storage.
-3. Watchdog quality quick wins:
-   - Add practical demo heuristics for `RAPID_RECONNECT` and `HEARTBEAT_MISSED`.
+1. Demo-mtls verification transport correction
+  - simulator verify backend URL in `demo-mtls` now uses `https://localhost:8443`
 
-### Next
+2. Station targeting consistency
+  - panel controls no longer hardcode `CS-101`
+  - station selection is dynamic/persisted/query-param aware
 
-1. Add focused tests for:
-   - security config behavior (public vs protected visualizer),
-   - trust session event transaction path,
-   - watchdog anomaly rules (energy spike, reconnect, heartbeat timeout).
-2. Clean up trust service overlap and define one verification path.
-3. Improve station identity model (cert CN mapping + allowlist).
+3. User-flow startup consistency
+  - dashboard startup reset retries
+  - payment panel state reset on load
+  - zero-address escrow values treated as unusable (not valid bindings)
 
-### Later
+4. Twin control UX hardening
+  - polling no longer overwrites unsaved control inputs
 
-1. Production hardening:
-   - stricter authz policy,
-   - secure secrets management,
-   - stronger observability and failure handling.
-2. Full E2E test harness with simulated OCPP clients + Ganache.
-3. Persistence strategy for twin history and trust audit records.
+5. Diagnostics clarity
+  - simulator status reports active runtime profile details
+  - trust/contract startup failures map to actionable dashboard guidance
 
-## 10) Current Runtime Profile Decisions
+## 6) Current Risks / Known Constraints
 
-- Target mode: hackathon demo grade.
-- Current priorities: security hardening, trust/blockchain correctness, watchdog detection quality.
-- Blockchain target environment: Ganache reliability first.
-- Unresolved preference: whether to include/ignore `target/` artifacts in future commits.
+1. Local env dependency
+  - guided trust/escrow flows require `scripts/local-env.ps1` values for contract + wallet.
+
+2. Port collision risk
+  - stale Java processes on `8443` or `8082` can mimic logic failures.
+
+3. Demo certificate coupling
+  - in `demo-mtls`, station ID must align with cert CN (`EV-Simulator-001` in current local cert set).
+
+4. Test surface remains narrow
+  - simulator controller tests exist, but broad E2E automation is still limited.
+
+## 7) Main Entry Points
+
+Backend:
+
+- `src/main/java/com/cybersecuals/gridgarrison/GridGarrisonApplication.java`
+- `src/main/java/com/cybersecuals/gridgarrison/orchestrator/websocket/OcppWebSocketHandler.java`
+- `src/main/java/com/cybersecuals/gridgarrison/orchestrator/config/OcppHandshakeInterceptor.java`
+- `src/main/java/com/cybersecuals/gridgarrison/trust/service/BlockchainServiceImpl.java`
+- `src/main/java/com/cybersecuals/gridgarrison/visualizer/RuntimeTraceController.java`
+
+Simulator:
+
+- `ev-simulator/simulator-app/src/main/java/com/cybersecuals/gridgarrison/simulator/EvWebSocketClient.java`
+- `ev-simulator/simulator-app/src/main/java/com/cybersecuals/gridgarrison/simulator/EvSimulatorController.java`
+- `ev-simulator/simulator-app/src/main/resources/static/ev-dashboard.html`
+
+## 8) Recommended Next Priorities
+
+1. Expand E2E smoke automation for first-launch user flow and anomaly/refund paths.
+2. Improve production-grade cert/key lifecycle and secret handling.
+3. Increase watchdog rule transparency with explicit confidence/threshold telemetry in APIs.
+4. Add integration tests around trust + escrow behavior under temporary RPC failures.
+
+## 9) Current Demo Assumptions
+
+1. Deterministic behavior is preferred over realism.
+2. Local Ganache-backed chain is acceptable for demo trust evidence.
+3. Visualizer and simulator pages must remain easy to operate without deep setup overhead.

@@ -125,6 +125,8 @@ ev:
   simulator:
     station-id: EV-Simulator-001
     gateway-uri: wss://localhost:8443/ocpp/{stationId}
+    verify:
+      backend-base-url: https://localhost:8443
     iso15118:
       enabled: true
       authorization-mode: PlugAndCharge
